@@ -33,9 +33,9 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
     if (err) {
-        console.error('❌ [MySQL] Không thể kết nối! Hãy chắc chắn bạn đã bật MySQL trên XAMPP.');
+        console.error('❌ [MySQL] Không thể kết nối! Chi tiết lỗi:', err.message);
     } else {
-        console.log('🗄️ [MySQL] Đã kết nối tới Database ev_station thành công!');
+        console.log('🗄️ [MySQL] Đã kết nối tới Database thành công!');
     }
 });
 
