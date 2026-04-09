@@ -328,6 +328,12 @@ function runBackgroundWorker() {
     });
 }
 
+// Chặn báo lỗi rác 404 do trình duyệt tự tìm file favicon
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// Bắt tất cả các đường dẫn không tồn tại và trả về lỗi 404 chuẩn JSON
+app.use((req, res) => res.status(404).json({ success: false, message: 'Đường dẫn API hoặc File không tồn tại!' }));
+
 // Khởi động Web Server
 app.listen(port, () => {
     console.log(`🚀 Backend Server đang chạy tại: http://localhost:${port}`);
