@@ -168,91 +168,172 @@
                     </div>
                 </div>
 
-                <!-- Trạng thái Tủ 1 -->
-                <div class="card card-stat mt-4 border-primary" style="border-top: 3px solid #0d6efd;">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0 text-primary"><i class="fas fa-server me-2"></i>Tủ sạc 1 (Trạm 001)</h5>
+                <!-- Khu vực 2 Tủ sạc (Side by Side) -->
+                <div class="row g-4 mt-2">
+                    <!-- Trạng thái Tủ 1 -->
+                    <div class="col-lg-6">
+                        <div class="card card-stat h-100 border-primary" style="border-top: 3px solid #0d6efd;">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-primary"><i class="fas fa-server me-2"></i>Tủ sạc 1 (001)</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="alert('Mở trang chi tiết Tủ 1')">Chi tiết</button>
+                            </div>
+                            <div class="card-body">
+                                <!-- Nhiệt độ & Độ ẩm -->
+                                <div class="row text-center mb-4">
+                                    <div class="col-6 border-end">
+                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
+                                        <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i> <span id="temp_001">--</span>°C</h4>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
+                                        <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span id="hum_001">--</span>%</h4>
+                                    </div>
+                                </div>
+                                
+                                <!-- Trạng thái ổ sạc -->
+                                <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="15%">Ổ cắm</th>
+                                                <th width="25%">Trạng thái</th>
+                                                <th width="35%">Thông số</th>
+                                                <th width="25%">Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Ổ 1</strong></td>
+                                                <td><span id="stat_badge_001_1" class="badge bg-secondary">Chờ...</span></td>
+                                                <td>
+                                                    <span id="stat_v_001_1">0.0</span>V - <span id="stat_i_001_1">0.00</span>A<br>
+                                                    <strong class="text-primary"><span id="stat_p_001_1">0.0</span> W</strong>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
+                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Ổ 2</strong></td>
+                                                <td><span id="stat_badge_001_2" class="badge bg-secondary">Chờ...</span></td>
+                                                <td>
+                                                    <span id="stat_v_001_2">0.0</span>V - <span id="stat_i_001_2">0.00</span>A<br>
+                                                    <strong class="text-primary"><span id="stat_p_001_2">0.0</span> W</strong>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
+                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-0">
-                        <table class="table table-hover mb-0 text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th width="15%">Ổ cắm</th>
-                                    <th width="15%">Trạng thái</th>
-                                    <th width="15%">Điện áp (V)</th>
-                                    <th width="15%">Dòng điện (A)</th>
-                                    <th width="15%">Công suất (W)</th>
-                                    <th width="10%">RFID</th>
-                                    <th width="15%">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Ổ 1</strong></td>
-                                    <td><span id="stat_badge_001_1" class="badge bg-secondary">Chờ kết nối...</span></td>
-                                    <td id="stat_v_001_1">0.0</td><td id="stat_i_001_1">0.00</td><td id="stat_p_001_1">0.0</td>
-                                    <td>-</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
-                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Ổ 2</strong></td>
-                                    <td><span id="stat_badge_001_2" class="badge bg-secondary">Chờ kết nối...</span></td>
-                                    <td id="stat_v_001_2">0.0</td><td id="stat_i_001_2">0.00</td><td id="stat_p_001_2">0.0</td>
-                                    <td>-</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
-                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+
+                    <!-- Trạng thái Tủ 2 -->
+                    <div class="col-lg-6">
+                        <div class="card card-stat h-100 border-danger" style="border-top: 3px solid #dc3545;">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-danger"><i class="fas fa-server me-2"></i>Tủ sạc 2 (002)</h5>
+                                <button class="btn btn-sm btn-outline-danger" onclick="alert('Mở trang chi tiết Tủ 2')">Chi tiết</button>
+                            </div>
+                            <div class="card-body">
+                                <!-- Nhiệt độ & Độ ẩm -->
+                                <div class="row text-center mb-4">
+                                    <div class="col-6 border-end">
+                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
+                                        <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i> <span id="temp_002">--</span>°C</h4>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
+                                        <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span id="hum_002">--</span>%</h4>
+                                    </div>
+                                </div>
+                                
+                                <!-- Trạng thái ổ sạc -->
+                                <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th width="15%">Ổ cắm</th>
+                                                <th width="25%">Trạng thái</th>
+                                                <th width="35%">Thông số</th>
+                                                <th width="25%">Hành động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Ổ 1</strong></td>
+                                                <td><span id="stat_badge_002_1" class="badge bg-secondary">Chờ...</span></td>
+                                                <td>
+                                                    <span id="stat_v_002_1">0.0</span>V - <span id="stat_i_002_1">0.00</span>A<br>
+                                                    <strong class="text-danger"><span id="stat_p_002_1">0.0</span> W</strong>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
+                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Ổ 2</strong></td>
+                                                <td><span id="stat_badge_002_2" class="badge bg-secondary">Chờ...</span></td>
+                                                <td>
+                                                    <span id="stat_v_002_2">0.0</span>V - <span id="stat_i_002_2">0.00</span>A<br>
+                                                    <strong class="text-danger"><span id="stat_p_002_2">0.0</span> W</strong>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
+                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Trạng thái Tủ 2 -->
-                <div class="card card-stat mt-4 border-danger" style="border-top: 3px solid #dc3545;">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0 text-danger"><i class="fas fa-server me-2"></i>Tủ sạc 2 (Trạm 002)</h5>
-                    </div>
+            <!-- Stations Tab (Quản lý Trạm sạc) -->
+            <div id="tab-stations" class="p-4 tab-content d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0">Danh sách trạm sạc</h5>
+                    <button class="btn btn-primary" onclick="alert('Tính năng thêm trạm đang phát triển!')"><i class="fas fa-plus me-2"></i>Thêm Trạm mới</button>
+                </div>
+                
+                <div class="card card-stat">
                     <div class="card-body p-0">
-                        <table class="table table-hover mb-0 text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th width="15%">Ổ cắm</th>
-                                    <th width="15%">Trạng thái</th>
-                                    <th width="15%">Điện áp (V)</th>
-                                    <th width="15%">Dòng điện (A)</th>
-                                    <th width="15%">Công suất (W)</th>
-                                    <th width="10%">RFID</th>
-                                    <th width="15%">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Ổ 1</strong></td>
-                                    <td><span id="stat_badge_002_1" class="badge bg-secondary">Chờ kết nối...</span></td>
-                                    <td id="stat_v_002_1">0.0</td><td id="stat_i_002_1">0.00</td><td id="stat_p_002_1">0.0</td>
-                                    <td>-</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
-                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Ổ 2</strong></td>
-                                    <td><span id="stat_badge_002_2" class="badge bg-secondary">Chờ kết nối...</span></td>
-                                    <td id="stat_v_002_2">0.0</td><td id="stat_i_002_2">0.00</td><td id="stat_p_002_2">0.0</td>
-                                    <td>-</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
-                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 text-center align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mã Trạm (ID)</th>
+                                        <th>Tên / Vị trí</th>
+                                        <th>Trạng thái mạng</th>
+                                        <th>Tổng điện năng</th>
+                                        <th>Đơn giá (VNĐ/kWh)</th>
+                                        <th>Cài đặt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stations_table_body">
+                                    <tr><td colspan="6">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -442,6 +523,16 @@
                 document.getElementById('stat_p_' + uniqueId).innerText = data.power.toFixed(1);
             }
             
+            // Cập nhật nhiệt độ & độ ẩm nếu mạch phần cứng có gửi lên
+            if (data.temperature !== undefined) {
+                const tempEl = document.getElementById('temp_' + stationId);
+                if (tempEl) tempEl.innerText = data.temperature;
+            }
+            if (data.humidity !== undefined) {
+                const humEl = document.getElementById('hum_' + stationId);
+                if (humEl) humEl.innerText = data.humidity;
+            }
+            
             // Cập nhật Card tổng quan (Cộng gộp công suất)
             currentPower[uniqueId] = data.power;
             let totalPower = 0;
@@ -585,7 +676,7 @@
         // Thay đổi Tiêu đề trên Top Navbar tự động
         const titleMap = {
             'dashboard': 'Tổng quan hệ thống',
-            'stations': 'Quản lý Trạm sạc',
+            'stations': 'Quản lý trạm sạc',
             'users': 'Người dùng & Ví tiền',
             'history': 'Lịch sử Hóa đơn',
             'settings': 'Cài đặt hệ thống'
@@ -595,6 +686,7 @@
         // Nếu bấm vào tab Lịch sử thì gọi API lấy dữ liệu
         if (tabId === 'history') loadHistory();
         if (tabId === 'users') loadUsers();
+        if (tabId === 'stations') loadStations();
     }
 
     function loadHistory() {
@@ -618,6 +710,38 @@
                     });
                 }
             });
+    }
+
+    // --- QUẢN LÝ TRẠM SẠC ---
+    function loadStations() {
+        if (!authToken) {
+            document.getElementById('stations_table_body').innerHTML = `<tr><td colspan="6" class="text-danger">Vui lòng đăng nhập!</td></tr>`;
+            return;
+        }
+        fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('stations_table_body');
+            tbody.innerHTML = '';
+            if (data.success) {
+                data.data.forEach(st => {
+                    let badge = st.status === 'online' ? '<span class="badge bg-success">Online</span>' : (st.status === 'maintenance' ? '<span class="badge bg-warning text-dark">Bảo trì</span>' : '<span class="badge bg-danger">Offline</span>');
+                    let kwh = parseFloat(st.total_kwh).toFixed(2);
+                    let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${st.station_id}</strong></td>
+                        <td>${st.name}<br><small class="text-muted">${st.location}</small></td>
+                        <td>${badge}</td>
+                        <td>${kwh} kWh</td>
+                        <td>${price}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng"><i class="fas fa-cog"></i></button>
+                        </td>
+                    </tr>`;
+                });
+            }
+        });
     }
 
     // --- QUẢN LÝ USER & VÍ TIỀN ---

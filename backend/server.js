@@ -237,6 +237,27 @@ app.get('/api/sessions/history', (req, res) => {
     });
 });
 
+// API Lấy danh sách Trạm sạc và Tổng điện năng
+app.get('/api/stations', verifyToken, (req, res) => {
+    // Câu lệnh SQL: Lấy thông tin trạm VÀ tính tổng kWh từ các hóa đơn đã hoàn tất
+    const sql = `
+        SELECT 
+            s.station_id, 
+            s.name, 
+            s.location, 
+            s.unit_price, 
+            s.status,
+            COALESCE(SUM(cs.total_kwh), 0) as total_kwh
+        FROM stations s
+        LEFT JOIN charging_sessions cs ON cs.station_id LIKE CONCAT(s.station_id, '.%') AND cs.status = 'completed'
+        GROUP BY s.station_id
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
+        res.json({ success: true, data: results });
+    });
+});
+
 // API Lấy thông tin ví tiền của User đang đăng nhập
 app.get('/api/user/me', verifyToken, (req, res) => {
     db.query('SELECT username, role, balance FROM users WHERE id = ?', [req.user.id], (err, results) => {
