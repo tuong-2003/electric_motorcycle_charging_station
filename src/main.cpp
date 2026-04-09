@@ -14,14 +14,15 @@ const int   MQTT_PORT = 1883;
 const char* MQTT_CLIENT_ID = "EV_Charger_001"; // ID phải là duy nhất cho mỗi trụ sạc
 
 // --- Các Topic MQTT ---
-const char* TOPIC_PUB_STATUS = "ev_station/001/status"; // ESP32 gửi dữ liệu lên Web
-const char* TOPIC_SUB_CMD    = "ev_station/001/cmd";    // ESP32 nhận lệnh từ Web
+// Dùng wildcard (+) để lắng nghe lệnh từ tất cả các tủ và ổ cắm
+const char* TOPIC_SUB_CMD = "ev_station/+/outlet/+/cmd";
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
 
 // --- Biến trạng thái toàn cục của Trạm sạc ---
-bool is_charging = false; // Mặc định ban đầu là rảnh (chưa sạc)
+// Mảng lưu trạng thái 2 chiều: [Tủ][Ổ cắm] (Tủ 1-2, Ổ 1-2)
+bool is_charging[2][2] = {{false, false}, {false, false}}; 
 
 // 1. Hàm kết nối WiFi
 void setup_wifi() {
@@ -46,6 +47,14 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     Serial.println("\n[MQTT] Nhan lenh tu topic: " + String(topic));
     Serial.println("Noi dung: " + message);
 
+    // Tách stationId và outletId từ topic (VD: ev_station/002/outlet/1/cmd)
+    String t = String(topic);
+    int stationId = 1;
+    if (t.indexOf("002") != -1) stationId = 2;
+    
+    int outletId = 1;
+    if (t.indexOf("/2/cmd") != -1) outletId = 2;
+
     // Xử lý JSON lệnh nhận được
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, message);
@@ -53,12 +62,12 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     if (!error) {
         String command = doc["command"]; 
         if (command == "START_CHARGE") {
-            is_charging = true;
-            Serial.println("-> Thuc thi: DONG RELAY SAC CHO XE");
+            is_charging[stationId - 1][outletId - 1] = true;
+            Serial.printf("-> Thuc thi: DONG RELAY TU %d - O SO %d\n", stationId, outletId);
             // TODO: digitalWrite(RELAY_PIN, HIGH);
         } else if (command == "STOP_CHARGE") {
-            is_charging = false;
-            Serial.println("-> Thuc thi: NGAT RELAY SAC");
+            is_charging[stationId - 1][outletId - 1] = false;
+            Serial.printf("-> Thuc thi: NGAT RELAY TU %d - O SO %d\n", stationId, outletId);
             // TODO: digitalWrite(RELAY_PIN, LOW);
         }
     }
@@ -101,33 +110,38 @@ void loop() {
     if (millis() - last_publish > 5000) {
         last_publish = millis();
         
-        // TODO: Đo thực tế bằng PZEM-004T
-        // Hiện tại: Mô phỏng điện áp dao động từ 220.0V đến 230.0V
-        float voltage = random(2200, 2300) / 10.0; 
-        float current = 0.0;
+        // Gửi dữ liệu mô phỏng cho cả Tủ 1 và Tủ 2 (tổng 4 ổ cắm)
+        for (int s = 1; s <= 2; s++) {
+            for (int i = 1; i <= 2; i++) {
+                // Mô phỏng dữ liệu
+                float voltage = random(2200, 2300) / 10.0; 
+                float current = 0.0;
+                if (is_charging[s - 1][i - 1]) {
+                    current = random(20, 35) / 10.0;
+                }
+                float power = voltage * current;
+                String current_status = is_charging[s - 1][i - 1] ? "CHARGING" : "AVAILABLE";
 
-        // Nếu đang sạc, dòng điện dao động từ 2.0A đến 3.5A. Nếu không sạc thì dòng = 0.
-        if (is_charging) {
-            current = random(20, 35) / 10.0;
+                // Đóng gói dữ liệu thành chuẩn JSON
+                JsonDocument doc;
+                char stationStr[4];
+                snprintf(stationStr, sizeof(stationStr), "%03d", s);
+                doc["station_id"] = stationStr;
+                doc["outlet_id"] = i; 
+                doc["status"] = current_status;
+                doc["voltage"] = voltage;
+                doc["current"] = current;
+                doc["power"] = power;
+
+                String payload;
+                serializeJson(doc, payload);
+
+                // Publish lên Cloud với topic tương ứng
+                char topic_pub[50];
+                snprintf(topic_pub, sizeof(topic_pub), "ev_station/%03d/outlet/%d/status", s, i);
+                mqtt.publish(topic_pub, payload.c_str());
+                Serial.println("[MQTT] Da gui: " + payload);
+            }
         }
-        
-        float power = voltage * current;
-        
-        String current_status = is_charging ? "CHARGING" : "AVAILABLE";
-
-        // Đóng gói dữ liệu thành chuẩn JSON
-        JsonDocument doc;
-        doc["station_id"] = "001";
-        doc["status"] = current_status;
-        doc["voltage"] = voltage;
-        doc["current"] = current;
-        doc["power"] = power;
-
-        String payload;
-        serializeJson(doc, payload);
-
-        // Publish lên Cloud
-        mqtt.publish(TOPIC_PUB_STATUS, payload.c_str());
-        Serial.println("[MQTT] Da gui: " + payload);
     }
 }
