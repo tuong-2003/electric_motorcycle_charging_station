@@ -399,6 +399,59 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Settings Tab (Cài đặt) -->
+            <div id="tab-settings" class="p-4 tab-content d-none">
+                <div class="row g-4">
+                    <!-- Đổi mật khẩu -->
+                    <div class="col-md-6">
+                        <div class="card card-stat h-100 p-4">
+                            <h6 class="mb-3 text-primary"><i class="fas fa-lock me-2"></i>Đổi mật khẩu Quản trị</h6>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Mật khẩu hiện tại</label>
+                                <input type="password" id="setting_old_pass" class="form-control" placeholder="Nhập mật khẩu cũ">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label text-muted small">Mật khẩu mới</label>
+                                <input type="password" id="setting_new_pass" class="form-control" placeholder="Nhập mật khẩu mới">
+                            </div>
+                            <button class="btn btn-primary mt-auto" onclick="alert('Tính năng đổi mật khẩu đang phát triển!')">Cập nhật mật khẩu</button>
+                        </div>
+                    </div>
+
+                    <!-- Cấu hình hệ thống -->
+                    <div class="col-md-6">
+                        <div class="card card-stat h-100 p-4">
+                            <h6 class="mb-3 text-success"><i class="fas fa-sliders-h me-2"></i>Cấu hình vận hành</h6>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Thời gian ngắt sạc khi rớt mạng (giây)</label>
+                                <input type="number" class="form-control" value="30">
+                                <div class="form-text" style="font-size: 0.75rem;">Hệ thống tự chốt hóa đơn nếu trụ rớt mạng quá thời gian này.</div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label text-muted small">Cảnh báo Telegram</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="telegramAlert" checked>
+                                    <label class="form-check-label" for="telegramAlert">Gửi tin nhắn khi có Trạm Offline</label>
+                                </div>
+                            </div>
+                            <button class="btn btn-success mt-auto" onclick="alert('Tính năng lưu cấu hình đang phát triển!')">Lưu cấu hình</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Danger Zone -->
+                    <div class="col-md-12">
+                        <div class="card card-stat border-danger mt-2">
+                            <div class="card-body p-4">
+                                <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Khu vực nguy hiểm (Danger Zone)</h6>
+                                <p class="text-muted small mb-3">Xóa bớt dữ liệu để giải phóng dung lượng Database. Hành động này không thể hoàn tác!</p>
+                                <button class="btn btn-outline-danger btn-sm me-2" onclick="if(confirm('Xóa hóa đơn cũ hơn 30 ngày?')) alert('Chưa khả dụng')">Dọn dẹp Hóa đơn cũ</button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Xóa dữ liệu điện áp cũ hơn 7 ngày?')) alert('Chưa khả dụng')">Dọn dẹp Lịch sử Telemetry</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -672,6 +725,14 @@
         if (document.getElementById('tab-' + tabId)) {
             document.getElementById('tab-' + tabId).classList.remove('d-none');
         }
+        
+        // Cập nhật trạng thái Active (viền xanh) trên thanh Menu (Sidebar)
+        document.querySelectorAll('.sidebar .nav a').forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(`switchTab('${tabId}')`)) {
+                link.classList.add('active');
+            }
+        });
         
         // Thay đổi Tiêu đề trên Top Navbar tự động
         const titleMap = {
