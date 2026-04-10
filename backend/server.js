@@ -198,8 +198,18 @@ app.post('/api/register', async (req, res) => {
     try {
         const hashed = await bcrypt.hash(password, 10);
         // Mặc định khách tự đăng ký sẽ có role là 'user'
-        db.query('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, "user")', [username, email, hashed], (err) => {
-            if (err) return res.status(400).json({ success: false, message: 'Tài khoản hoặc Email đã tồn tại trong hệ thống!' });
+        db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, "user", 0)', [username, email, hashed], (err) => {
+            if (err) {
+                console.error('⚠️ [MySQL] Lỗi Đăng ký User:', err.message);
+                if (err.code === 'ER_DUP_ENTRY') {
+                    // Trả chi tiết lỗi ra App để dễ dàng debug (VD: Duplicate entry '0' for key 'PRIMARY')
+                    if (err.message.includes('PRIMARY')) {
+                        return res.status(400).json({ success: false, message: 'Lỗi CSDL: Cột ID chưa được bật tự động tăng (AUTO_INCREMENT)!' });
+                    }
+                    return res.status(400).json({ success: false, message: 'Trùng lặp dữ liệu: ' + err.message });
+                }
+                return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+            }
             res.json({ success: true, message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.' });
         });
     } catch (error) {
@@ -370,8 +380,17 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
     if (!username || !password || !email) return res.status(400).json({ success: false, message: 'Thiếu thông tin!' });
     
     const hashed = await bcrypt.hash(password, 10);
-    db.query('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [username, email, hashed, role || 'user'], (err) => {
-        if (err) return res.status(400).json({ success: false, message: 'Username hoặc Email đã bị trùng!' });
+    db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, ?, 0)', [username, email, hashed, role || 'user'], (err) => {
+        if (err) {
+            console.error('⚠️ [MySQL] Lỗi Admin tạo User:', err.message);
+            if (err.code === 'ER_DUP_ENTRY') {
+                if (err.message.includes('PRIMARY')) {
+                    return res.status(400).json({ success: false, message: 'Lỗi CSDL: Cột ID chưa được bật tự động tăng (AUTO_INCREMENT)!' });
+                }
+                return res.status(400).json({ success: false, message: 'Trùng lặp dữ liệu: ' + err.message });
+            }
+            return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+        }
         res.json({ success: true, message: 'Tạo tài khoản thành công!' });
     });
 });
