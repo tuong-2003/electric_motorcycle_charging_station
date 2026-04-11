@@ -79,8 +79,10 @@ client.on('message', (topic, message) => {
         console.log(`⚡ [Tủ ${stationId} - Ổ ${outletId}] Trạng thái:`, data);
         
         // Lưu dữ liệu vào Database MySQL
-        const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power) VALUES (?, ?, ?, ?, ?)';
-        db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power], (err, result) => {
+        const tempVal = data.temperature !== undefined ? data.temperature : null;
+        const humVal = data.humidity !== undefined ? data.humidity : null;
+        const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err, result) => {
             if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
         });
     }
@@ -92,7 +94,13 @@ client.on('message', (topic, message) => {
 
 // API Đăng nhập ảo
 app.post('/api/login', (req, res) => {
-    const { username, password, rememberMe } = req.body;
+    let { username, password, rememberMe } = req.body;
+
+    // Tự động cắt bỏ dấu cách thừa do bàn phím điện thoại tự chèn vào
+    if (username) username = username.trim();
+
+    // [FIX] Thêm kiểm tra đầu vào để tránh lỗi không đáng có
+    if (!username || !password) return res.status(400).json({ success: false, message: 'Vui lòng nhập đủ tài khoản và mật khẩu!' });
 
     // Truy vấn Database để tìm User
     const sql = 'SELECT * FROM users WHERE username = ?';
@@ -187,7 +195,11 @@ app.post('/api/reset-password', async (req, res) => {
 
 // API Đăng ký tài khoản tự do (Cho khách hàng từ App)
 app.post('/api/register', async (req, res) => {
-    const { username, email, password } = req.body;
+    let { username, email, password } = req.body;
+
+    // Cắt bỏ khoảng trắng thừa
+    if (username) username = username.trim();
+    if (email) email = email.trim();
     
     if (!username || !email || !password) return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ thông tin!' });
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải từ 6 ký tự!' });
@@ -344,7 +356,9 @@ app.get('/api/stations', verifyToken, (req, res) => {
             s.location, 
             s.unit_price, 
             s.status,
-            COALESCE(SUM(cs.total_kwh), 0) as total_kwh
+            COALESCE(SUM(cs.total_kwh), 0) as total_kwh,
+            (SELECT temperature FROM telemetry WHERE station_id LIKE CONCAT(s.station_id, '.%') AND temperature IS NOT NULL ORDER BY id DESC LIMIT 1) as temperature,
+            (SELECT humidity FROM telemetry WHERE station_id LIKE CONCAT(s.station_id, '.%') AND humidity IS NOT NULL ORDER BY id DESC LIMIT 1) as humidity
         FROM stations s
         LEFT JOIN charging_sessions cs ON cs.station_id LIKE CONCAT(s.station_id, '.%') AND cs.status = 'completed'
         GROUP BY s.station_id

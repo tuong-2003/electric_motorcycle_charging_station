@@ -61,13 +61,19 @@ export default function App() {
   }, []);
 
   const handleLogin = async () => {
+    const cleanUsername = username.trim(); // Loại bỏ dấu cách thừa khi gõ trên điện thoại
+    if (!cleanUsername || !password) {
+      Alert.alert('Thông báo', 'Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
+      return;
+    }
+
     setIsLoading(true);
     setLoginError(false);
     try {
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, rememberMe })
+        body: JSON.stringify({ username: cleanUsername, password, rememberMe })
       });
       const data = await response.json();
 
@@ -139,6 +145,26 @@ export default function App() {
     }
   };
 
+  // Tự động đồng bộ dữ liệu vào Trạm đang xem chi tiết nếu danh sách stations có cập nhật mới
+  useEffect(() => {
+    if (selectedStation) {
+      const updated = stations.find((s: any) => s.station_id === selectedStation.station_id);
+      if (updated) setSelectedStation(updated);
+    }
+  }, [stations]);
+
+  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc mỗi 5 giây để bắt kịp nhiệt độ mới nhất
+  useEffect(() => {
+    let interval: any;
+    if (isLoggedIn && authToken && activeTab === 'home') {
+      interval = setInterval(() => {
+        fetchStations(authToken);
+      }, 5000);
+    }
+    // Dọn dẹp timer khi chuyển tab hoặc tắt app
+    return () => clearInterval(interval);
+  }, [isLoggedIn, authToken, activeTab]);
+  
   // Hàm tải Lịch sử sạc từ Backend
   const fetchHistory = async () => {
     try {
@@ -430,6 +456,18 @@ export default function App() {
                 <Text style={styles.detailTitle}>{selectedStation.name}</Text>
                 <Text style={styles.detailLocation}>{selectedStation.location}</Text>
                 <Text style={styles.detailPrice}>Đơn giá: {selectedStation.unit_price.toLocaleString('vi-VN')} đ/kWh</Text>
+              </View>
+
+              {/* --- KHU VỰC HIỂN THỊ NHIỆT ĐỘ & ĐỘ ẨM --- */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                <View style={[styles.stationDetailHeader, { flex: 1, marginHorizontal: 5, padding: 15, marginBottom: 0 }]}>
+                  <FontAwesome5 name="temperature-high" size={24} color="#e74c3c" style={{ marginBottom: 5 }} />
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>{selectedStation.temperature != null ? `${selectedStation.temperature} °C` : '-- °C'}</Text>
+                </View>
+                <View style={[styles.stationDetailHeader, { flex: 1, marginHorizontal: 5, padding: 15, marginBottom: 0 }]}>
+                  <FontAwesome5 name="tint" size={24} color="#3498db" style={{ marginBottom: 5 }} />
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>{selectedStation.humidity != null ? `${selectedStation.humidity} %` : '-- %'}</Text>
+                </View>
               </View>
 
               <Text style={styles.sectionTitle}>Chọn ổ cắm để sạc</Text>

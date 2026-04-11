@@ -2,16 +2,25 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <DHT.h>
 
-// --- Cấu hình WiFi ---
-const char* WIFI_SSID = "KST Group";
-const char* WIFI_PASS = "Kim$0nT13n";
+// // --- Cấu hình WiFi ---
+// const char* WIFI_SSID = "KST Group";
+// const char* WIFI_PASS = "Kim$0nT13n";
+
+ const char* WIFI_SSID = "Rubyhouselau1@2025";
+ const char* WIFI_PASS = "ruby@09876";
 
 // --- Cấu hình MQTT Cloud (Đang dùng HiveMQ Public để test) ---
 // Sau này khi dự án release, ta sẽ đổi sang HiveMQ Cloud (bản có SSL/Mật khẩu bảo mật)
 const char* MQTT_BROKER = "broker.hivemq.com"; 
 const int   MQTT_PORT = 1883; 
 const char* MQTT_CLIENT_ID = "EV_Charger_001"; // ID phải là duy nhất cho mỗi trụ sạc
+
+// --- Cấu hình DHT11 ---
+#define DHTPIN 19        // Chân dữ liệu của DHT11 kết nối với ESP32 (bạn có thể thay đổi tùy thực tế)
+#define DHTTYPE DHT11   // Sử dụng loại cảm biến DHT11
+DHT dht(DHTPIN, DHTTYPE);
 
 // --- Các Topic MQTT ---
 // Dùng wildcard (+) để lắng nghe lệnh từ tất cả các tủ và ổ cắm
@@ -96,6 +105,8 @@ void setup() {
     setup_wifi();
     mqtt.setServer(MQTT_BROKER, MQTT_PORT);
     mqtt.setCallback(mqtt_callback);
+
+    dht.begin();
 }
 
 void loop() {
@@ -109,7 +120,19 @@ void loop() {
     static uint32_t last_publish = 0;
     if (millis() - last_publish > 5000) {
         last_publish = millis();
+
+        // Đọc dữ liệu từ cảm biến DHT11
+        float humidity = dht.readHumidity();
+        float temperature = dht.readTemperature();
         
+        // --- DEBUG CẢM BIẾN ---
+        Serial.print("[DHT11] Nhiet do: "); 
+        Serial.print(temperature);
+        Serial.print(" *C | Do am: "); 
+        Serial.print(humidity);
+        Serial.println(" %");
+        // ----------------------
+
         // Gửi dữ liệu mô phỏng cho cả Tủ 1 và Tủ 2 (tổng 4 ổ cắm)
         for (int s = 1; s <= 2; s++) {
             for (int i = 1; i <= 2; i++) {
@@ -132,6 +155,12 @@ void loop() {
                 doc["voltage"] = voltage;
                 doc["current"] = current;
                 doc["power"] = power;
+
+                // Gửi kèm nhiệt độ & độ ẩm vào JSON nếu đọc thành công
+                if (!isnan(temperature) && !isnan(humidity)) {
+                    doc["temperature"] = round(temperature * 10) / 10.0;
+                    doc["humidity"] = round(humidity * 10) / 10.0;
+                }
 
                 String payload;
                 serializeJson(doc, payload);
