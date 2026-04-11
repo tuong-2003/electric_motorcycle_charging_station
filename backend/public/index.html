@@ -324,13 +324,14 @@
                                         <th>Mã Trạm (ID)</th>
                                         <th>Tên / Vị trí</th>
                                         <th>Trạng thái mạng</th>
+                                        <th>Nhiệt độ / Độ ẩm</th>
                                         <th>Tổng điện năng</th>
                                         <th>Đơn giá (VNĐ/kWh)</th>
                                         <th>Cài đặt</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stations_table_body">
-                                    <tr><td colspan="6">Đang tải dữ liệu...</td></tr>
+                                    <tr><td colspan="7">Đang tải dữ liệu...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -822,10 +823,13 @@
                     let badge = st.status === 'online' ? '<span class="badge bg-success">Online</span>' : (st.status === 'maintenance' ? '<span class="badge bg-warning text-dark">Bảo trì</span>' : '<span class="badge bg-danger">Offline</span>');
                     let kwh = parseFloat(st.total_kwh).toFixed(2);
                     let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
+                    let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
+                    let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
                     tbody.innerHTML += `<tr>
                         <td><strong>${st.station_id}</strong></td>
                         <td>${st.name}<br><small class="text-muted">${st.location}</small></td>
                         <td>${badge}</td>
+                        <td><span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span></td>
                         <td>${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
