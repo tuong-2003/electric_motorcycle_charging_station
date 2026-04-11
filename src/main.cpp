@@ -4,12 +4,9 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
 
-// // --- Cấu hình WiFi ---
-// const char* WIFI_SSID = "KST Group";
-// const char* WIFI_PASS = "Kim$0nT13n";
-
- const char* WIFI_SSID = "Rubyhouselau1@2025";
- const char* WIFI_PASS = "ruby@09876";
+// --- Cấu hình WiFi ---
+const char* WIFI_SSID = "Rubyhouselau1@2025";
+const char* WIFI_PASS = "ruby@09876";
 
 // --- Cấu hình MQTT Cloud (Đang dùng HiveMQ Public để test) ---
 // Sau này khi dự án release, ta sẽ đổi sang HiveMQ Cloud (bản có SSL/Mật khẩu bảo mật)
@@ -125,14 +122,6 @@ void loop() {
         float humidity = dht.readHumidity();
         float temperature = dht.readTemperature();
         
-        // --- DEBUG CẢM BIẾN ---
-        Serial.print("[DHT11] Nhiet do: "); 
-        Serial.print(temperature);
-        Serial.print(" *C | Do am: "); 
-        Serial.print(humidity);
-        Serial.println(" %");
-        // ----------------------
-
         // Gửi dữ liệu mô phỏng cho cả Tủ 1 và Tủ 2 (tổng 4 ổ cắm)
         for (int s = 1; s <= 2; s++) {
             for (int i = 1; i <= 2; i++) {
@@ -169,7 +158,6 @@ void loop() {
                 char topic_pub[50];
                 snprintf(topic_pub, sizeof(topic_pub), "ev_station/%03d/outlet/%d/status", s, i);
                 mqtt.publish(topic_pub, payload.c_str());
-                Serial.println("[MQTT] Da gui: " + payload);
             }
         }
     }

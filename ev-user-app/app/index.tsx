@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Button, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -167,8 +167,11 @@ export default function App() {
   
   // Hàm tải Lịch sử sạc từ Backend
   const fetchHistory = async () => {
+    if (!authToken) return;
     try {
-      const response = await fetch(`${API_URL}/api/sessions/history`);
+      const response = await fetch(`${API_URL}/api/sessions/history`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
       const data = await response.json();
       if (data.success) {
         setHistory(data.data || []);
@@ -405,7 +408,9 @@ export default function App() {
         />
         <View style={styles.overlay}>
           <Text style={styles.scanText}>Di chuyển camera vào mã QR trên trụ sạc</Text>
-          <Button title="Hủy quét" onPress={() => setIsScanning(false)} color="#e74c3c" />
+          <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c', width: 150 }]} onPress={() => setIsScanning(false)}>
+            <Text style={styles.buttonText}>Hủy quét</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
