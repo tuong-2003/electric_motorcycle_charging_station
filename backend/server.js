@@ -37,6 +37,10 @@ db.connect((err) => {
         console.error('❌ [MySQL] Không thể kết nối! Chi tiết lỗi:', err.message);
     } else {
         console.log('🗄️ [MySQL] Đã kết nối tới Database thành công!');
+        // [FIX] Ép múi giờ của Database về giờ Việt Nam (GMT+7) cho mọi truy vấn
+        db.query("SET time_zone = '+07:00';", (err) => {
+            if (err) console.error('⚠️ [MySQL] Không thể set timezone:', err.message);
+        });
     }
 });
 
@@ -456,14 +460,13 @@ function runBackgroundWorker() {
     });
 
     // Lấy tất cả các phiên đang sạc của User
-    db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance FROM charging_sessions s JOIN users u ON s.user_id = u.id WHERE s.status = "ongoing"', (err, sessions) => {
+    db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN users u ON s.user_id = u.id WHERE s.status = "ongoing"', (err, sessions) => {
         if (err || sessions.length === 0) return;
 
         sessions.forEach(session => {
-            db.query('SELECT created_at FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
+            db.query('SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) as seconds_since FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
                 if (tele.length > 0) {
-                    const lastHeartbeat = new Date(tele[0].created_at);
-                    const secondsSinceLastHeartbeat = (new Date() - lastHeartbeat) / 1000;
+                    const secondsSinceLastHeartbeat = tele[0].seconds_since;
 
                     if (secondsSinceLastHeartbeat > 30) {
                         console.log(`⚠️ [Worker] Trạm ${session.station_id} mất kết nối! Tự động chốt hóa đơn #${session.id}`);
@@ -474,7 +477,7 @@ function runBackgroundWorker() {
                 }
             });
 
-            const durationHours = (new Date() - new Date(session.start_time)) / 3600000.0;
+            const durationHours = session.duration_sec / 3600.0;
             db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele) => {
                 let avgPower = (tele && tele.length > 0 && tele[0].avg_power != null) ? tele[0].avg_power : 0;
                 const tempCost = (avgPower / 1000) * durationHours * 3500;
