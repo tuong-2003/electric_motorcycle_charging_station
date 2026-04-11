@@ -46,34 +46,22 @@ void setup_wifi() {
 
 // 2. Callback xử lý khi nhận được lệnh từ Server/Web
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
-    String message = "";
-    for (unsigned int i = 0; i < length; i++) {
-        message += (char)payload[i];
-    }
-    Serial.println("\n[MQTT] Nhan lenh tu topic: " + String(topic));
-    Serial.println("Noi dung: " + message);
-
-    // Tách stationId và outletId từ topic (VD: ev_station/002/outlet/1/cmd)
-    String t = String(topic);
-    int stationId = 1;
-    if (t.indexOf("002") != -1) stationId = 2;
-    
-    int outletId = 1;
-    if (t.indexOf("/2/cmd") != -1) outletId = 2;
-
-    // Xử lý JSON lệnh nhận được
+    // Xử lý JSON lệnh nhận được trực tiếp từ payload (Không dùng String cộng dồn gây phân mảnh RAM)
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, message);
+    DeserializationError error = deserializeJson(doc, payload, length);
     
     if (!error) {
-        String command = doc["command"]; 
-        if (command == "START_CHARGE") {
+        const char* command = doc["command"]; 
+        
+        // Dùng hàm strstr nguyên thủy của C để tìm kiếm chuỗi siêu nhanh
+        int stationId = (strstr(topic, "/002/") != NULL) ? 2 : 1;
+        int outletId = (strstr(topic, "/outlet/2/") != NULL) ? 2 : 1;
+
+        if (strcmp(command, "START_CHARGE") == 0) {
             is_charging[stationId - 1][outletId - 1] = true;
-            Serial.printf("-> Thuc thi: DONG RELAY TU %d - O SO %d\n", stationId, outletId);
             // TODO: digitalWrite(RELAY_PIN, HIGH);
-        } else if (command == "STOP_CHARGE") {
+        } else if (strcmp(command, "STOP_CHARGE") == 0) {
             is_charging[stationId - 1][outletId - 1] = false;
-            Serial.printf("-> Thuc thi: NGAT RELAY TU %d - O SO %d\n", stationId, outletId);
             // TODO: digitalWrite(RELAY_PIN, LOW);
         }
     }

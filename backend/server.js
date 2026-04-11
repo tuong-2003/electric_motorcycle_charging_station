@@ -52,6 +52,14 @@ const transporter = nodemailer.createTransport({
 });
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
 
+// [TỐI ƯU] Tự động dọn rác (Garbage Collection) các mã OTP hết hạn mỗi 10 phút để chống rò rỉ RAM
+setInterval(() => {
+    const now = Date.now();
+    for (let [user, record] of otpStorage.entries()) {
+        if (now > record.expires) otpStorage.delete(user);
+    }
+}, 600000);
+
 // ==========================================
 // 2. CẤU HÌNH MQTT KẾT NỐI VỚI ESP32
 // ==========================================
@@ -72,17 +80,21 @@ client.on('connect', () => {
 client.on('message', (topic, message) => {
     const parts = topic.split('/');
     if (parts.length === 5 && parts[0] === 'ev_station' && parts[4] === 'status') {
-        const data = JSON.parse(message.toString());
-        const stationId = parts[1];
-        const outletId = parts[3];
-        
-        // Lưu dữ liệu vào Database MySQL
-        const tempVal = data.temperature !== undefined ? data.temperature : null;
-        const humVal = data.humidity !== undefined ? data.humidity : null;
-        const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
-        db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err, result) => {
-            if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
-        });
+        try {
+            const data = JSON.parse(message.toString());
+            const stationId = parts[1];
+            const outletId = parts[3];
+            
+            // Lưu dữ liệu vào Database MySQL
+            const tempVal = data.temperature !== undefined ? data.temperature : null;
+            const humVal = data.humidity !== undefined ? data.humidity : null;
+            const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err) => {
+                if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
+            });
+        } catch (error) {
+            // [BẢO VỆ] Bỏ qua gói tin lỗi, ngăn Node.js bị crash (sập server) nếu nhận chuỗi không phải JSON
+        }
     }
 });
 

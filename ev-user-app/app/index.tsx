@@ -119,7 +119,7 @@ export default function App() {
         setPassword('');
       }
     } catch (error) {
-      console.log(error);
+      // Bỏ qua log lỗi mạng ngầm
     }
   };
 
@@ -141,7 +141,7 @@ export default function App() {
         setPassword('');
       }
     } catch (error) {
-      console.log('Lỗi tải danh sách trạm:', error);
+      // Bỏ qua log lỗi mạng ngầm
     }
   };
 
@@ -177,7 +177,7 @@ export default function App() {
         setHistory(data.data || []);
       }
     } catch (error) {
-      console.log('Lỗi tải lịch sử:', error);
+      // Bỏ qua log lỗi mạng ngầm
     }
   };
 
