@@ -670,6 +670,41 @@
         }
     });
 
+    // --- [MỚI] AUTO REFRESH (POLLING) CHO WEB ADMIN ---
+    // Đảm bảo Nhiệt độ / Độ ẩm luôn được cập nhật thời gian thực (Giống hệt App)
+    function syncStationsData() {
+        if (!authToken) return;
+        fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // 1. Cập nhật ngay lên màn hình TỔNG QUAN (Phòng khi MQTT bị trễ)
+                data.data.forEach(st => {
+                    const tempEl = document.getElementById('temp_' + st.station_id);
+                    if (tempEl && st.temperature != null) tempEl.innerText = st.temperature;
+                    
+                    const humEl = document.getElementById('hum_' + st.station_id);
+                    if (humEl && st.humidity != null) humEl.innerText = st.humidity;
+                });
+
+                // 2. Cập nhật trên DANH SÁCH TRẠM (Chỉ thay đổi text, không làm chớp nháy bảng)
+                if (!document.getElementById('tab-stations').classList.contains('d-none')) {
+                    data.data.forEach(st => {
+                        const cell = document.getElementById('table_th_' + st.station_id);
+                        if (cell) {
+                            let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
+                            let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
+                            cell.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span>`;
+                        }
+                    });
+                }
+            }
+        }).catch(e => {});
+    }
+
+    // Quét cập nhật tự động mỗi 5 giây
+    setInterval(syncStationsData, 5000);
+
     // --- XÁC THỰC BẢO MẬT (JWT) ---
     let authToken = localStorage.getItem('ev_token') || ''; // Lấy Token từ LocalStorage nếu có
 
@@ -701,6 +736,9 @@
                 const loginModalEl = document.getElementById('loginModal');
                 const modalInstance = bootstrap.Modal.getInstance(loginModalEl);
                 if (modalInstance) modalInstance.hide();
+
+                // [MỚI] Tải ngay Nhiệt độ/Độ ẩm để hiển thị tức thì khi vừa đăng nhập xong
+                syncStationsData();
 
                 // Nếu có tin nhắn chào mừng lúc đăng nhập thì hiện ra sau khi đã vẽ xong ví tiền
                 if (loginMessage)
@@ -829,7 +867,7 @@
                         <td><strong>${st.station_id}</strong></td>
                         <td>${st.name}<br><small class="text-muted">${st.location}</small></td>
                         <td>${badge}</td>
-                        <td><span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span></td>
+                        <td id="table_th_${st.station_id}"><span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span></td>
                         <td>${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
