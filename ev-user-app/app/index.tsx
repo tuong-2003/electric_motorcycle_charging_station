@@ -159,7 +159,7 @@ export default function App() {
     if (isLoggedIn && authToken && activeTab === 'home') {
       interval = setInterval(() => {
         fetchStations(authToken);
-      }, 5000);
+      }, 10000); // [TỐI ƯU] Tăng lên 10 giây để tiết kiệm pin và giảm tải máy chủ
     }
     // Dọn dẹp timer khi chuyển tab hoặc tắt app
     return () => clearInterval(interval);

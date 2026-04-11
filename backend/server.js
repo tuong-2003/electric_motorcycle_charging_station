@@ -66,6 +66,9 @@ setInterval(() => {
 const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://broker.hivemq.com';
 const client = mqtt.connect(MQTT_BROKER);
 
+// [TỐI ƯU] Bộ nhớ đệm (RAM Cache) lưu trạng thái mới nhất của trạm
+const liveDataCache = {};
+
 // Dùng wildcard để hứng mọi tín hiệu từ mọi Tủ và mọi Ổ
 const TOPIC_STATUS = 'ev_station/+/outlet/+/status';
 
@@ -88,6 +91,12 @@ client.on('message', (topic, message) => {
             // Lưu dữ liệu vào Database MySQL
             const tempVal = data.temperature !== undefined ? data.temperature : null;
             const humVal = data.humidity !== undefined ? data.humidity : null;
+            
+            // [TỐI ƯU] Lưu vào RAM Cache siêu tốc
+            if (!liveDataCache[stationId]) liveDataCache[stationId] = {};
+            if (tempVal !== null) liveDataCache[stationId].temperature = tempVal;
+            if (humVal !== null) liveDataCache[stationId].humidity = humVal;
+
             const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
             db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err) => {
                 if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
@@ -364,16 +373,21 @@ app.get('/api/stations', verifyToken, (req, res) => {
             s.location, 
             s.unit_price, 
             s.status,
-            COALESCE(SUM(cs.total_kwh), 0) as total_kwh,
-            (SELECT temperature FROM telemetry WHERE station_id LIKE CONCAT(s.station_id, '.%') AND temperature IS NOT NULL ORDER BY id DESC LIMIT 1) as temperature,
-            (SELECT humidity FROM telemetry WHERE station_id LIKE CONCAT(s.station_id, '.%') AND humidity IS NOT NULL ORDER BY id DESC LIMIT 1) as humidity
+            COALESCE(SUM(cs.total_kwh), 0) as total_kwh
         FROM stations s
         LEFT JOIN charging_sessions cs ON cs.station_id LIKE CONCAT(s.station_id, '.%') AND cs.status = 'completed'
         GROUP BY s.station_id
     `;
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
-        res.json({ success: true, data: results });
+        
+        // [TỐI ƯU] Ghép dữ liệu từ DB với dữ liệu Real-time từ RAM Cache
+        const mappedData = results.map(st => ({
+            ...st,
+            temperature: liveDataCache[st.station_id]?.temperature || null,
+            humidity: liveDataCache[st.station_id]?.humidity || null
+        }));
+        res.json({ success: true, data: mappedData });
     });
 });
 
@@ -433,6 +447,13 @@ app.post('/api/users/add_balance', verifyToken, (req, res) => {
 // 4. BACKGROUND WORKER (CRONJOB) - GIÁM SÁT & TỰ ĐỘNG XỬ LÝ
 // ==========================================
 function runBackgroundWorker() {
+
+    // [TỐI ƯU] Xóa dữ liệu rác (telemetry) cũ hơn 7 ngày để chống tràn Database
+    db.query('DELETE FROM telemetry WHERE created_at < NOW() - INTERVAL 7 DAY', (err, result) => {
+        if (!err && result.affectedRows > 0) {
+            console.log(`🧹 [Worker] Đã dọn dẹp ${result.affectedRows} dòng dữ liệu cũ trong bảng telemetry.`);
+        }
+    });
 
     // Lấy tất cả các phiên đang sạc của User
     db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance FROM charging_sessions s JOIN users u ON s.user_id = u.id WHERE s.status = "ongoing"', (err, sessions) => {
