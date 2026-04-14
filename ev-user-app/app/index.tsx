@@ -615,13 +615,13 @@ export default function App() {
           </View>
           <Text style={styles.mainTitle}>Khôi Phục Mật Khẩu</Text>
           <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>
-            {fpStep === 1 ? 'Nhập tài khoản để nhận mã OTP qua email' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
+            {fpStep === 1 ? 'Nhập tài khoản hoặc Email để nhận mã OTP' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
           </Text>
         </View>
 
         {fpStep === 1 ? (
           <>
-            <TextInput style={[styles.input, fpUsernameError && styles.inputError]} placeholder="Tài khoản của bạn" value={fpUsername} onChangeText={(text) => { setFpUsername(text); setFpUsernameError(false); }} autoCapitalize="none" />
+            <TextInput style={[styles.input, fpUsernameError && styles.inputError]} placeholder="Tài khoản hoặc Email của bạn" value={fpUsername} onChangeText={(text) => { setFpUsername(text); setFpUsernameError(false); }} autoCapitalize="none" />
             <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c' }]} onPress={handleRequestOtp} disabled={isFpLoading}>
               {isFpLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Nhận mã OTP qua Email</Text>}
             </TouchableOpacity>

@@ -68,13 +68,15 @@ db.connect((err) => {
 });
 
 // ==========================================
-// CẤU HÌNH GỬI EMAIL (GMAIL)
+// CẤU HÌNH GỬI EMAIL (SMTP BREVO QUA PORT 2525 ĐỂ TRÁNH RENDER CHẶN)
 // ==========================================
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp-relay.brevo.com',
+    port: 2525, // Render không chặn port này!
     auth: {
-        user: 'tuog678@gmail.com', // Gắn cứng trực tiếp, KHÔNG CẦN cấu hình trên Render
-        pass: 'jrng aqep tuqx zfkd' // <-- BẠN HÃY XÓA DÒNG CHỮ NÀY VÀ ĐIỀN MẬT KHẨU VÀO ĐÂY
+        // Lấy thông tin trong màn hình SMTP & API -> tab "SMTP" của Brevo
+        user: process.env.BREVO_USER || 'điền-email-đăng-nhập-brevo-vào-đây', 
+        pass: process.env.BREVO_PASS || 'điền-mật-khẩu-smtp-brevo-vào-đây' 
     }
 });
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
@@ -193,24 +195,28 @@ app.post('/api/forgot-password', (req, res) => {
     let { username } = req.body;
     if (username) username = username.trim();
 
-    if (!username) return res.status(400).json({ success: false, message: 'Vui lòng nhập tên tài khoản!' });
+    if (!username) return res.status(400).json({ success: false, message: 'Vui lòng nhập tên tài khoản hoặc email!' });
 
-    db.query('SELECT id, email FROM users WHERE username = ?', [username], (err, results) => {
+    // Hỗ trợ tìm kiếm bằng Username HOẶC Email
+    db.query('SELECT id, username, email FROM users WHERE username = ? OR email = ?', [username, username], (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
-        if (results.length === 0) return res.status(404).json({ success: false, message: 'Tài khoản không tồn tại!' });
+        if (results.length === 0) return res.status(404).json({ success: false, message: 'Tài khoản hoặc Email không tồn tại!' });
 
         const userEmail = results[0].email;
+        const actualUsername = results[0].username; // Lấy đúng username gốc phòng khi họ nhập email
         if (!userEmail) return res.status(400).json({ success: false, message: 'Tài khoản này chưa được liên kết Email!' });
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpKey = username.toLowerCase(); // Chuẩn hóa key về chữ thường
+        const otpKey = actualUsername.toLowerCase(); // Lưu map OTP bằng username chính xác
         otpStorage.set(otpKey, { otp, expires: Date.now() + 5 * 60 * 1000 }); // Sống 5 phút
 
+        // Dùng email đã đăng ký Brevo làm người gửi (không dùng ID đăng nhập SMTP)
+        const senderEmail = process.env.BREVO_SENDER || 'tuog678@gmail.com'; 
         const mailOptions = {
-            from: '"Hệ thống Trạm Sạc EV" <tuog678@gmail.com>',
+            from: `"Hệ thống Trạm Sạc EV" <${senderEmail}>`,
             to: userEmail,
             subject: `Mã OTP của bạn là ${otp}`,
-            html: `<p>Chào ${username},</p><p>Mã OTP khôi phục mật khẩu của bạn là: <strong style="font-size:18px;">${otp}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
+            html: `<p>Chào ${actualUsername},</p><p>Mã OTP khôi phục mật khẩu của bạn là: <strong style="font-size:18px;">${otp}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
         };
 
         transporter.sendMail(mailOptions, (error, info) => {
@@ -231,18 +237,25 @@ app.post('/api/reset-password', async (req, res) => {
     let { username, otp, newPassword } = req.body;
     if (username) username = username.trim();
     
-    const otpKey = username ? username.toLowerCase() : '';
-    const record = otpStorage.get(otpKey);
-    if (!record) return res.status(400).json({ success: false, message: 'OTP đã hết hạn hoặc chưa được yêu cầu!' });
-    if (Date.now() > record.expires) { otpStorage.delete(otpKey); return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút)!' }); }
-    if (record.otp !== otp) return res.status(400).json({ success: false, message: 'Mã OTP không chính xác!' });
-    if (!newPassword || newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải từ 6 ký tự!' });
+    // Tìm chính xác username gốc (phòng trường hợp người dùng nhập email ở bước trước)
+    db.query('SELECT username FROM users WHERE username = ? OR email = ?', [username, username], async (err, results) => {
+        if (err || results.length === 0) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản!' });
+        
+        const actualUsername = results[0].username;
+        const otpKey = actualUsername.toLowerCase();
+        
+        const record = otpStorage.get(otpKey);
+        if (!record) return res.status(400).json({ success: false, message: 'OTP đã hết hạn hoặc chưa được yêu cầu!' });
+        if (Date.now() > record.expires) { otpStorage.delete(otpKey); return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút)!' }); }
+        if (record.otp !== otp) return res.status(400).json({ success: false, message: 'Mã OTP không chính xác!' });
+        if (!newPassword || newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải từ 6 ký tự!' });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
-    db.query('UPDATE users SET password = ? WHERE username = ?', [hashed, username], (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi cập nhật DB' });
-        otpStorage.delete(otpKey); // Dọn rác
-        res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+        const hashed = await bcrypt.hash(newPassword, 10);
+        db.query('UPDATE users SET password = ? WHERE username = ?', [hashed, actualUsername], (err) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi cập nhật DB' });
+            otpStorage.delete(otpKey); // Dọn rác
+            res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+        });
     });
 });
 
