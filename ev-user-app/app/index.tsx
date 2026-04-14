@@ -347,7 +347,7 @@ export default function App() {
         if (data.message.includes('Email')) {
           setRegEmailError(true);
         }
-          Alert.alert('Lỗi', data.message);
+        Alert.alert('Thông báo', data.message);
       }
     } catch (error) {
       Alert.alert('Lỗi mạng', 'Không thể kết nối đến máy chủ!');
