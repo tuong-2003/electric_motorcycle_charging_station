@@ -43,7 +43,7 @@ db.connect((err) => {
         });
 
         // [MỚI] Tự động tạo tài khoản Admin mặc định nếu chưa có
-        const adminUser = process.env.ADMIN_USERNAME || 'admin';
+        const adminUser = process.env.ADMIN_USERNAME || 'Admin';
         const adminPass = process.env.ADMIN_PASSWORD || '@minad';
         const adminEmail = process.env.ADMIN_EMAIL || 'tuog678@gmail.com';
 
@@ -216,7 +216,8 @@ app.post('/api/forgot-password', (req, res) => {
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
                 console.error('⚠️ [Nodemailer] Lỗi gửi email:', error);
-                return res.status(500).json({ success: false, message: 'Lỗi gửi email! Vui lòng kiểm tra cấu hình Gmail.' });
+                // Trả về thẳng lỗi của Google để App hiển thị, giúp bắt bệnh ngay lập tức
+                return res.status(500).json({ success: false, message: 'Chi tiết lỗi Gmail: ' + error.message });
             }
             
             // Che mờ Email để bảo mật (VD: tuog678@gmail.com -> t***@gmail.com)
@@ -549,45 +550,49 @@ app.delete('/api/users/:id', verifyToken, (req, res) => {
 // ==========================================
 function runBackgroundWorker() {
 
-    // [TỐI ƯU] Xóa dữ liệu rác (telemetry) cũ hơn 7 ngày để chống tràn Database
-    db.query('DELETE FROM telemetry WHERE created_at < NOW() - INTERVAL 7 DAY', (err, result) => {
-        if (!err && result.affectedRows > 0) {
-            console.log(`🧹 [Worker] Đã dọn dẹp ${result.affectedRows} dòng dữ liệu cũ trong bảng telemetry.`);
-        }
-    });
-
     // Lấy tất cả các phiên đang sạc của User
     db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN users u ON s.user_id = u.id WHERE s.status = "ongoing"', (err, sessions) => {
         if (err || sessions.length === 0) return;
 
         sessions.forEach(session => {
+            // [FIX LOGIC] Chuyển kiểm tra số dư VÀO TRONG callback kiểm tra rớt mạng để tránh LỖI CHẠY ĐUA (Race Condition)
             db.query('SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) as seconds_since FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
-                if (tele.length > 0) {
+                if (tele && tele.length > 0) {
                     const secondsSinceLastHeartbeat = tele[0].seconds_since;
 
                     if (secondsSinceLastHeartbeat > 30) {
                         console.log(`⚠️ [Worker] Trạm ${session.station_id} mất kết nối! Tự động chốt hóa đơn #${session.id}`);
                         const [stId, outId] = session.station_id.split('.');
                         processStopCharge(stId, outId, session.user_id, () => {});
-                        return; // Dừng kiểm tra phiên này
+                        return; // Đã chốt hóa đơn do rớt mạng, KHÔNG kiểm tra số dư nữa!
                     }
                 }
-            });
 
-            const durationHours = session.duration_sec / 3600.0;
-            db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele) => {
-                let avgPower = (tele && tele.length > 0 && tele[0].avg_power != null) ? tele[0].avg_power : 0;
-                const tempCost = (avgPower / 1000) * durationHours * 3500;
+                // Nếu trạm VẪN ONLINE, tiến hành kiểm tra số dư ví
+                const durationHours = session.duration_sec / 3600.0;
+                db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele2) => {
+                    let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;
+                    const tempCost = (avgPower / 1000) * durationHours * 3500;
 
-                if (tempCost >= session.balance) {
-                    console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
-                    const [stId, outId] = session.station_id.split('.');
-                    processStopCharge(stId, outId, session.user_id, () => {});
-                }
+                    if (tempCost >= session.balance) {
+                        console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
+                        const [stId, outId] = session.station_id.split('.');
+                        processStopCharge(stId, outId, session.user_id, () => {});
+                    }
+                });
             });
         });
     });
 }
+
+// [MỚI] Tách riêng tác vụ dọn dẹp Database chạy mỗi 24h (Thay vì 15 giây 1 lần gây giật lag máy chủ)
+setInterval(() => {
+    db.query('DELETE FROM telemetry WHERE created_at < NOW() - INTERVAL 7 DAY', (err, result) => {
+        if (!err && result.affectedRows > 0) {
+            console.log(`🧹 [Cleaner] Đã dọn dẹp ${result.affectedRows} dòng dữ liệu cũ trong bảng telemetry.`);
+        }
+    });
+}, 24 * 60 * 60 * 1000); // 24 giờ
 
 // Chặn báo lỗi rác 404 do trình duyệt tự tìm file favicon
 app.get('/favicon.ico', (req, res) => res.status(204).end());
