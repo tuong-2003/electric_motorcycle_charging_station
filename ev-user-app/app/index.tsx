@@ -21,15 +21,17 @@ export default function App() {
   const [selectedStation, setSelectedStation] = useState<any>(null); // State lưu trạm đang xem chi tiết
   const [history, setHistory] = useState([]); // State lưu lịch sử giao dịch
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // State cho luồng Quên mật khẩu qua Email
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [fpStep, setFpStep] = useState(1);
   const [fpUsername, setFpUsername] = useState('');
+  const [fpEmail, setFpEmail] = useState(''); // [MỚI] Ô nhập email cho bảo mật chống spam
   const [fpOtp, setFpOtp] = useState('');
   const [fpNewPassword, setFpNewPassword] = useState('');
   const [isFpLoading, setIsFpLoading] = useState(false);
   const [fpUsernameError, setFpUsernameError] = useState(false);
+  const [fpEmailError, setFpEmailError] = useState(false); // [MỚI] Lỗi ô nhập email
   const [fpOtpError, setFpOtpError] = useState(false);
   const [fpNewPasswordError, setFpNewPasswordError] = useState(false);
   const [showFpPassword, setShowFpPassword] = useState(false);
@@ -167,7 +169,7 @@ export default function App() {
     // Dọn dẹp timer khi chuyển tab hoặc tắt app
     return () => clearInterval(interval);
   }, [isLoggedIn, authToken, activeTab]);
-  
+
   // Hàm tải Lịch sử sạc từ Backend
   const fetchHistory = async () => {
     if (!authToken) return;
@@ -203,7 +205,7 @@ export default function App() {
         },
         body: JSON.stringify({ stationId, outletId })
       });
-      
+
       const result = await response.json();
       if (result.success) {
         Alert.alert('Thành công!', `Đã bắt đầu sạc xe tại Trạm ${stationId} - Ổ ${outletId}`);
@@ -229,7 +231,7 @@ export default function App() {
         },
         body: JSON.stringify({ stationId, outletId })
       });
-      
+
       const result = await response.json();
       if (result.success) {
         Alert.alert('Đã chốt hóa đơn!', result.message);
@@ -254,16 +256,27 @@ export default function App() {
 
   // Hàm gửi yêu cầu lấy OTP qua Email
   const handleRequestOtp = async () => {
-    if (!fpUsername) {
-      setFpUsernameError(true);
-      return Alert.alert('Thông báo', 'Vui lòng nhập tên tài khoản!');
+    let error = false;
+    if (!fpUsername) { setFpUsernameError(true); error = true; }
+    if (!fpEmail) { setFpEmailError(true); error = true; }
+
+    if (error) {
+      return Alert.alert('Thông báo', 'Vui lòng điền cả Tài khoản và Email đang liên kết!');
     }
+
+    // Kiểm tra định dạng Email chuẩn
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(fpEmail)) {
+      setFpEmailError(true);
+      return Alert.alert('Thông báo', 'Địa chỉ Email không đúng định dạng!');
+    }
+
     setIsFpLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: fpUsername })
+        body: JSON.stringify({ username: fpUsername, email: fpEmail })
       });
       const data = await response.json();
       if (data.success) {
@@ -287,7 +300,7 @@ export default function App() {
     if (hasError) {
       return Alert.alert('Thông báo', 'Vui lòng điền đủ thông tin!');
     }
-    
+
     setIsFpLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/reset-password`, {
@@ -299,7 +312,7 @@ export default function App() {
       if (data.success) {
         Alert.alert('Thành công', data.message);
         setShowForgotPassword(false); setFpStep(1); setFpOtp(''); setFpNewPassword('');
-        setUsername(fpUsername); setFpUsername('');
+        setUsername(fpUsername); setFpUsername(''); setFpEmail('');
       } else {
         Alert.alert('Lỗi', data.message);
       }
@@ -371,7 +384,7 @@ export default function App() {
   // Hàm xử lý khi Camera đọc được mã QR
   const handleBarcodeScanned = async ({ type, data }: any) => {
     setIsScanning(false); // Tắt camera
-    
+
     // Giả sử mã QR dán trên trạm có định dạng: "001.1" (Trạm 001, Ổ 1)
     const parts = data.split('.');
     if (parts.length !== 2) {
@@ -392,7 +405,7 @@ export default function App() {
         },
         body: JSON.stringify({ stationId, outletId })
       });
-      
+
       const result = await response.json();
       if (result.success) {
         Alert.alert('Thành công!', `Đã bắt đầu sạc xe tại Trạm ${stationId} - Ổ ${outletId}`);
@@ -434,7 +447,7 @@ export default function App() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
               <Text style={styles.title}>⚡ EV Charger</Text>
               <Text style={styles.subtitle}>Xin chào, {username}!</Text>
-              
+
               <TouchableOpacity style={styles.button} onPress={startScanning}>
                 <Text style={styles.buttonText}>📷 Quét QR sạc xe nhanh</Text>
               </TouchableOpacity>
@@ -464,9 +477,9 @@ export default function App() {
                 <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
                 <Text style={styles.backButtonText}>Quay lại</Text>
               </TouchableOpacity>
-              
+
               <View style={styles.stationDetailHeader}>
-                <FontAwesome5 name="charging-station" size={40} color="#3498db" style={{marginBottom: 10}} />
+                <FontAwesome5 name="charging-station" size={40} color="#3498db" style={{ marginBottom: 10 }} />
                 <Text style={styles.detailTitle}>{selectedStation.name}</Text>
                 <Text style={styles.detailLocation}>{selectedStation.location}</Text>
                 <Text style={styles.detailPrice}>Đơn giá: {selectedStation.unit_price.toLocaleString('vi-VN')} đ/kWh</Text>
@@ -485,25 +498,25 @@ export default function App() {
               </View>
 
               <Text style={styles.sectionTitle}>Chọn ổ cắm để sạc</Text>
-              
+
               <View style={styles.outletsContainer}>
                 {[1, 2].map(outletId => (
-                  <TouchableOpacity 
-                    key={outletId} 
+                  <TouchableOpacity
+                    key={outletId}
                     style={styles.outletCard}
                     onPress={() => {
                       Alert.alert(
-                      'Tùy chọn sạc', 
-                      `Bạn muốn làm gì với ${selectedStation.name} - Ổ ${outletId}?`,
+                        'Tùy chọn sạc',
+                        `Bạn muốn làm gì với ${selectedStation.name} - Ổ ${outletId}?`,
                         [
-                        { text: 'Dừng sạc (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outletId), style: 'destructive' },
-                        { text: 'Bắt đầu sạc', onPress: () => startChargeFromList(selectedStation.station_id, outletId) },
-                        { text: 'Hủy', style: 'cancel' }
+                          { text: 'Dừng sạc (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outletId), style: 'destructive' },
+                          { text: 'Bắt đầu sạc', onPress: () => startChargeFromList(selectedStation.station_id, outletId) },
+                          { text: 'Hủy', style: 'cancel' }
                         ]
                       );
                     }}
                   >
-                    <FontAwesome5 name="plug" size={30} color="#2ecc71" style={{marginBottom: 10}} />
+                    <FontAwesome5 name="plug" size={30} color="#2ecc71" style={{ marginBottom: 10 }} />
                     <Text style={styles.outletName}>Ổ cắm {outletId}</Text>
                     <Text style={styles.outletStatus}>Sẵn sàng</Text>
                   </TouchableOpacity>
@@ -526,8 +539,8 @@ export default function App() {
                       <View style={styles.stationInfo}>
                         <Text style={styles.stationName}>Trạm: {item.station_id}</Text>
                         <Text style={styles.stationLocation}>{item.start} ➡️ {item.end || 'Đang sạc...'}</Text>
-                        <Text style={[styles.stationName, {color: '#e67e22', marginTop: 4}]}>
-                          {item.total_kwh ? parseFloat(item.total_kwh).toFixed(2) + ' kWh - ' : ''} 
+                        <Text style={[styles.stationName, { color: '#e67e22', marginTop: 4 }]}>
+                          {item.total_kwh ? parseFloat(item.total_kwh).toFixed(2) + ' kWh - ' : ''}
                           {parseInt(item.total_cost || 0).toLocaleString('vi-VN')} đ
                         </Text>
                       </View>
@@ -553,7 +566,7 @@ export default function App() {
                   <FontAwesome5 name="wallet" size={20} color="#3498db" />
                   <Text style={styles.walletTitle}>Ví của tôi</Text>
                 </View>
-                
+
                 <Text style={styles.walletLabel}>Số dư hiện tại</Text>
                 <Text style={styles.walletAmount}>{balance.toLocaleString('vi-VN')} đ</Text>
 
@@ -599,10 +612,10 @@ export default function App() {
   if (showForgotPassword) {
     return (
       <View style={[styles.container, { justifyContent: 'flex-start', paddingTop: 60 }]}>
-        <TouchableOpacity style={styles.absoluteBackButton} onPress={() => { 
-          setShowForgotPassword(false); setFpStep(1); 
-          setFpUsername(''); setFpOtp(''); setFpNewPassword(''); 
-          setFpUsernameError(false); setFpOtpError(false); setFpNewPasswordError(false);
+        <TouchableOpacity style={styles.absoluteBackButton} onPress={() => {
+          setShowForgotPassword(false); setFpStep(1);
+          setFpUsername(''); setFpEmail(''); setFpOtp(''); setFpNewPassword('');
+          setFpUsernameError(false); setFpEmailError(false); setFpOtpError(false); setFpNewPasswordError(false);
           setShowFpPassword(false);
         }}>
           <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
@@ -615,14 +628,16 @@ export default function App() {
           </View>
           <Text style={styles.mainTitle}>Khôi Phục Mật Khẩu</Text>
           <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>
-            {fpStep === 1 ? 'Nhập tài khoản hoặc Email để nhận mã OTP' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
+            {fpStep === 1 ? 'Điền thông tin liên kết phòng chống Spam OTP' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
           </Text>
         </View>
 
         {fpStep === 1 ? (
           <>
-            <TextInput style={[styles.input, fpUsernameError && styles.inputError]} placeholder="Tài khoản hoặc Email của bạn" value={fpUsername} onChangeText={(text) => { setFpUsername(text); setFpUsernameError(false); }} autoCapitalize="none" />
-            <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c' }]} onPress={handleRequestOtp} disabled={isFpLoading}>
+            <TextInput style={[styles.input, fpUsernameError && styles.inputError]} placeholder="Tên tài khoản (Username)" value={fpUsername} onChangeText={(text) => { setFpUsername(text); setFpUsernameError(false); }} autoCapitalize="none" />
+            <TextInput style={[styles.input, fpEmailError && styles.inputError]} placeholder="Email liên kết ban đầu" value={fpEmail} onChangeText={(text) => { setFpEmail(text); setFpEmailError(false); }} keyboardType="email-address" autoCapitalize="none" />
+
+            <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c', marginTop: 10 }]} onPress={handleRequestOtp} disabled={isFpLoading}>
               {isFpLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Nhận mã OTP qua Email</Text>}
             </TouchableOpacity>
           </>
@@ -648,9 +663,9 @@ export default function App() {
   if (showRegister) {
     return (
       <View style={[styles.container, { justifyContent: 'flex-start', paddingTop: 60 }]}>
-        <TouchableOpacity style={styles.absoluteBackButton} onPress={() => { 
-          setShowRegister(false); 
-          setRegUsername(''); setRegEmail(''); setRegPassword(''); 
+        <TouchableOpacity style={styles.absoluteBackButton} onPress={() => {
+          setShowRegister(false);
+          setRegUsername(''); setRegEmail(''); setRegPassword('');
           setRegUsernameError(false); setRegEmailError(false); setRegPasswordError(false);
           setShowRegPassword(false);
         }}>
@@ -674,7 +689,7 @@ export default function App() {
             <FontAwesome5 name={showRegPassword ? "eye" : "eye-slash"} size={18} color="#7f8c8d" />
           </TouchableOpacity>
         </View>
-        
+
         <TouchableOpacity style={[styles.button, { backgroundColor: '#3498db' }]} onPress={handleRegister} disabled={isRegLoading}>
           {isRegLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Hoàn tất Đăng ký</Text>}
         </TouchableOpacity>
@@ -691,19 +706,19 @@ export default function App() {
         <Text style={styles.mainTitle}>Trạm Sạc Xe Điện</Text>
         <Text style={styles.subTitleText}>Đăng nhập để sử dụng dịch vụ</Text>
       </View>
-      
-      <TextInput 
-        style={[styles.input, loginError && styles.inputError]} 
-        placeholder="Tài khoản" 
+
+      <TextInput
+        style={[styles.input, loginError && styles.inputError]}
+        placeholder="Tài khoản"
         value={username}
         onChangeText={(text) => { setUsername(text); setLoginError(false); }}
         autoCapitalize="none"
       />
       <View style={styles.passwordInputContainer}>
-        <TextInput 
-          style={[styles.input, styles.passwordInput, loginError && styles.inputError]} 
-          placeholder="Mật khẩu" 
-          secureTextEntry={!showPassword} 
+        <TextInput
+          style={[styles.input, styles.passwordInput, loginError && styles.inputError]}
+          placeholder="Mật khẩu"
+          secureTextEntry={!showPassword}
           value={password}
           onChangeText={(text) => { setPassword(text); setLoginError(false); }}
         />
@@ -766,7 +781,7 @@ const styles = StyleSheet.create({
   walletActionText: { fontSize: 13, color: '#34495e', fontWeight: '500' },
   overlay: { position: 'absolute', bottom: 50, left: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.7)', padding: 20, borderRadius: 15, alignItems: 'center' },
   scanText: { color: '#fff', fontSize: 16, marginBottom: 15, textAlign: 'center' },
-  
+
   // Styles mới cho form đăng nhập nâng cao
   headerContainer: { alignItems: 'center', marginBottom: 35 },
   logoContainer: { width: 90, height: 90, backgroundColor: '#e1f0fa', borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 15, shadowColor: '#3498db', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
@@ -785,7 +800,7 @@ const styles = StyleSheet.create({
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 12, color: '#7f8c8d', marginTop: 4 },
   tabTextActive: { color: '#3498db', fontWeight: 'bold' },
-  
+
   // Styles cho danh sách Trạm sạc
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50', marginTop: 20, marginBottom: 15 },
   stationCard: { flexDirection: 'row', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 15, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },

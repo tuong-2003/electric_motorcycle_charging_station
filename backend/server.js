@@ -71,7 +71,7 @@ db.connect((err) => {
 // THÔNG TIN GOOGLE APPS SCRIPT WEBHOOK (GỬI MAIL API REST)
 // ==========================================
 // Địa chỉ URL do Google cấp sau khi bạn Deploy Apps Script
-const GAS_MAIL_URL = process.env.GAS_MAIL_URL || ''; 
+const GAS_MAIL_URL = process.env.GAS_MAIL_URL || '';
 
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
 
@@ -110,11 +110,11 @@ client.on('message', (topic, message) => {
             const data = JSON.parse(message.toString());
             const stationId = parts[1];
             const outletId = parts[3];
-            
+
             // Lưu dữ liệu vào Database MySQL
             const tempVal = data.temperature !== undefined ? data.temperature : null;
             const humVal = data.humidity !== undefined ? data.humidity : null;
-            
+
             // [TỐI ƯU] Lưu vào RAM Cache siêu tốc
             if (!liveDataCache[stationId]) liveDataCache[stationId] = {};
             if (tempVal !== null) liveDataCache[stationId].temperature = tempVal;
@@ -158,7 +158,7 @@ app.post('/api/login', (req, res) => {
         }
 
         const user = results[0]; // Lấy thông tin user tìm được
-        
+
         let isMatch = false;
         // Kiểm tra xem mật khẩu trong DB đã được mã hóa chưa (bcrypt hash thường bắt đầu bằng $2)
         if (user.password.startsWith('$2')) {
@@ -186,23 +186,37 @@ app.post('/api/login', (req, res) => {
 
 // API Yêu cầu cấp lại mật khẩu (Gửi OTP qua Email)
 app.post('/api/forgot-password', (req, res) => {
-    let { username } = req.body;
+    let { username, email } = req.body;
     if (username) username = username.trim();
+    if (email) email = email.trim();
 
-    if (!username) return res.status(400).json({ success: false, message: 'Vui lòng nhập tên tài khoản hoặc email!' });
+    if (!username || !email) return res.status(400).json({ success: false, message: 'Vui lòng điền cả Tài khoản và Email hợp lệ!' });
 
-    // Hỗ trợ tìm kiếm bằng Username HOẶC Email
-    db.query('SELECT id, username, email FROM users WHERE username = ? OR email = ?', [username, username], (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
-        if (results.length === 0) return res.status(404).json({ success: false, message: 'Tài khoản hoặc Email không tồn tại!' });
+    // Tăng bảo mật chống SPAM: Bắt buộc cung cấp CHÍNH XÁC cặp Username và Email liên kết
+    db.query('SELECT id, username, email FROM users WHERE username = ? AND email = ?', [username, email], (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database' });
+        if (results.length === 0) return res.status(404).json({ success: false, message: 'Thông tin Tài khoản và Email không khớp hoặc không tồn tại!' });
 
         const userEmail = results[0].email;
-        const actualUsername = results[0].username; // Lấy đúng username gốc phòng khi họ nhập email
-        if (!userEmail) return res.status(400).json({ success: false, message: 'Tài khoản này chưa được liên kết Email!' });
+        const actualUsername = results[0].username;
 
+        const otpKey = actualUsername.toLowerCase();
+
+        // [CHỐNG SPAM] Kiểm tra trạng thái Request của user để tránh việc spam nút Gửi OTP
+        const existingRecord = otpStorage.get(otpKey);
+        if (existingRecord && existingRecord.nextRequestAvailable > Date.now()) {
+            const waitTime = Math.ceil((existingRecord.nextRequestAvailable - Date.now()) / 1000);
+            return res.status(429).json({ success: false, message: `Hệ thống vừa gửi OTP xong. Vui lòng chờ ${waitTime} giây nữa trước khi yêu cầu gửi lại!` });
+        }
+
+        // Tạo mã OTP ngẫu nhiên (6 chữ số)
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpKey = actualUsername.toLowerCase(); // Lưu map OTP bằng username chính xác
-        otpStorage.set(otpKey, { otp, expires: Date.now() + 5 * 60 * 1000 }); // Sống 5 phút
+        // Cập nhật Storage: OTP sống 5 phút, nhưng thêm Cooldown (khóa Request) 60 giây chống Spam
+        otpStorage.set(otpKey, {
+            otp,
+            expires: Date.now() + 5 * 60 * 1000,
+            nextRequestAvailable: Date.now() + 60 * 1000
+        });
 
         const maskEmailStr = userEmail.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
 
@@ -222,19 +236,19 @@ app.post('/api/forgot-password', (req, res) => {
             method: 'POST',
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                res.json({ success: true, message: `Mã OTP đã được gửi qua cổng REST API về: ${maskEmailStr}` });
-            } else {
-                console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
-                res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });
-            }
-        })
-        .catch(error => {
-            console.error('⚠️ [Google API] Fetch thất bại:', error.message);
-            res.status(500).json({ success: false, message: 'Lỗi văng kết nối mạng nội bộ đến Google Server.' });
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    res.json({ success: true, message: `Mã OTP đã được gửi qua cổng REST API về: ${maskEmailStr}` });
+                } else {
+                    console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
+                    res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });
+                }
+            })
+            .catch(error => {
+                console.error('⚠️ [Google API] Fetch thất bại:', error.message);
+                res.status(500).json({ success: false, message: 'Lỗi văng kết nối mạng nội bộ đến Google Server.' });
+            });
     });
 });
 
@@ -242,14 +256,14 @@ app.post('/api/forgot-password', (req, res) => {
 app.post('/api/reset-password', async (req, res) => {
     let { username, otp, newPassword } = req.body;
     if (username) username = username.trim();
-    
+
     // Tìm chính xác username gốc (phòng trường hợp người dùng nhập email ở bước trước)
     db.query('SELECT username FROM users WHERE username = ? OR email = ?', [username, username], async (err, results) => {
         if (err || results.length === 0) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản!' });
-        
+
         const actualUsername = results[0].username;
         const otpKey = actualUsername.toLowerCase();
-        
+
         const record = otpStorage.get(otpKey);
         if (!record) return res.status(400).json({ success: false, message: 'OTP đã hết hạn hoặc chưa được yêu cầu!' });
         if (Date.now() > record.expires) { otpStorage.delete(otpKey); return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút)!' }); }
@@ -272,7 +286,7 @@ app.post('/api/register', async (req, res) => {
     // Cắt bỏ khoảng trắng thừa
     if (username) username = username.trim();
     if (email) email = email.trim();
-    
+
     if (!username || !email || !password) return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ thông tin!' });
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải từ 6 ký tự!' });
 
@@ -340,7 +354,7 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
     // 1. Kiểm tra số dư người dùng
     db.query('SELECT balance FROM users WHERE id = ?', [userId], (err, results) => {
         if (err || results.length === 0) return res.status(500).json({ success: false, message: 'Lỗi DB' });
-        
+
         if (results[0].balance <= 0) {
             return res.status(400).json({ success: false, message: '⛔ Số dư ví không đủ để sạc!' });
         }
@@ -450,7 +464,7 @@ app.get('/api/stations', verifyToken, (req, res) => {
     `;
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
-        
+
         // [TỐI ƯU] Ghép dữ liệu từ DB với dữ liệu Real-time từ RAM Cache
         const mappedData = results.map(st => ({
             ...st,
@@ -484,7 +498,7 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền tạo tài khoản!' });
     const { username, email, password, role } = req.body;
     if (!username || !password || !email) return res.status(400).json({ success: false, message: 'Thiếu thông tin!' });
-    
+
     // [TỐI ƯU] Kiểm tra trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
     db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
         if (err) {
@@ -527,7 +541,7 @@ app.post('/api/users/add_balance', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền nạp tiền!' });
     const { userId, amount } = req.body;
     if (!userId || !amount || amount <= 0) return res.status(400).json({ success: false, message: 'Thông tin không hợp lệ!' });
-    
+
     db.query('UPDATE users SET balance = balance + ? WHERE id = ?', [amount, userId], (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
         res.json({ success: true, message: `Đã nạp ${amount.toLocaleString('vi-VN')} VNĐ vào tài khoản ID ${userId}!` });
@@ -537,7 +551,7 @@ app.post('/api/users/add_balance', verifyToken, (req, res) => {
 // API Xóa User và dữ liệu liên quan (Chỉ Admin)
 app.delete('/api/users/:id', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xóa tài khoản!' });
-    
+
     const targetUserId = req.params.id;
 
     // Bảo vệ: Không cho phép Admin tự xóa chính mình đang đăng nhập
@@ -581,7 +595,7 @@ function runBackgroundWorker() {
                     if (secondsSinceLastHeartbeat > 30) {
                         console.log(`⚠️ [Worker] Trạm ${session.station_id} mất kết nối! Tự động chốt hóa đơn #${session.id}`);
                         const [stId, outId] = session.station_id.split('.');
-                        processStopCharge(stId, outId, session.user_id, () => {});
+                        processStopCharge(stId, outId, session.user_id, () => { });
                         return; // Đã chốt hóa đơn do rớt mạng, KHÔNG kiểm tra số dư nữa!
                     }
                 }
@@ -595,7 +609,7 @@ function runBackgroundWorker() {
                     if (tempCost >= session.balance) {
                         console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
                         const [stId, outId] = session.station_id.split('.');
-                        processStopCharge(stId, outId, session.user_id, () => {});
+                        processStopCharge(stId, outId, session.user_id, () => { });
                     }
                 });
             });
