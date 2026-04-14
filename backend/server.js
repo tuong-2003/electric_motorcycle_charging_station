@@ -59,7 +59,7 @@ db.connect((err) => {
                 // [FIX] Nếu tài khoản đã tồn tại, ép đồng bộ lại mật khẩu và email theo cấu hình mới nhất
                 try {
                     const hashed = await bcrypt.hash(adminPass, 10);
-                    db.query('UPDATE users SET password = ?, email = ? WHERE username = ?', [hashed, adminEmail, adminUser]);
+                    db.query('UPDATE users SET password = ?, email = ?, role = "admin" WHERE username = ?', [hashed, adminEmail, adminUser]);
                 } catch (e) { console.error('Lỗi cập nhật pass admin', e); }
             }
         });
