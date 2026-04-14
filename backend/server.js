@@ -68,17 +68,11 @@ db.connect((err) => {
 });
 
 // ==========================================
-// CẤU HÌNH GỬI EMAIL (SMTP BREVO QUA PORT 2525 ĐỂ TRÁNH RENDER CHẶN)
+// THÔNG TIN GOOGLE APPS SCRIPT WEBHOOK (GỬI MAIL API REST)
 // ==========================================
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 2525, // Render không chặn port này!
-    auth: {
-        // Lấy thông tin trong màn hình SMTP & API -> tab "SMTP" của Brevo
-        user: process.env.BREVO_USER || 'điền-email-đăng-nhập-brevo-vào-đây', 
-        pass: process.env.BREVO_PASS || 'điền-mật-khẩu-smtp-brevo-vào-đây' 
-    }
-});
+// Địa chỉ URL do Google cấp sau khi bạn Deploy Apps Script
+const GAS_MAIL_URL = process.env.GAS_MAIL_URL || ''; 
+
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
 
 // [TỐI ƯU] Tự động dọn rác (Garbage Collection) các mã OTP hết hạn mỗi 10 phút để chống rò rỉ RAM
@@ -210,24 +204,36 @@ app.post('/api/forgot-password', (req, res) => {
         const otpKey = actualUsername.toLowerCase(); // Lưu map OTP bằng username chính xác
         otpStorage.set(otpKey, { otp, expires: Date.now() + 5 * 60 * 1000 }); // Sống 5 phút
 
-        // Dùng email đã đăng ký Brevo làm người gửi (không dùng ID đăng nhập SMTP)
-        const senderEmail = process.env.BREVO_SENDER || 'tuog678@gmail.com'; 
-        const mailOptions = {
-            from: `"Hệ thống Trạm Sạc EV" <${senderEmail}>`,
+        const maskEmailStr = userEmail.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
+
+        if (!GAS_MAIL_URL) {
+            console.error('⚠️ Cảnh báo: Chưa cấu hình biến môi trường GAS_MAIL_URL!');
+            return res.status(500).json({ success: false, message: 'Lỗi: Hệ thống gửi mail chưa được cấu hình (Thiếu Webhook URL)' });
+        }
+
+        const payload = {
             to: userEmail,
-            subject: `Mã OTP của bạn là ${otp}`,
-            html: `<p>Chào ${actualUsername},</p><p>Mã OTP khôi phục mật khẩu của bạn là: <strong style="font-size:18px;">${otp}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
+            subject: `Hệ thống Trạm Sạc - Mã OTP của bạn là ${otp}`,
+            htmlBody: `<p>Chào ${actualUsername},</p><p>Mã OTP khôi phục mật khẩu của bạn là: <strong style="font-size:18px; color: #3498db;">${otp}</strong></p><p>Lưu ý: Mã này chỉ có hiệu lực trong vòng 5 phút.</p>`
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error('⚠️ [Nodemailer] Lỗi gửi email Gmail:', error.message);
-                return res.status(500).json({ success: false, message: 'Chi tiết lỗi Gmail: ' + error.message });
+        // Bắn API sang Google Apps Script qua HTTPS (Port 443 - Chuẩn REST API không bao giờ bị Render chặn)
+        fetch(GAS_MAIL_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                res.json({ success: true, message: `Mã OTP đã được gửi qua cổng REST API về: ${maskEmailStr}` });
+            } else {
+                console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
+                res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });
             }
-
-            // Che mờ Email để bảo mật (VD: tuog678@gmail.com -> t***@gmail.com)
-            const maskedEmail = userEmail.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
-            res.json({ success: true, message: `Mã OTP đã được gửi về địa chỉ: ${maskedEmail}` });
+        })
+        .catch(error => {
+            console.error('⚠️ [Google API] Fetch thất bại:', error.message);
+            res.status(500).json({ success: false, message: 'Lỗi văng kết nối mạng nội bộ đến Google Server.' });
         });
     });
 });
