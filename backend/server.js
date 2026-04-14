@@ -73,7 +73,7 @@ const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER || 'tuog678@gmail.com', 
-        pass: process.env.EMAIL_PASS || 'wssu aqds otrb ysil'
+        pass: process.env.EMAIL_PASS || 'jrng aqep tuqx zfkd'
     }
 });
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
