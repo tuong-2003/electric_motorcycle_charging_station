@@ -55,6 +55,12 @@ db.connect((err) => {
                         if (!err) console.log(`👑 Đã khởi tạo tài khoản Admin mặc định: Tài khoản: ${adminUser} | Mật khẩu: ${adminPass}`);
                     });
                 } catch (e) { console.error('Lỗi tạo admin mặc định', e); }
+            } else if (!err && results.length > 0) {
+                // [FIX] Nếu tài khoản đã tồn tại, ép đồng bộ lại mật khẩu và email theo cấu hình mới nhất
+                try {
+                    const hashed = await bcrypt.hash(adminPass, 10);
+                    db.query('UPDATE users SET password = ?, email = ? WHERE username = ?', [hashed, adminEmail, adminUser]);
+                } catch (e) { console.error('Lỗi cập nhật pass admin', e); }
             }
         });
     }
