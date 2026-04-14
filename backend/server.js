@@ -1,4 +1,5 @@
 require('dotenv').config(); // [MỚI] Load cấu hình từ file .env
+require('dns').setDefaultResultOrder('ipv4first'); // [FIX IPv6] Ép Node.js sử dụng IPv4, khắc phục triệt để lỗi ENETUNREACH của Gmail
 const express = require('express');
 const mqtt = require('mqtt');
 const cors = require('cors');
