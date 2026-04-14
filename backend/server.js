@@ -70,9 +70,7 @@ db.connect((err) => {
 // CẤU HÌNH GỬI EMAIL (NODEMAILER)
 // ==========================================
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Ép sử dụng kết nối bảo mật chuẩn IPv4 để chống lỗi mạng
+    service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER || 'tuog678@gmail.com', 
         pass: process.env.EMAIL_PASS || 'jrng aqep tuqx zfkd'
@@ -221,8 +219,7 @@ app.post('/api/forgot-password', (req, res) => {
             
             if (error) {
                 console.error('⚠️ [Nodemailer] Lỗi gửi email (Bị chặn hoặc sai Pass):', error.message);
-                // [CƠ CHẾ DỰ PHÒNG] Bắn thẳng OTP lên màn hình App để không làm gián đoạn việc test
-                return res.json({ success: true, message: `(Chế độ Test)\nKhông thể gửi thư do lỗi mạng/máy chủ.\n\nMã OTP của bạn là: ${otp}\n\nHãy dùng mã này để đổi mật khẩu!` });
+                return res.status(500).json({ success: false, message: 'Chi tiết lỗi Gmail: ' + error.message });
             }
             
             // Nếu thực sự gửi thành công qua Email
