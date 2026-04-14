@@ -230,26 +230,43 @@ app.post('/api/register', async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
 
-    try {
-        const hashed = await bcrypt.hash(password, 10);
-        // Mặc định khách tự đăng ký sẽ có role là 'user'
-        db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, "user", 0)', [username, email, hashed], (err) => {
-            if (err) {
-                console.error('⚠️ [MySQL] Lỗi Đăng ký User:', err.message);
-                if (err.code === 'ER_DUP_ENTRY') {
-                    // Trả chi tiết lỗi ra App để dễ dàng debug (VD: Duplicate entry '0' for key 'PRIMARY')
-                    if (err.message.includes('PRIMARY')) {
-                        return res.status(400).json({ success: false, message: 'Lỗi CSDL: Cột ID chưa được bật tự động tăng (AUTO_INCREMENT)!' });
-                    }
-                    return res.status(400).json({ success: false, message: 'Trùng lặp dữ liệu: ' + err.message });
+    // [TỐI ƯU] Kiểm tra username và email tồn tại trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
+    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
+        if (err) {
+            console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+        }
+
+        if (results.length > 0) {
+            for (const user of results) {
+                if (user.username === username) {
+                    return res.status(400).json({ success: false, message: 'Tên tài khoản này đã có người sử dụng. Vui lòng chọn tên khác!' });
                 }
-                return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+                if (user.email === email) {
+                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký trên hệ thống!' });
+                }
             }
-            res.json({ success: true, message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.' });
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi mã hóa dữ liệu!' });
-    }
+        }
+
+        // Nếu không trùng, tiến hành mã hóa và thêm user mới
+        try {
+            const hashed = await bcrypt.hash(password, 10);
+            // Mặc định khách tự đăng ký sẽ có role là 'user'
+            db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, "user", 0)', [username, email, hashed], (err) => {
+                if (err) {
+                    // Vẫn giữ lại block này để xử lý lỗi race condition (2 request đăng ký cùng lúc)
+                    console.error('⚠️ [MySQL] Lỗi Đăng ký User:', err.message);
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(400).json({ success: false, message: 'Tên tài khoản hoặc Email đã tồn tại!' });
+                    }
+                    return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+                }
+                res.json({ success: true, message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.' });
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Lỗi mã hóa dữ liệu!' });
+        }
+    });
 });
 
 // Lính gác (Middleware) chặn các Request không có thẻ hợp lệ
@@ -419,19 +436,40 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
     const { username, email, password, role } = req.body;
     if (!username || !password || !email) return res.status(400).json({ success: false, message: 'Thiếu thông tin!' });
     
-    const hashed = await bcrypt.hash(password, 10);
-    db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, ?, 0)', [username, email, hashed, role || 'user'], (err) => {
+    // [TỐI ƯU] Kiểm tra trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
+    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
         if (err) {
-            console.error('⚠️ [MySQL] Lỗi Admin tạo User:', err.message);
-            if (err.code === 'ER_DUP_ENTRY') {
-                if (err.message.includes('PRIMARY')) {
-                    return res.status(400).json({ success: false, message: 'Lỗi CSDL: Cột ID chưa được bật tự động tăng (AUTO_INCREMENT)!' });
-                }
-                return res.status(400).json({ success: false, message: 'Trùng lặp dữ liệu: ' + err.message });
-            }
+            console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
             return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
         }
-        res.json({ success: true, message: 'Tạo tài khoản thành công!' });
+
+        if (results.length > 0) {
+            for (const user of results) {
+                if (user.username === username) {
+                    return res.status(400).json({ success: false, message: 'Tên tài khoản này đã tồn tại!' });
+                }
+                if (user.email === email) {
+                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã tồn tại!' });
+                }
+            }
+        }
+
+        try {
+            const hashed = await bcrypt.hash(password, 10);
+            db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, ?, 0)', [username, email, hashed, role || 'user'], (err) => {
+                if (err) {
+                    console.error('⚠️ [MySQL] Lỗi Admin tạo User:', err.message);
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(400).json({ success: false, message: 'Thông tin đã tồn tại trong hệ thống!' });
+                    }
+                    return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+                }
+                res.json({ success: true, message: 'Tạo tài khoản thành công!' });
+            });
+        } catch (error) {
+            console.error('⚠️ [Bcrypt] Lỗi mã hóa mật khẩu:', error.message);
+            res.status(500).json({ success: false, message: 'Lỗi mã hóa dữ liệu!' });
+        }
     });
 });
 

@@ -20,6 +20,7 @@ export default function App() {
   const [stations, setStations] = useState([]); // State lưu danh sách trạm
   const [selectedStation, setSelectedStation] = useState<any>(null); // State lưu trạm đang xem chi tiết
   const [history, setHistory] = useState([]); // State lưu lịch sử giao dịch
+  const [showPassword, setShowPassword] = useState(false);
   
   // State cho luồng Quên mật khẩu qua Email
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -31,6 +32,7 @@ export default function App() {
   const [fpUsernameError, setFpUsernameError] = useState(false);
   const [fpOtpError, setFpOtpError] = useState(false);
   const [fpNewPasswordError, setFpNewPasswordError] = useState(false);
+  const [showFpPassword, setShowFpPassword] = useState(false);
 
   // State cho luồng Đăng ký tài khoản
   const [showRegister, setShowRegister] = useState(false);
@@ -41,6 +43,7 @@ export default function App() {
   const [regUsernameError, setRegUsernameError] = useState(false);
   const [regEmailError, setRegEmailError] = useState(false);
   const [regPasswordError, setRegPasswordError] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // State cho Camera quét QR
   const [isScanning, setIsScanning] = useState(false);
@@ -338,7 +341,13 @@ export default function App() {
         setUsername(regUsername); // Tự động điền sẵn tên user ra màn hình đăng nhập cho tiện
         setRegUsername(''); setRegEmail(''); setRegPassword('');
       } else {
-        Alert.alert('Lỗi', data.message);
+        if (data.message.includes('Tên tài khoản') || data.message.includes('Email')) {
+          setRegUsernameError(true);
+        }
+        if (data.message.includes('Email')) {
+          setRegEmailError(true);
+        }
+          Alert.alert('Lỗi', data.message);
       }
     } catch (error) {
       Alert.alert('Lỗi mạng', 'Không thể kết nối đến máy chủ!');
@@ -594,6 +603,7 @@ export default function App() {
           setShowForgotPassword(false); setFpStep(1); 
           setFpUsername(''); setFpOtp(''); setFpNewPassword(''); 
           setFpUsernameError(false); setFpOtpError(false); setFpNewPasswordError(false);
+          setShowFpPassword(false);
         }}>
           <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
           <Text style={styles.backButtonText}>Quay lại</Text>
@@ -619,7 +629,12 @@ export default function App() {
         ) : (
           <>
             <TextInput style={[styles.input, fpOtpError && styles.inputError]} placeholder="Mã OTP (6 chữ số)" value={fpOtp} onChangeText={(text) => { setFpOtp(text); setFpOtpError(false); }} keyboardType="numeric" />
-            <TextInput style={[styles.input, fpNewPasswordError && styles.inputError]} placeholder="Mật khẩu mới (ít nhất 6 ký tự)" value={fpNewPassword} onChangeText={(text) => { setFpNewPassword(text); setFpNewPasswordError(false); }} secureTextEntry />
+            <View style={styles.passwordInputContainer}>
+              <TextInput style={[styles.input, styles.passwordInput, fpNewPasswordError && styles.inputError]} placeholder="Mật khẩu mới (ít nhất 6 ký tự)" value={fpNewPassword} onChangeText={(text) => { setFpNewPassword(text); setFpNewPasswordError(false); }} secureTextEntry={!showFpPassword} />
+              <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowFpPassword(!showFpPassword)}>
+                <FontAwesome5 name={showFpPassword ? "eye" : "eye-slash"} size={18} color="#7f8c8d" />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity style={[styles.button, { backgroundColor: '#2ecc71' }]} onPress={handleResetPassword} disabled={isFpLoading}>
               {isFpLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Xác nhận đổi mật khẩu</Text>}
             </TouchableOpacity>
@@ -637,6 +652,7 @@ export default function App() {
           setShowRegister(false); 
           setRegUsername(''); setRegEmail(''); setRegPassword(''); 
           setRegUsernameError(false); setRegEmailError(false); setRegPasswordError(false);
+          setShowRegPassword(false);
         }}>
           <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
           <Text style={styles.backButtonText}>Quay lại</Text>
@@ -652,7 +668,12 @@ export default function App() {
 
         <TextInput style={[styles.input, regUsernameError && styles.inputError]} placeholder="Tên tài khoản (viết liền không dấu)" value={regUsername} onChangeText={(text) => { setRegUsername(text); setRegUsernameError(false); }} autoCapitalize="none" />
         <TextInput style={[styles.input, regEmailError && styles.inputError]} placeholder="Địa chỉ Email" value={regEmail} onChangeText={(text) => { setRegEmail(text); setRegEmailError(false); }} keyboardType="email-address" autoCapitalize="none" />
-        <TextInput style={[styles.input, regPasswordError && styles.inputError]} placeholder="Mật khẩu (ít nhất 6 ký tự)" value={regPassword} onChangeText={(text) => { setRegPassword(text); setRegPasswordError(false); }} secureTextEntry />
+        <View style={styles.passwordInputContainer}>
+          <TextInput style={[styles.input, styles.passwordInput, regPasswordError && styles.inputError]} placeholder="Mật khẩu (ít nhất 6 ký tự)" value={regPassword} onChangeText={(text) => { setRegPassword(text); setRegPasswordError(false); }} secureTextEntry={!showRegPassword} />
+          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowRegPassword(!showRegPassword)}>
+            <FontAwesome5 name={showRegPassword ? "eye" : "eye-slash"} size={18} color="#7f8c8d" />
+          </TouchableOpacity>
+        </View>
         
         <TouchableOpacity style={[styles.button, { backgroundColor: '#3498db' }]} onPress={handleRegister} disabled={isRegLoading}>
           {isRegLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Hoàn tất Đăng ký</Text>}
@@ -678,13 +699,18 @@ export default function App() {
         onChangeText={(text) => { setUsername(text); setLoginError(false); }}
         autoCapitalize="none"
       />
-      <TextInput 
-        style={[styles.input, loginError && styles.inputError]} 
-        placeholder="Mật khẩu" 
-        secureTextEntry 
-        value={password}
-        onChangeText={(text) => { setPassword(text); setLoginError(false); }}
-      />
+      <View style={styles.passwordInputContainer}>
+        <TextInput 
+          style={[styles.input, styles.passwordInput, loginError && styles.inputError]} 
+          placeholder="Mật khẩu" 
+          secureTextEntry={!showPassword} 
+          value={password}
+          onChangeText={(text) => { setPassword(text); setLoginError(false); }}
+        />
+        <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+          <FontAwesome5 name={showPassword ? "eye" : "eye-slash"} size={18} color="#7f8c8d" />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.optionsRow}>
         <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
@@ -723,6 +749,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 18, textAlign: 'center', marginBottom: 20 },
   input: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 15, fontSize: 16 },
   inputError: { borderWidth: 1, borderColor: '#e74c3c', backgroundColor: '#fdedec' },
+  passwordInputContainer: { position: 'relative', marginBottom: 15 },
+  passwordInput: { marginBottom: 0, paddingRight: 45 },
+  eyeIcon: { position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 15 },
   button: { backgroundColor: '#3498db', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
   logoutBtn: { backgroundColor: '#e74c3c' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
@@ -769,7 +798,7 @@ const styles = StyleSheet.create({
   statusOnline: { backgroundColor: '#e8f8f5', color: '#2ecc71' },
   statusOffline: { backgroundColor: '#fdedec', color: '#e74c3c' },
   backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingVertical: 5 },
-  absoluteBackButton: { position: 'absolute', top: 15, left: 20, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, zIndex: 10 },
+  absoluteBackButton: { position: 'absolute', top: 5, left: 20, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, zIndex: 10 },
   backButtonText: { fontSize: 16, color: '#34495e', marginLeft: 8, fontWeight: '500' },
   stationDetailHeader: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 15, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
   detailTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50', marginBottom: 5 },

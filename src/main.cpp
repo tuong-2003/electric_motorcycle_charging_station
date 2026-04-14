@@ -5,8 +5,8 @@
 #include <DHT.h>
 
 // --- Cấu hình WiFi ---
-const char* WIFI_SSID = "Rubyhouselau1@2025";
-const char* WIFI_PASS = "ruby@09876";
+const char* WIFI_SSID = "KST Group";
+const char* WIFI_PASS = "Kim$0nT13n";
 
 // --- Cấu hình MQTT Cloud (Đang dùng HiveMQ Public để test) ---
 // Sau này khi dự án release, ta sẽ đổi sang HiveMQ Cloud (bản có SSL/Mật khẩu bảo mật)
