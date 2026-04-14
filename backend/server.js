@@ -239,7 +239,7 @@ app.post('/api/forgot-password', (req, res) => {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    res.json({ success: true, message: `Mã OTP đã được gửi qua cổng REST API về: ${maskEmailStr}` });
+                    res.json({ success: true, message: `Mã OTP đã được gửi về: ${maskEmailStr}` });
                 } else {
                     console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
                     res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });

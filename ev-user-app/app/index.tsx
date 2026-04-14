@@ -261,7 +261,7 @@ export default function App() {
     if (!fpEmail) { setFpEmailError(true); error = true; }
 
     if (error) {
-      return Alert.alert('Thông báo', 'Vui lòng điền cả Tài khoản và Email đang liên kết!');
+      return Alert.alert('Thông báo', 'Vui lòng điền Tài khoản và Email!');
     }
 
     // Kiểm tra định dạng Email chuẩn
@@ -628,14 +628,14 @@ export default function App() {
           </View>
           <Text style={styles.mainTitle}>Khôi Phục Mật Khẩu</Text>
           <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>
-            {fpStep === 1 ? 'Điền thông tin liên kết phòng chống Spam OTP' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
+            {fpStep === 1 ? 'Điền thông tin để nhận mã OTP' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
           </Text>
         </View>
 
         {fpStep === 1 ? (
           <>
-            <TextInput style={[styles.input, fpUsernameError && styles.inputError]} placeholder="Tên tài khoản (Username)" value={fpUsername} onChangeText={(text) => { setFpUsername(text); setFpUsernameError(false); }} autoCapitalize="none" />
-            <TextInput style={[styles.input, fpEmailError && styles.inputError]} placeholder="Email liên kết ban đầu" value={fpEmail} onChangeText={(text) => { setFpEmail(text); setFpEmailError(false); }} keyboardType="email-address" autoCapitalize="none" />
+            <TextInput style={[styles.input, fpUsernameError && styles.inputError]} placeholder="Tên tài khoản" value={fpUsername} onChangeText={(text) => { setFpUsername(text); setFpUsernameError(false); }} autoCapitalize="none" />
+            <TextInput style={[styles.input, fpEmailError && styles.inputError]} placeholder="Email liên kết" value={fpEmail} onChangeText={(text) => { setFpEmail(text); setFpEmailError(false); }} keyboardType="email-address" autoCapitalize="none" />
 
             <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c', marginTop: 10 }]} onPress={handleRequestOtp} disabled={isFpLoading}>
               {isFpLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Nhận mã OTP qua Email</Text>}
@@ -698,7 +698,7 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { justifyContent: 'flex-start', paddingTop: 60 }]}>
       <View style={styles.headerContainer}>
         <View style={styles.logoContainer}>
           <FontAwesome5 name="charging-station" size={45} color="#3498db" />
