@@ -262,7 +262,7 @@ app.post('/api/register', async (req, res) => {
         if (results.length > 0) {
             for (const user of results) {
                 if (user.username === username) {
-                    return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại. Vui lòng chọn tên khác!' });
+                    return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại!' });
                 }
                 if (user.email === email) {
                     return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
