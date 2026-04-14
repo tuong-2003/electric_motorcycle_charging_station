@@ -900,6 +900,7 @@
                         <td>
                             <button class="btn btn-sm btn-success" onclick="addBalance(${user.id}, 50000)">+ 50k</button>
                             <button class="btn btn-sm btn-warning" onclick="addBalance(${user.id}, 100000)">+ 100k</button>
+                            <button class="btn btn-sm btn-danger ms-1" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>`;
                 });
@@ -931,6 +932,24 @@
             alert(data.message);
             if (data.success) { loadUsers(); fetchUserProfile(); }
         });
+    }
+
+    // Hàm gọi API Xóa User
+    function deleteUser(userId, username) {
+        if (!confirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`)) return;
+
+        fetch(`/api/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) {
+                loadUsers(); // Tải lại danh sách sau khi xóa thành công
+            }
+        })
+        .catch(err => alert("Lỗi kết nối đến máy chủ khi yêu cầu xóa!"));
     }
 
     // Hàm gửi lệnh từ Web xuống Backend Node.js API

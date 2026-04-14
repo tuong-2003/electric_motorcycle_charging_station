@@ -41,6 +41,22 @@ db.connect((err) => {
         db.query("SET time_zone = '+07:00';", (err) => {
             if (err) console.error('⚠️ [MySQL] Không thể set timezone:', err.message);
         });
+
+        // [MỚI] Tự động tạo tài khoản Admin mặc định nếu chưa có
+        const adminUser = process.env.ADMIN_USERNAME || 'Admin';
+        const adminPass = process.env.ADMIN_PASSWORD || '@minad';
+        const adminEmail = process.env.ADMIN_EMAIL || 'tuog678@gmail.com';
+
+        db.query("SELECT id FROM users WHERE username = ?", [adminUser], async (err, results) => {
+            if (!err && results.length === 0) {
+                try {
+                    const hashed = await bcrypt.hash(adminPass, 10);
+                    db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, ?, 0)', [adminUser, adminEmail, hashed, 'admin'], (err) => {
+                        if (!err) console.log(`👑 Đã khởi tạo tài khoản Admin mặc định: Tài khoản: ${adminUser} | Mật khẩu: ${adminPass}`);
+                    });
+                } catch (e) { console.error('Lỗi tạo admin mặc định', e); }
+            }
+        });
     }
 });
 
@@ -243,7 +259,7 @@ app.post('/api/register', async (req, res) => {
                     return res.status(400).json({ success: false, message: 'Tên tài khoản này đã có người sử dụng. Vui lòng chọn tên khác!' });
                 }
                 if (user.email === email) {
-                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký trên hệ thống!' });
+                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
                 }
             }
         }
@@ -482,6 +498,30 @@ app.post('/api/users/add_balance', verifyToken, (req, res) => {
     db.query('UPDATE users SET balance = balance + ? WHERE id = ?', [amount, userId], (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
         res.json({ success: true, message: `Đã nạp ${amount.toLocaleString('vi-VN')} VNĐ vào tài khoản ID ${userId}!` });
+    });
+});
+
+// API Xóa User và dữ liệu liên quan (Chỉ Admin)
+app.delete('/api/users/:id', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xóa tài khoản!' });
+    
+    const targetUserId = req.params.id;
+
+    // Bảo vệ: Không cho phép Admin tự xóa chính mình đang đăng nhập
+    if (parseInt(targetUserId) === req.user.id) {
+        return res.status(400).json({ success: false, message: 'Hệ thống từ chối việc tự xóa tài khoản của chính bạn!' });
+    }
+
+    // Bước 1: Xóa toàn bộ lịch sử sạc (charging_sessions) của user này trước để tránh lỗi khóa ngoại (Foreign Key constraint)
+    db.query('DELETE FROM charging_sessions WHERE user_id = ?', [targetUserId], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB khi xóa dữ liệu lịch sử sạc.' });
+
+        // Bước 2: Xóa thông tin User
+        db.query('DELETE FROM users WHERE id = ?', [targetUserId], (err, result) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi DB khi xóa User.' });
+            if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy User!' });
+            res.json({ success: true, message: 'Đã xóa User và toàn bộ lịch sử sạc liên quan thành công!' });
+        });
     });
 });
 
