@@ -189,7 +189,9 @@ app.post('/api/login', (req, res) => {
 
 // API Yêu cầu cấp lại mật khẩu (Gửi OTP qua Email)
 app.post('/api/forgot-password', (req, res) => {
-    const { username } = req.body;
+    let { username } = req.body;
+    if (username) username = username.trim();
+
     if (!username) return res.status(400).json({ success: false, message: 'Vui lòng nhập tên tài khoản!' });
 
     db.query('SELECT id, email FROM users WHERE username = ?', [username], (err, results) => {
@@ -201,7 +203,8 @@ app.post('/api/forgot-password', (req, res) => {
 
         // Tạo mã OTP ngẫu nhiên 6 số
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        otpStorage.set(username, { otp, expires: Date.now() + 5 * 60 * 1000 }); // Sống 5 phút
+        const otpKey = username.toLowerCase(); // Chuẩn hóa key về chữ thường
+        otpStorage.set(otpKey, { otp, expires: Date.now() + 5 * 60 * 1000 }); // Sống 5 phút
 
         const mailOptions = {
             from: '"EV Station Admin" <no-reply@evstation.com>',
@@ -211,7 +214,10 @@ app.post('/api/forgot-password', (req, res) => {
         };
 
         transporter.sendMail(mailOptions, (error, info) => {
-            if (error) return res.status(500).json({ success: false, message: 'Lỗi gửi email! Vui lòng kiểm tra cấu hình Gmail.' });
+            if (error) {
+                console.error('⚠️ [Nodemailer] Lỗi gửi email:', error);
+                return res.status(500).json({ success: false, message: 'Lỗi gửi email! Vui lòng kiểm tra cấu hình Gmail.' });
+            }
             
             // Che mờ Email để bảo mật (VD: tuog678@gmail.com -> t***@gmail.com)
             const maskedEmail = userEmail.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
@@ -222,18 +228,20 @@ app.post('/api/forgot-password', (req, res) => {
 
 // API Đặt lại mật khẩu mới bằng OTP
 app.post('/api/reset-password', async (req, res) => {
-    const { username, otp, newPassword } = req.body;
+    let { username, otp, newPassword } = req.body;
+    if (username) username = username.trim();
     
-    const record = otpStorage.get(username);
+    const otpKey = username ? username.toLowerCase() : '';
+    const record = otpStorage.get(otpKey);
     if (!record) return res.status(400).json({ success: false, message: 'OTP đã hết hạn hoặc chưa được yêu cầu!' });
-    if (Date.now() > record.expires) { otpStorage.delete(username); return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút)!' }); }
+    if (Date.now() > record.expires) { otpStorage.delete(otpKey); return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn (quá 5 phút)!' }); }
     if (record.otp !== otp) return res.status(400).json({ success: false, message: 'Mã OTP không chính xác!' });
     if (!newPassword || newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải từ 6 ký tự!' });
 
     const hashed = await bcrypt.hash(newPassword, 10);
     db.query('UPDATE users SET password = ? WHERE username = ?', [hashed, username], (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi cập nhật DB' });
-        otpStorage.delete(username); // Dọn rác
+        otpStorage.delete(otpKey); // Dọn rác
         res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
     });
 });
