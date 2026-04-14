@@ -5,8 +5,8 @@ const mqtt = require('mqtt');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2');
-const bcrypt = require('bcryptjs'); 
-const { Resend } = require('resend'); // [THAY THẾ] Dùng Resend thay cho Nodemailer
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer'); // [SỬA LẠI] Quay lại dùng Nodemailer cho Brevo/SendGrid
 const path = require('path');
 
 const app = express();
@@ -68,9 +68,15 @@ db.connect((err) => {
 });
 
 // ==========================================
-// CẤU HÌNH GỬI EMAIL (RESEND API)
+// CẤU HÌNH GỬI EMAIL (GMAIL)
 // ==========================================
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER || 'tuog678@gmail.com',
+        pass: process.env.EMAIL_PASS
+    }
+});
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
 
 // [TỐI ƯU] Tự động dọn rác (Garbage Collection) các mã OTP hết hạn mỗi 10 phút để chống rò rỉ RAM
@@ -183,13 +189,13 @@ app.post('/api/login', (req, res) => {
 });
 
 // API Yêu cầu cấp lại mật khẩu (Gửi OTP qua Email)
-app.post('/api/forgot-password', async (req, res) => { // Chuyển sang hàm async
+app.post('/api/forgot-password', (req, res) => {
     let { username } = req.body;
     if (username) username = username.trim();
 
     if (!username) return res.status(400).json({ success: false, message: 'Vui lòng nhập tên tài khoản!' });
 
-    db.query('SELECT id, email FROM users WHERE username = ?', [username], async (err, results) => { // Chuyển sang hàm async
+    db.query('SELECT id, email FROM users WHERE username = ?', [username], (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
         if (results.length === 0) return res.status(404).json({ success: false, message: 'Tài khoản không tồn tại!' });
 
@@ -200,26 +206,23 @@ app.post('/api/forgot-password', async (req, res) => { // Chuyển sang hàm asy
         const otpKey = username.toLowerCase(); // Chuẩn hóa key về chữ thường
         otpStorage.set(otpKey, { otp, expires: Date.now() + 5 * 60 * 1000 }); // Sống 5 phút
 
-        try {
-            const { data, error } = await resend.emails.send({
-                from: 'EV Station <onboarding@resend.dev>', // Bắt buộc, không thay đổi
-                to: [userEmail],
-                subject: `Mã OTP của bạn là ${otp}`,
-                html: `<p>Chào ${username},</p><p>Mã OTP khôi phục mật khẩu của bạn là: <strong>${otp}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
-            });
+        const mailOptions = {
+            from: '"Hệ thống Trạm Sạc EV" <tuog678@gmail.com>',
+            to: userEmail,
+            subject: `Mã OTP của bạn là ${otp}`,
+            html: `<p>Chào ${username},</p><p>Mã OTP khôi phục mật khẩu của bạn là: <strong style="font-size:18px;">${otp}</strong></p><p>Mã này sẽ hết hạn sau 5 phút.</p>`
+        };
 
+        transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
-                console.error('⚠️ [Resend] Lỗi gửi email:', error);
-                return res.status(500).json({ success: false, message: 'Lỗi từ dịch vụ gửi mail: ' + error.message });
+                console.error('⚠️ [Nodemailer] Lỗi gửi email Gmail:', error.message);
+                return res.status(500).json({ success: false, message: 'Chi tiết lỗi Gmail: ' + error.message });
             }
 
             // Che mờ Email để bảo mật (VD: tuog678@gmail.com -> t***@gmail.com)
             const maskedEmail = userEmail.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
             res.json({ success: true, message: `Mã OTP đã được gửi về địa chỉ: ${maskedEmail}` });
-        } catch (e) {
-            console.error('⚠️ [Resend] Lỗi nghiêm trọng:', e);
-            res.status(500).json({ success: false, message: 'Lỗi hệ thống gửi mail.' });
-        }
+        });
     });
 });
 
