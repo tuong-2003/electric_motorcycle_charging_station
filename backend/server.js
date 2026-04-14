@@ -43,7 +43,7 @@ db.connect((err) => {
         });
 
         // [MỚI] Tự động tạo tài khoản Admin mặc định nếu chưa có
-        const adminUser = process.env.ADMIN_USERNAME || 'Admin';
+        const adminUser = process.env.ADMIN_USERNAME || 'admin';
         const adminPass = process.env.ADMIN_PASSWORD || '@minad';
         const adminEmail = process.env.ADMIN_EMAIL || 'tuog678@gmail.com';
 
@@ -518,13 +518,18 @@ app.delete('/api/users/:id', verifyToken, (req, res) => {
         return res.status(400).json({ success: false, message: 'Hệ thống từ chối việc tự xóa tài khoản của chính bạn!' });
     }
 
+    const safeUserId = parseInt(targetUserId, 10);
+
     // Bước 1: Xóa toàn bộ lịch sử sạc (charging_sessions) của user này trước để tránh lỗi khóa ngoại (Foreign Key constraint)
-    db.query('DELETE FROM charging_sessions WHERE user_id = ?', [targetUserId], (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB khi xóa dữ liệu lịch sử sạc.' });
+    db.query('DELETE FROM charging_sessions WHERE user_id = ?', [safeUserId], (err) => {
+        if (err) {
+            console.error('⚠️ [MySQL] Lỗi xóa charging_sessions:', err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi DB lịch sử sạc: ' + err.message });
+        }
 
         // Bước 2: Xóa thông tin User
-        db.query('DELETE FROM users WHERE id = ?', [targetUserId], (err, result) => {
-            if (err) return res.status(500).json({ success: false, message: 'Lỗi DB khi xóa User.' });
+        db.query('DELETE FROM users WHERE id = ?', [safeUserId], (err, result) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi DB khi xóa User: ' + err.message });
             if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy User!' });
             res.json({ success: true, message: 'Đã xóa User và toàn bộ lịch sử sạc liên quan thành công!' });
         });
