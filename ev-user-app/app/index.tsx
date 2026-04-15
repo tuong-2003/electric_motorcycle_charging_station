@@ -628,7 +628,7 @@ export default function App() {
           </View>
           <Text style={styles.mainTitle}>Khôi Phục Mật Khẩu</Text>
           <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>
-            {fpStep === 1 ? 'Điền thông tin để nhận mã OTP' : 'Nhập mã OTP trong email để tạo mật khẩu mới'}
+            {fpStep === 1 ? 'Điền thông tin để nhận mã OTP' : 'Nhập mã OTP để thiết lập mật khẩu mới'}
           </Text>
         </View>
 
