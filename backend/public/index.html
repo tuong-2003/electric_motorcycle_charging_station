@@ -506,6 +506,28 @@
       </div>
     </div>
   </div>
+</div><!-- Modal Sửa Trạm Sạc -->
+<div class="modal fade" id="editStationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Chỉnh sửa Tủ sạc</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit_station_id">
+        <div class="mb-3">
+            <label class="form-label text-muted small">Tên tủ sạc hiển thị</label>
+            <input type="text" id="edit_station_name" class="form-control bg-light" placeholder="Ví dụ: Tủ sạc 1 - Khu A">
+        </div>
+        <div class="mb-3">
+            <label class="form-label text-muted small">Vị trí / Địa chỉ</label>
+            <input type="text" id="edit_station_location" class="form-control bg-light" placeholder="Ví dụ: Bãi đỗ xe hầm B1">
+        </div>
+        <button class="btn btn-primary w-100 fw-bold mt-2" type="button" onclick="saveStation()">Lưu thay đổi</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -871,12 +893,59 @@
                         <td>${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin" onclick="openEditStation('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-edit"></i></button>
                             <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng"><i class="fas fa-cog"></i></button>
                         </td>
                     </tr>`;
                 });
             }
+        });
+    }
+
+    // Mở Popup Edit
+    function openEditStation(id, name, location) {
+        document.getElementById('edit_station_id').value = id;
+        document.getElementById('edit_station_name').value = name;
+        document.getElementById('edit_station_location').value = location;
+        
+        var editModal = new bootstrap.Modal(document.getElementById('editStationModal'));
+        editModal.show();
+    }
+
+    // Lưu dữ liệu Edit lên Server
+    function saveStation() {
+        const id = document.getElementById('edit_station_id').value;
+        const newName = document.getElementById('edit_station_name').value;
+        const newLocation = document.getElementById('edit_station_location').value;
+
+        if (!newName || !newLocation) {
+            alert("Vui lòng nhập đủ tên và địa chỉ!");
+            return;
+        }
+
+        fetch('/api/stations/' + id, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': 'Bearer ' + authToken 
+            },
+            body: JSON.stringify({ name: newName, location: newLocation })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) {
+                // Tắt Modal
+                var modalEl = document.getElementById('editStationModal');
+                var modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+                // Load lại danh sách
+                loadStations();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Lỗi kết nối máy chủ");
         });
     }
 

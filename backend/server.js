@@ -475,6 +475,23 @@ app.get('/api/stations', verifyToken, (req, res) => {
     });
 });
 
+// API Chỉnh sửa Tên và Địa chỉ Trạm sạc (Chỉ Admin)
+app.put('/api/stations/:id', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền chỉnh sửa trạm sạc!' });
+
+    const stationId = req.params.id;
+    const { name, location } = req.body;
+
+    if (!name || !location) return res.status(400).json({ success: false, message: 'Vui lòng nhập đủ Tên và Địa chỉ!' });
+
+    db.query('UPDATE stations SET name = ?, location = ? WHERE station_id = ?', [name, location, stationId], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật trạm sạc' });
+        
+        // [TỐI ƯU] Xóa Cache tạm thời nếu có hoặc chỉnh sửa cơ chế Reload (Ở đây DB đã nhận 100% chuẩn)
+        res.json({ success: true, message: 'Cập nhật thông tin trạm sạc thành công!' });
+    });
+});
+
 // API Lấy thông tin ví tiền của User đang đăng nhập
 app.get('/api/user/me', verifyToken, (req, res) => {
     db.query('SELECT username, role, balance FROM users WHERE id = ?', [req.user.id], (err, results) => {

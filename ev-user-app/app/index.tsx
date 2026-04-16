@@ -441,6 +441,14 @@ export default function App() {
   if (isLoggedIn) {
     return (
       <View style={styles.mainContainer}>
+        {/* Nút Quay lại cho trang Chi tiết Trạm sạc (cố định góc trên cùng giống trang Đăng ký) */}
+        {activeTab === 'home' && selectedStation && (
+          <TouchableOpacity style={styles.absoluteBackButton} onPress={() => setSelectedStation(null)}>
+            <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
+            <Text style={styles.backButtonText}>Quay lại</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.tabContent}>
           {/* Màn hình Trang chủ: Danh sách trạm */}
           {activeTab === 'home' && !selectedStation && (
@@ -472,57 +480,54 @@ export default function App() {
 
           {/* Màn hình Chi tiết Trạm sạc */}
           {activeTab === 'home' && selectedStation && (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              <TouchableOpacity style={styles.backButton} onPress={() => setSelectedStation(null)}>
-                <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
-                <Text style={styles.backButtonText}>Quay lại</Text>
-              </TouchableOpacity>
-
-              <View style={styles.stationDetailHeader}>
-                <FontAwesome5 name="charging-station" size={40} color="#3498db" style={{ marginBottom: 10 }} />
-                <Text style={styles.detailTitle}>{selectedStation.name}</Text>
-                <Text style={styles.detailLocation}>{selectedStation.location}</Text>
-                <Text style={styles.detailPrice}>Đơn giá: {selectedStation.unit_price.toLocaleString('vi-VN')} đ/kWh</Text>
-              </View>
-
-              {/* --- KHU VỰC HIỂN THỊ NHIỆT ĐỘ & ĐỘ ẨM --- */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
-                <View style={[styles.stationDetailHeader, { flex: 1, marginHorizontal: 5, padding: 15, marginBottom: 0 }]}>
-                  <FontAwesome5 name="temperature-high" size={24} color="#e74c3c" style={{ marginBottom: 5 }} />
-                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>{selectedStation.temperature != null ? `${selectedStation.temperature} °C` : '-- °C'}</Text>
+            <View style={{ flex: 1, paddingTop: 40 }}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                <View style={styles.stationDetailHeader}>
+                  <FontAwesome5 name="charging-station" size={40} color="#3498db" style={{ marginBottom: 10 }} />
+                  <Text style={styles.detailTitle}>{selectedStation.name}</Text>
+                  <Text style={styles.detailLocation}>{selectedStation.location}</Text>
+                  <Text style={styles.detailPrice}>Đơn giá: {selectedStation.unit_price.toLocaleString('vi-VN')} đ/kWh</Text>
                 </View>
-                <View style={[styles.stationDetailHeader, { flex: 1, marginHorizontal: 5, padding: 15, marginBottom: 0 }]}>
-                  <FontAwesome5 name="tint" size={24} color="#3498db" style={{ marginBottom: 5 }} />
-                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>{selectedStation.humidity != null ? `${selectedStation.humidity} %` : '-- %'}</Text>
+
+                {/* --- KHU VỰC HIỂN THỊ NHIỆT ĐỘ & ĐỘ ẨM --- */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <View style={[styles.stationDetailHeader, { flex: 1, marginHorizontal: 5, padding: 15, marginBottom: 0 }]}>
+                    <FontAwesome5 name="temperature-high" size={24} color="#e74c3c" style={{ marginBottom: 5 }} />
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>{selectedStation.temperature != null ? `${selectedStation.temperature} °C` : '-- °C'}</Text>
+                  </View>
+                  <View style={[styles.stationDetailHeader, { flex: 1, marginHorizontal: 5, padding: 15, marginBottom: 0 }]}>
+                    <FontAwesome5 name="tint" size={24} color="#3498db" style={{ marginBottom: 5 }} />
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>{selectedStation.humidity != null ? `${selectedStation.humidity} %` : '-- %'}</Text>
+                  </View>
                 </View>
-              </View>
 
-              <Text style={styles.sectionTitle}>Chọn ổ cắm để sạc</Text>
+                <Text style={styles.sectionTitle}>Chọn ổ cắm để sạc</Text>
 
-              <View style={styles.outletsContainer}>
-                {[1, 2].map(outletId => (
-                  <TouchableOpacity
-                    key={outletId}
-                    style={styles.outletCard}
-                    onPress={() => {
-                      Alert.alert(
-                        'Tùy chọn sạc',
-                        `Bạn muốn làm gì với ${selectedStation.name} - Ổ ${outletId}?`,
-                        [
-                          { text: 'Dừng sạc (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outletId), style: 'destructive' },
-                          { text: 'Bắt đầu sạc', onPress: () => startChargeFromList(selectedStation.station_id, outletId) },
-                          { text: 'Hủy', style: 'cancel' }
-                        ]
-                      );
-                    }}
-                  >
-                    <FontAwesome5 name="plug" size={30} color="#2ecc71" style={{ marginBottom: 10 }} />
-                    <Text style={styles.outletName}>Ổ cắm {outletId}</Text>
-                    <Text style={styles.outletStatus}>Sẵn sàng</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
+                <View style={styles.outletsContainer}>
+                  {[1, 2].map(outletId => (
+                    <TouchableOpacity
+                      key={outletId}
+                      style={styles.outletCard}
+                      onPress={() => {
+                        Alert.alert(
+                          'Tùy chọn sạc',
+                          `Bạn muốn làm gì với ${selectedStation.name} - Ổ ${outletId}?`,
+                          [
+                            { text: 'Dừng sạc (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outletId), style: 'destructive' },
+                            { text: 'Bắt đầu sạc', onPress: () => startChargeFromList(selectedStation.station_id, outletId) },
+                            { text: 'Hủy', style: 'cancel' }
+                          ]
+                        );
+                      }}
+                    >
+                      <FontAwesome5 name="plug" size={30} color="#2ecc71" style={{ marginBottom: 10 }} />
+                      <Text style={styles.outletName}>Ổ cắm {outletId}</Text>
+                      <Text style={styles.outletStatus}>Sẵn sàng</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
           )}
 
           {activeTab === 'history' && (
