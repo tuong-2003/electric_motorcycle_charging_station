@@ -465,13 +465,40 @@ app.get('/api/stations', verifyToken, (req, res) => {
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
 
-        // [TỐI ƯU] Ghép dữ liệu từ DB với dữ liệu Real-time từ RAM Cache
-        const mappedData = results.map(st => ({
-            ...st,
-            temperature: liveDataCache[st.station_id]?.temperature || null,
-            humidity: liveDataCache[st.station_id]?.humidity || null
-        }));
-        res.json({ success: true, data: mappedData });
+        // Lấy danh sách các ổ cắm đang được sạc (ongoing)
+        db.query("SELECT station_id, user_id, TIMESTAMPDIFF(SECOND, start_time, NOW()) as duration_sec FROM charging_sessions WHERE status = 'ongoing'", (err, activeSessions) => {
+            const activeMap = {};
+            if (!err && activeSessions) {
+                activeSessions.forEach(session => {
+                    activeMap[session.station_id] = { user_id: session.user_id, duration_sec: session.duration_sec };
+                });
+            }
+
+            // [TỐI ƯU] Ghép dữ liệu DB, Real-time RAM Cache và Trạng thái Ổ cắm
+            const mappedData = results.map(st => {
+                // Tự động quét 2 ổ cắm của mỗi trạm để ép cấu hình
+                const outlets = [1, 2].map(outletId => {
+                    const fullId = `${st.station_id}.${outletId}`;
+                    const sessionInfo = activeMap[fullId];
+
+                    if (!sessionInfo) {
+                        return { id: outletId, status: 'available' };
+                    } else if (sessionInfo.user_id === req.user.id) {
+                        return { id: outletId, status: 'charging_by_me', duration_sec: sessionInfo.duration_sec };
+                    } else {
+                        return { id: outletId, status: 'charging_by_other' };
+                    }
+                });
+
+                return {
+                    ...st,
+                    temperature: liveDataCache[st.station_id]?.temperature || null,
+                    humidity: liveDataCache[st.station_id]?.humidity || null,
+                    outlets: outlets
+                };
+            });
+            res.json({ success: true, data: mappedData });
+        });
     });
 });
 

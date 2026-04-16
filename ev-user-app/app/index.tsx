@@ -504,27 +504,55 @@ export default function App() {
                 <Text style={styles.sectionTitle}>Chọn ổ cắm để sạc</Text>
 
                 <View style={styles.outletsContainer}>
-                  {[1, 2].map(outletId => (
-                    <TouchableOpacity
-                      key={outletId}
-                      style={styles.outletCard}
-                      onPress={() => {
-                        Alert.alert(
-                          'Tùy chọn sạc',
-                          `Bạn muốn làm gì với ${selectedStation.name} - Ổ ${outletId}?`,
-                          [
-                            { text: 'Dừng sạc (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outletId), style: 'destructive' },
-                            { text: 'Bắt đầu sạc', onPress: () => startChargeFromList(selectedStation.station_id, outletId) },
-                            { text: 'Hủy', style: 'cancel' }
-                          ]
-                        );
-                      }}
-                    >
-                      <FontAwesome5 name="plug" size={30} color="#2ecc71" style={{ marginBottom: 10 }} />
-                      <Text style={styles.outletName}>Ổ cắm {outletId}</Text>
-                      <Text style={styles.outletStatus}>Sẵn sàng</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {(selectedStation.outlets || [
+                    { id: 1, status: 'available' },
+                    { id: 2, status: 'available' }
+                  ]).map((outlet: any) => {
+                    let outletColor = "#2ecc71"; // Xanh mặc định
+                    let statusText = "Trống";
+                    
+                    if (outlet.status === 'charging_by_me') {
+                      outletColor = "#e67e22"; // Cam nếu mình đang sạc
+                      statusText = `Đang sạc (${Math.floor(outlet.duration_sec / 60)}p)`;
+                    } else if (outlet.status === 'charging_by_other') {
+                      outletColor = "#e74c3c"; // Đỏ nếu người khác sạc
+                      statusText = "Đang bận";
+                    }
+
+                    return (
+                      <TouchableOpacity
+                        key={outlet.id}
+                        style={[styles.outletCard, { borderColor: outletColor, borderWidth: 1 }]}
+                        onPress={() => {
+                          if (outlet.status === 'available') {
+                            Alert.alert(
+                              'Bắt đầu sạc',
+                              `Kích hoạt sạc tại ${selectedStation.name} - Ổ ${outlet.id}?`,
+                              [
+                                { text: 'Xác nhận', onPress: () => startChargeFromList(selectedStation.station_id, outlet.id) },
+                                { text: 'Hủy', style: 'cancel' }
+                              ]
+                            );
+                          } else if (outlet.status === 'charging_by_me') {
+                            Alert.alert(
+                              'Ngắt sạc',
+                              `Bạn muốn chốt hóa đơn cho Ổ ${outlet.id}?`,
+                              [
+                                { text: 'Xác nhận dừng (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outlet.id), style: 'destructive' },
+                                { text: 'Hủy', style: 'cancel' }
+                              ]
+                            );
+                          } else {
+                            Alert.alert('Không khả dụng', 'Ổ cắm này đang được người khác sử dụng!');
+                          }
+                        }}
+                      >
+                        <FontAwesome5 name="plug" size={30} color={outletColor} style={{ marginBottom: 10 }} />
+                        <Text style={styles.outletName}>Ổ cắm {outlet.id}</Text>
+                        <Text style={[styles.outletStatus, { color: outletColor }]}>{statusText}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </ScrollView>
             </View>
