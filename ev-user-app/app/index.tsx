@@ -284,7 +284,7 @@ export default function App() {
       }
 
       Alert.alert('Đang lưu', 'Hệ thống đang tải ảnh về máy...');
-      const qrUrl = `https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=NGUYEN%20VAN%20A`;
+      const qrUrl = `https://img.vietqr.io/image/970422-0377326806-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=HVT%20STATION`;
       const fileUri = FileSystem.documentDirectory + `vietqr_${new Date().getTime()}.png`;
 
       const { uri } = await FileSystem.downloadAsync(qrUrl, fileUri);
@@ -767,7 +767,7 @@ export default function App() {
               <TouchableOpacity
                 style={[styles.button, { width: '100%' }]}
                 onPress={() => {
-                  if (parseInt(topupAmount) >= 10000) {
+                  if (parseInt(topupAmount) >= 2000) {
                     setTopupModalVisible(false);
                     setQrModalVisible(true);
                   } else {
@@ -804,7 +804,7 @@ export default function App() {
               {/* KHU VỰC HIỂN THỊ ẢNH QR MẪU */}
               <View style={{ padding: 10, backgroundColor: '#fff', borderRadius: 15, borderWidth: 1, borderColor: '#ecf0f1', marginBottom: 15 }}>
                 <Image
-                  source={{ uri: `https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=NGUYEN%20VAN%20A` }}
+                  source={{ uri: `https://img.vietqr.io/image/970422-0377326806-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=HVT%20STATION` }}
                   style={{ width: 220, height: 220 }}
                   resizeMode="contain"
                 />
@@ -827,8 +827,8 @@ export default function App() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
                   <Text style={{ color: '#7f8c8d' }}>Số tài khoản:</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontWeight: 'bold', marginRight: 10 }}>0123456789</Text>
-                    <TouchableOpacity onPress={() => copyToClipboard('0123456789', 'Số tài khoản')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                    <Text style={{ fontWeight: 'bold', marginRight: 10 }}>0377326806</Text>
+                    <TouchableOpacity onPress={() => copyToClipboard('0377326806', 'Số tài khoản')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>

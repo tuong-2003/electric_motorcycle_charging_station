@@ -699,15 +699,15 @@ app.post('/api/payment/webhook', (req, res) => {
         return res.status(401).json({ success: false, message: 'Unauthorized (Lỗi xác thực)' });
     }
 
-    // Expected Payload từ SePay: { transferAmount: 50000, transactionContent: "NAP TRAM admin" }
-    const { transferAmount, transactionContent } = req.body;
+    // Payload thực tế từ SePay: { transferAmount, content, gateway, ... }
+    const { transferAmount, content } = req.body;
     
-    if (!transferAmount || !transactionContent) {
+    if (!transferAmount || !content) {
         return res.status(400).json({ success: false, message: 'Dữ liệu Webhook không hợp lệ' });
     }
 
     // Phân tích mã nội dung (Tìm chữ "NAP TRAM [username]")
-    const splitContent = transactionContent.toUpperCase().split(' ');
+    const splitContent = content.toUpperCase().split(' ');
     const napIndex = splitContent.indexOf('NAP');
     const tramIndex = splitContent.indexOf('TRAM');
 
