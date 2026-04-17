@@ -685,6 +685,46 @@ setInterval(() => {
     });
 }, 24 * 60 * 60 * 1000); // 24 giờ
 
+// ==========================================
+// 5. WEBHOOK NẠP TIỀN TỰ ĐỘNG (OPEN BANKING / SEPAY)
+// ==========================================
+app.post('/api/payment/webhook', (req, res) => {
+    // Expected Payload từ SePay: { transferAmount: 50000, transactionContent: "NAP TRAM admin" }
+    const { transferAmount, transactionContent } = req.body;
+    
+    if (!transferAmount || !transactionContent) {
+        return res.status(400).json({ success: false, message: 'Dữ liệu Webhook không hợp lệ' });
+    }
+
+    // Phân tích mã nội dung (Tìm chữ "NAP TRAM [username]")
+    const splitContent = transactionContent.toUpperCase().split(' ');
+    const napIndex = splitContent.indexOf('NAP');
+    const tramIndex = splitContent.indexOf('TRAM');
+
+    // Chống hack: Chỉ mở cổng cộng tiền nếu nội dung bắt đầu bằng lệnh chỉ định
+    if (napIndex !== -1 && tramIndex === napIndex + 1 && splitContent.length > tramIndex + 1) {
+        const username = splitContent[tramIndex + 1].toLowerCase();
+
+        db.query('UPDATE users SET balance = balance + ? WHERE username = ?', [transferAmount, username], (err, result) => {
+            if (err) {
+                console.error('⚠️ [Webhook] Lỗi cộng tiền:', err.message);
+                return res.status(500).json({ success: false, message: 'Lỗi DB' });
+            }
+            if (result.affectedRows === 0) {
+                console.log(`⚠️ [Webhook] Nhận được ${transferAmount}đ nhưng không tìm thấy tài khoản "${username}". Vui lòng xử lý tay!`);
+                return res.status(404).json({ success: false, message: 'User không tồn tại' });
+            }
+
+            console.log(`🔥 [Webhook] Tự động CỘNG ${transferAmount}đ vào ví của User "${username}" thành công!`);
+            return res.json({ success: true, message: 'Đã nạp tiền thành công' });
+        });
+    } else {
+        // Có người chuyển tiền không đúng cú pháp, ghi log lại báo cho Admin
+        console.log(`⚠️ [Webhook] Giao dịch ${transferAmount}đ KHÔNG đúng Cú pháp. Lời nhắn: "${transactionContent}"`);
+        return res.status(200).json({ success: true, message: 'Webhook đã ghi nhận (Bỏ qua nạp tự động do sai cú pháp)' });
+    }
+});
+
 // Chặn báo lỗi rác 404 do trình duyệt tự tìm file favicon
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 

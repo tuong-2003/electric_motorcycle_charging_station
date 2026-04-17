@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Modal, Image, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { FontAwesome5 } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 
 // Đổi đường link này thành link Render thực tế của bạn
 const API_URL = 'https://electric-motorcycle-charging-station.onrender.com';
@@ -22,6 +23,11 @@ export default function App() {
   const [selectedOutletModal, setSelectedOutletModal] = useState<any>(null); // State Popup cấu hình Ổ cắm Nâng cao
   const [history, setHistory] = useState([]); // State lưu lịch sử giao dịch
   const [showPassword, setShowPassword] = useState(false);
+
+  // State cho luồng Nạp Tiền VietQR Webhook
+  const [topupModalVisible, setTopupModalVisible] = useState(false);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [topupAmount, setTopupAmount] = useState('');
 
   // State cho luồng Quên mật khẩu qua Email
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -260,6 +266,11 @@ export default function App() {
     setActiveTab('home');
     setUsername('');
     setPassword('');
+  };
+
+  const copyToClipboard = async (text: string, title: string) => {
+    await Clipboard.setStringAsync(text);
+    Alert.alert('Đã sao chép!', `${title} đã được lưu vào khay nhớ tạm.`);
   };
 
   // Hàm gửi yêu cầu lấy OTP qua Email
@@ -543,7 +554,7 @@ export default function App() {
 
                 {/* Modal Cấu hình Ổ cắm Nâng cao (HUD) */}
                 <Modal
-                  animationType="slide"
+                  animationType="fade"
                   transparent={true}
                   visible={selectedOutletModal !== null}
                   onRequestClose={() => setSelectedOutletModal(null)}
@@ -553,7 +564,7 @@ export default function App() {
                       {selectedOutletModal && (() => {
                         let badgeColor = "#2ecc71";
                         let badgeText = "Sẵn sàng sạc";
-                        let actionBtnText = "TIẾN HÀNH SẠC TẠI ĐÂY";
+                        let actionBtnText = "TIẾN HÀNH SẠC";
                         let actionBtnColor = "#2ecc71";
 
                         if (selectedOutletModal.status === 'charging_by_me') {
@@ -674,7 +685,7 @@ export default function App() {
                 <Text style={styles.walletAmount}>{balance.toLocaleString('vi-VN')} đ</Text>
 
                 <View style={styles.walletActions}>
-                  <TouchableOpacity style={styles.walletActionButton} onPress={() => Alert.alert('Tính năng', 'Đang chuyển hướng đến cổng thanh toán...')}>
+                  <TouchableOpacity style={styles.walletActionButton} onPress={() => setTopupModalVisible(true)}>
                     <View style={styles.walletActionIcon}><FontAwesome5 name="plus" size={16} color="#fff" /></View>
                     <Text style={styles.walletActionText}>Nạp tiền</Text>
                   </TouchableOpacity>
@@ -691,6 +702,140 @@ export default function App() {
             </View>
           )}
         </View>
+
+        {/* Modal: NHẬP SỐ TIỀN NẠP */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={topupModalVisible}
+          onRequestClose={() => setTopupModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: '85%', backgroundColor: '#fff', borderRadius: 20, padding: 25, elevation: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold' }}>Nạp tiền vào ví</Text>
+                <TouchableOpacity onPress={() => setTopupModalVisible(false)}>
+                  <FontAwesome5 name="times" size={24} color="#7f8c8d" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 16, marginBottom: 10, color: '#34495e' }}>Nhập số tiền muốn nạp (VNĐ):</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#bdc3c7', borderRadius: 10, padding: 15, fontSize: 18, marginBottom: 20, textAlign: 'center' }}
+                keyboardType="numeric"
+                placeholder="VD: 50000"
+                value={topupAmount}
+                onChangeText={setTopupAmount}
+              />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                {[50000, 100000, 200000].map(amt => (
+                  <TouchableOpacity
+                    key={amt}
+                    style={{ backgroundColor: '#ecf0f1', padding: 10, borderRadius: 10, flex: 1, marginHorizontal: 5, alignItems: 'center' }}
+                    onPress={() => setTopupAmount(amt.toString())}
+                  >
+                    <Text style={{ color: '#2c3e50', fontWeight: 'bold' }}>{amt / 1000}k</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, { width: '100%' }]}
+                onPress={() => {
+                  if (parseInt(topupAmount) >= 10000) {
+                    setTopupModalVisible(false);
+                    setQrModalVisible(true);
+                  } else {
+                    Alert.alert('Lỗi', 'Số tiền nạp tối thiểu là 10.000đ');
+                  }
+                }}
+              >
+                <Text style={styles.buttonText}>Tạo mã QR Nạp</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal: QUÉT MÃ VIETQR */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={qrModalVisible}
+          onRequestClose={() => setQrModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: '90%', backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 10, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2c3e50' }}>Quét mã nạp tiền</Text>
+                <TouchableOpacity onPress={() => setQrModalVisible(false)}>
+                  <FontAwesome5 name="times" size={24} color="#7f8c8d" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 14, color: '#7f8c8d', textAlign: 'center', marginBottom: 15 }}>
+                Sử dụng App Ngân hàng hoặc MoMo quét mã QR bên dưới. Tiền sẽ tự động cập nhật trong 10 giây.
+              </Text>
+
+              {/* KHU VỰC HIỂN THỊ ẢNH QR MẪU */}
+              <View style={{ padding: 10, backgroundColor: '#fff', borderRadius: 15, borderWidth: 1, borderColor: '#ecf0f1', marginBottom: 15 }}>
+                <Image
+                  source={{ uri: `https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=NGUYEN%20VAN%20A` }}
+                  style={{ width: 220, height: 220 }}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={{ flexDirection: 'row', backgroundColor: '#e8f4f8', padding: 10, borderRadius: 10, marginBottom: 20 }}
+                onPress={() => Linking.openURL('sms:?body=Tải ảnh từ thư viện để chuyển khoản nhé').catch(() => Alert.alert('TIPS', 'Hãy chụp màn hình lại và tải lên app Ngân hàng'))}
+              >
+                <FontAwesome5 name="download" size={16} color="#3498db" style={{ marginRight: 8, marginTop: 2 }} />
+                <Text style={{ color: '#3498db', fontWeight: 'bold' }}>Lưu mã QR (Chụp màn hình)</Text>
+              </TouchableOpacity>
+
+              {/* BẢNG TEXT COPY THỦ CÔNG */}
+              <View style={{ width: '100%', backgroundColor: '#f8f9fa', borderRadius: 10, padding: 15, marginBottom: 15 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ color: '#7f8c8d' }}>Ngân hàng:</Text>
+                  <Text style={{ fontWeight: 'bold' }}>MB Bank</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+                  <Text style={{ color: '#7f8c8d' }}>Số tài khoản:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontWeight: 'bold', marginRight: 10 }}>0123456789</Text>
+                    <TouchableOpacity onPress={() => copyToClipboard('0123456789', 'Số tài khoản')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+                  <Text style={{ color: '#7f8c8d' }}>Số tiền:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontWeight: 'bold', color: '#e74c3c', marginRight: 10 }}>{parseInt(topupAmount || '0').toLocaleString('vi-VN')} đ</Text>
+                    <TouchableOpacity onPress={() => copyToClipboard(topupAmount, 'Số tiền')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#7f8c8d' }}>Nội dung:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontWeight: 'bold', color: '#f39c12', marginRight: 10 }}>NAP TRAM {username}</Text>
+                    <TouchableOpacity onPress={() => copyToClipboard(`NAP TRAM ${username}`, 'Nội dung')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, { width: '100%', backgroundColor: '#2ecc71' }]}
+                onPress={() => {
+                  setQrModalVisible(false);
+                  if (authToken) fetchProfile(authToken); // Bắt đầu load lại ví sau khi khách confirm thao tác
+                  Alert.alert('Đang xử lý', 'Số dư sẽ tự động cộng trên ứng dụng trong 10-30 giây tới nếu bạn chuyển khoản đúng nội dung.');
+                }}
+              >
+                <Text style={styles.buttonText}>TÔI ĐÃ CHUYỂN KHOẢN</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Bottom Tab Bar */}
         <View style={styles.tabBar}>
