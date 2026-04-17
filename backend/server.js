@@ -528,7 +528,7 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
 
     db.query('UPDATE stations SET name = ?, location = ? WHERE station_id = ?', [name, location, stationId], (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật trạm sạc' });
-        
+
         // [TỐI ƯU] Xóa Cache tạm thời nếu có hoặc chỉnh sửa cơ chế Reload (Ở đây DB đã nhận 100% chuẩn)
         res.json({ success: true, message: 'Cập nhật thông tin trạm sạc thành công!' });
     });
@@ -701,7 +701,7 @@ app.post('/api/payment/webhook', (req, res) => {
 
     // Payload thực tế từ SePay: { transferAmount, content, gateway, ... }
     const { transferAmount, content } = req.body;
-    
+
     if (!transferAmount || !content) {
         return res.status(400).json({ success: false, message: 'Dữ liệu Webhook không hợp lệ' });
     }
@@ -713,7 +713,8 @@ app.post('/api/payment/webhook', (req, res) => {
 
     // Chống hack: Chỉ mở cổng cộng tiền nếu nội dung bắt đầu bằng lệnh chỉ định
     if (napIndex !== -1 && tramIndex === napIndex + 1 && splitContent.length > tramIndex + 1) {
-        const username = splitContent[tramIndex + 1].toLowerCase();
+        // [FIX] Lọc bỏ ký tự đặc biệt (dấu -/. do ngân hàng tự thêm) để khớp đúng username trong DB
+        const username = splitContent[tramIndex + 1].toLowerCase().replace(/[^a-z0-9]/g, '');
 
         db.query('UPDATE users SET balance = balance + ? WHERE username = ?', [transferAmount, username], (err, result) => {
             if (err) {
