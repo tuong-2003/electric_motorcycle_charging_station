@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Modal, Image, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -23,6 +23,7 @@ export default function App() {
   const [stations, setStations] = useState<any[]>([]); // State lưu danh sách trạm
   const [selectedStation, setSelectedStation] = useState<any>(null); // State lưu trạm đang xem chi tiết
   const [selectedOutletModal, setSelectedOutletModal] = useState<any>(null); // State Popup cấu hình Ổ cắm Nâng cao
+  const lastOutletRef = useRef<any>(null); // Giữ nội dung cũ trong suốt animation fade-out
   const [history, setHistory] = useState([]); // State lưu lịch sử giao dịch
   const [showPassword, setShowPassword] = useState(false);
 
@@ -30,6 +31,9 @@ export default function App() {
   const [topupModalVisible, setTopupModalVisible] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [topupAmount, setTopupAmount] = useState('');
+  const [isPollingBalance, setIsPollingBalance] = useState(false);
+  const [topupHistory, setTopupHistory] = useState<any[]>([]); // [MỚI] State lưu lịch sử nạp tiền
+  const [topupHistoryModalVisible, setTopupHistoryModalVisible] = useState(false); // [MỚI] State hiển thị Modal lịch sử nạp
 
   // State cho luồng Quên mật khẩu qua Email
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -209,6 +213,31 @@ export default function App() {
     }
   }, [activeTab]);
 
+  // Tự động làm mới số dư ví mỗi 10 giây khi đang đăng nhập
+  useEffect(() => {
+    if (!isLoggedIn || !authToken) return;
+    const intervalId = setInterval(() => {
+      fetchProfile(authToken);
+    }, 10000); // 10 giây
+    return () => clearInterval(intervalId); // Dọn dẹp khi đăng xuất
+  }, [isLoggedIn, authToken]);
+
+  // [MỚI] Hàm tải lịch sử nạp tiền
+  const fetchTopupHistory = async () => {
+    if (!authToken) return;
+    try {
+      const response = await fetch(`${API_URL}/api/user/topup-history`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setTopupHistory(data.data);
+      }
+    } catch (error) {
+      console.error('Lỗi tải lịch sử nạp:', error);
+    }
+  };
+
   // Hàm xử lý khi người dùng chọn sạc trực tiếp trên App thay vì quét QR
   const startChargeFromList = async (stationId: string, outletId: number) => {
     if (!authToken) return;
@@ -224,9 +253,8 @@ export default function App() {
 
       const result = await response.json();
       if (result.success) {
-        Alert.alert('Thành công!', `Đã bắt đầu sạc xe tại Trạm ${stationId} - Ổ ${outletId}`);
-        fetchProfile(authToken); // Cập nhật lại số dư ví sau khi sạc
-        setSelectedStation(null); // Đóng chi tiết trạm, quay lại danh sách
+        fetchProfile(authToken); // C?p nh?t l?i s? du v�
+        setSelectedStation(null);
       } else {
         Alert.alert('Từ chối', result.message);
       }
@@ -250,7 +278,6 @@ export default function App() {
 
       const result = await response.json();
       if (result.success) {
-        Alert.alert('Đã chốt hóa đơn!', result.message);
         fetchProfile(authToken); // Cập nhật lại số dư ví sau khi bị trừ tiền
         fetchHistory(); // Làm mới lại danh sách lịch sử sạc
       } else {
@@ -268,6 +295,37 @@ export default function App() {
     setActiveTab('home');
     setUsername('');
     setPassword('');
+  };
+
+  // Hàm polling: tự động kiểm tra số dư mỗi 5s, tối đa 12 lần (60s) sau khi user xác nhận CK
+  const startBalancePolling = (token: string, previousBalance: number) => {
+    setIsPollingBalance(true);
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    const intervalId = setInterval(async () => {
+      attempts++;
+      try {
+        const response = await fetch(`${API_URL}/api/user/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success && data.data.balance > previousBalance) {
+          // Số dư đã tăng → dừng polling và cập nhật UI
+          clearInterval(intervalId);
+          setIsPollingBalance(false);
+          setBalance(data.data.balance);
+          Alert.alert('🎉 Nạp tiền thành công!', `Đã cộng ${(data.data.balance - previousBalance).toLocaleString('vi-VN')}đ vào ví của bạn!`);
+          return;
+        }
+      } catch (_) { /* bỏ qua lỗi mạng tạm thời */ }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(intervalId);
+        setIsPollingBalance(false);
+        Alert.alert('Thông báo', 'Không phát hiện giao dịch mới. Nếu đã chuyển khoản đúng nội dung, số dư sẽ được cập nhật trong ít phút.');
+      }
+    }, 5000); // Kiểm tra mỗi 5 giây
   };
 
   const copyToClipboard = async (text: string, title: string) => {
@@ -496,11 +554,16 @@ export default function App() {
           {/* Màn hình Trang chủ: Danh sách trạm */}
           {activeTab === 'home' && !selectedStation && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              <Text style={styles.title}>⚡ EV Charger</Text>
-              <Text style={styles.subtitle}>Xin chào, {username}!</Text>
+              <View style={styles.headerContainer}>
+                <View style={styles.logoContainer}>
+                  <FontAwesome5 name="charging-station" size={45} color="#3498db" />
+                </View>
+                <Text style={styles.mainTitle}>Trạm Sạc Xe Máy Điện</Text>
+                <Text style={styles.subTitleText}>Xin chào, {username}! 👋</Text>
+              </View>
 
               <TouchableOpacity style={styles.button} onPress={startScanning}>
-                <Text style={styles.buttonText}>📷 Quét QR sạc xe nhanh</Text>
+                <Text style={styles.buttonText}>📷 Quét QR</Text>
               </TouchableOpacity>
 
               <Text style={styles.sectionTitle}>Danh sách Trạm sạc</Text>
@@ -585,18 +648,21 @@ export default function App() {
                 >
                   <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
                     <View style={{ width: '90%', backgroundColor: '#fff', borderRadius: 20, padding: 25, elevation: 10 }}>
-                      {selectedOutletModal && (() => {
+                      {(() => {
+                        if (selectedOutletModal) lastOutletRef.current = selectedOutletModal;
+                        const outletData = lastOutletRef.current;
+                        if (!outletData) return null;
                         let badgeColor = "#2ecc71";
                         let badgeText = "Sẵn sàng sạc";
                         let actionBtnText = "TIẾN HÀNH SẠC";
                         let actionBtnColor = "#2ecc71";
 
-                        if (selectedOutletModal.status === 'charging_by_me') {
+                        if (outletData.status === 'charging_by_me') {
                           badgeColor = "#e67e22";
-                          badgeText = `Đang sạc (${Math.floor((selectedOutletModal.duration_sec || 0) / 60)} phút)`;
+                          badgeText = `Đang sạc (${Math.floor((outletData.duration_sec || 0) / 60)} phút)`;
                           actionBtnText = "DỪNG SẠC & THANH TOÁN";
                           actionBtnColor = "#e74c3c";
-                        } else if (selectedOutletModal.status === 'charging_by_other') {
+                        } else if (outletData.status === 'charging_by_other') {
                           badgeColor = "#e74c3c";
                           badgeText = "Đang có người sử dụng";
                         }
@@ -605,7 +671,7 @@ export default function App() {
                           <View>
                             {/* Header Modal */}
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                              <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Cổng sạc {selectedOutletModal.id}</Text>
+                              <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Cổng sạc {outletData.id}</Text>
                               <TouchableOpacity onPress={() => setSelectedOutletModal(null)}>
                                 <FontAwesome5 name="times" size={24} color="#7f8c8d" />
                               </TouchableOpacity>
@@ -621,29 +687,29 @@ export default function App() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#f8f9fa', padding: 15, borderRadius: 15, marginBottom: 25 }}>
                               <View style={{ alignItems: 'center' }}>
                                 <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>ĐIỆN ÁP</Text>
-                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#2c3e50' }}>{selectedOutletModal.voltage || 0} V</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#2c3e50' }}>{outletData.voltage || 0} V</Text>
                               </View>
                               <View style={{ alignItems: 'center' }}>
                                 <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>DÒNG ĐIỆN</Text>
-                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#3498db' }}>{selectedOutletModal.current || 0} A</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#3498db' }}>{outletData.current || 0} A</Text>
                               </View>
                               <View style={{ alignItems: 'center' }}>
                                 <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>CÔNG SUẤT</Text>
-                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#e74c3c' }}>{selectedOutletModal.power || 0} W</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#e74c3c' }}>{outletData.power || 0} W</Text>
                               </View>
                             </View>
 
                             {/* Nút Điều Khiển Mạch */}
-                            {selectedOutletModal.status !== 'charging_by_other' ? (
+                            {outletData.status !== 'charging_by_other' ? (
                               <TouchableOpacity
                                 style={{ backgroundColor: actionBtnColor, paddingVertical: 15, borderRadius: 10, alignItems: 'center' }}
                                 onPress={() => {
-                                  if (selectedOutletModal.status === 'available') {
-                                    startChargeFromList(selectedStation.station_id, selectedOutletModal.id);
+                                  if (outletData.status === 'available') {
+                                    startChargeFromList(selectedStation.station_id, outletData.id);
                                   } else {
-                                    stopCharge(selectedStation.station_id, selectedOutletModal.id);
+                                    stopCharge(selectedStation.station_id, outletData.id);
                                   }
-                                  setSelectedOutletModal(null); // Đóng popup sau khi nhấn
+                                  setSelectedOutletModal(null);
                                 }}
                               >
                                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>{actionBtnText}</Text>
@@ -695,7 +761,7 @@ export default function App() {
           )}
 
           {activeTab === 'account' && (
-            <View style={{ flex: 1, justifyContent: 'center' }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
               <Text style={styles.title}>Tài khoản</Text>
               <Text style={styles.subtitle}>{username}</Text>
 
@@ -713,9 +779,12 @@ export default function App() {
                     <View style={styles.walletActionIcon}><FontAwesome5 name="plus" size={16} color="#fff" /></View>
                     <Text style={styles.walletActionText}>Nạp tiền</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.walletActionButton} onPress={() => setActiveTab('history')}>
+                  <TouchableOpacity style={styles.walletActionButton} onPress={() => {
+                    fetchTopupHistory();
+                    setTopupHistoryModalVisible(true);
+                  }}>
                     <View style={[styles.walletActionIcon, { backgroundColor: '#f39c12' }]}><FontAwesome5 name="history" size={16} color="#fff" /></View>
-                    <Text style={styles.walletActionText}>Lịch sử</Text>
+                    <Text style={styles.walletActionText}>Lịch sử nạp</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -723,7 +792,7 @@ export default function App() {
               <TouchableOpacity style={[styles.button, styles.logoutBtn, { width: '100%' }]} onPress={handleLogout}>
                 <Text style={styles.buttonText}>Đăng xuất</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           )}
         </View>
 
@@ -848,15 +917,58 @@ export default function App() {
               </View>
 
               <TouchableOpacity
-                style={[styles.button, { width: '100%', backgroundColor: '#2ecc71' }]}
+                style={[styles.button, { width: '100%', backgroundColor: isPollingBalance ? '#95a5a6' : '#2ecc71' }]}
+                disabled={isPollingBalance}
                 onPress={() => {
                   setQrModalVisible(false);
-                  if (authToken) fetchProfile(authToken); // Bắt đầu load lại ví sau khi khách confirm thao tác
-                  Alert.alert('Đang xử lý', 'Số dư sẽ tự động cộng trên ứng dụng trong 10-30 giây tới nếu bạn chuyển khoản đúng nội dung.');
+                  if (authToken) startBalancePolling(authToken, balance);
                 }}
               >
-                <Text style={styles.buttonText}>TÔI ĐÃ CHUYỂN KHOẢN</Text>
+                <Text style={styles.buttonText}>
+                  {isPollingBalance ? '⏳ Đang chờ xác nhận...' : 'TÔI ĐÃ CHUYỂN KHOẢN'}
+                </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal: LỊCH SỬ NẠP TIỀN */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={topupHistoryModalVisible}
+          onRequestClose={() => setTopupHistoryModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, height: '70%', padding: 25 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2c3e50' }}>Lịch sử nạp tiền</Text>
+                <TouchableOpacity onPress={() => setTopupHistoryModalVisible(false)}>
+                  <FontAwesome5 name="times" size={24} color="#7f8c8d" />
+                </TouchableOpacity>
+              </View>
+
+              {topupHistory.length === 0 ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <FontAwesome5 name="box-open" size={50} color="#bdc3c7" style={{ marginBottom: 15 }} />
+                  <Text style={{ color: '#7f8c8d' }}>Chưa có giao dịch nạp tiền nào.</Text>
+                </View>
+              ) : (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {topupHistory.map((item, index) => (
+                    <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2ecc71' }}>+{item.amount.toLocaleString('vi-VN')} đ</Text>
+                        <Text style={{ fontSize: 12, color: '#7f8c8d', marginTop: 4 }}>{new Date(item.created_at).toLocaleString('vi-VN')}</Text>
+                        <Text style={{ fontSize: 13, color: '#34495e', marginTop: 4 }} numberOfLines={1}>{item.note}</Text>
+                      </View>
+                      <View style={{ backgroundColor: '#e8f5e9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
+                        <Text style={{ color: '#2ecc71', fontSize: 11, fontWeight: 'bold' }}>Thành công</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
             </View>
           </View>
         </Modal>

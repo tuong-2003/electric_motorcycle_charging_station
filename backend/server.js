@@ -64,6 +64,20 @@ db.connect((err) => {
                 } catch (e) { console.error('Lỗi cập nhật pass admin', e); }
             }
         });
+
+        // [MỚI] Tự động tạo bảng lịch sử nạp tiền nếu chưa có
+        const createTopupTable = `
+        CREATE TABLE IF NOT EXISTS topup_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(100) NOT NULL,
+            amount INT NOT NULL,
+            note TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );`;
+        db.query(createTopupTable, (err) => {
+            if (err) console.error('⚠️ [MySQL] Lỗi tạo bảng topup_history:', err.message);
+            else console.log('✅ [MySQL] Bảng topup_history đã sẵn sàng.');
+        });
     }
 });
 
@@ -727,6 +741,12 @@ app.post('/api/payment/webhook', (req, res) => {
             }
 
             console.log(`🔥 [Webhook] Tự động CỘNG ${transferAmount}đ vào ví của User "${username}" thành công!`);
+            
+            // [MỚI] Ghi log vào bảng topup_history
+            db.query('INSERT INTO topup_history (username, amount, note) VALUES (?, ?, ?)', [username, transferAmount, content], (hErr) => {
+                if (hErr) console.error('⚠️ [Webhook] Lỗi ghi log nạp tiền:', hErr.message);
+            });
+
             return res.json({ success: true, message: 'Đã nạp tiền thành công' });
         });
     } else {
@@ -734,6 +754,23 @@ app.post('/api/payment/webhook', (req, res) => {
         console.log(`⚠️ [Webhook] Giao dịch ${transferAmount}đ KHÔNG đúng Cú pháp. Lời nhắn: "${transactionContent}"`);
         return res.status(200).json({ success: true, message: 'Webhook đã ghi nhận (Bỏ qua nạp tự động do sai cú pháp)' });
     }
+});
+
+// [MỚI] API lấy lịch sử nạp tiền của người dùng
+app.get('/api/user/topup-history', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) return res.status(401).json({ success: false, message: 'Thiếu Token' });
+
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) return res.status(401).json({ success: false, message: 'Token hết hạn' });
+
+        const username = decoded.username;
+        db.query('SELECT amount, note, created_at FROM topup_history WHERE username = ? ORDER BY created_at DESC LIMIT 50', [username], (err, results) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
+            res.json({ success: true, data: results });
+        });
+    });
 });
 
 // Chặn báo lỗi rác 404 do trình duyệt tự tìm file favicon
