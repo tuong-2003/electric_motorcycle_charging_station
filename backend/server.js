@@ -451,20 +451,39 @@ app.get('/api/telemetry/history', (req, res) => {
     });
 });
 
-// API Lấy danh sách lịch sử sạc cá nhân
+// API Lấy danh sách lịch sử sạc cá nhân (Hỗ trợ lọc theo ngày)
 app.get('/api/sessions/history', verifyToken, (req, res) => {
-    const sql = `
+    const { startDate, endDate } = req.query; // Nhận tham số lọc: startDate, endDate (YYYY-MM-DD)
+
+    let sql = `
         SELECT id, station_id, 
                DATE_FORMAT(start_time, '%d/%m/%Y %H:%i:%s') as start, 
                DATE_FORMAT(end_time, '%d/%m/%Y %H:%i:%s') as end, 
                total_kwh, total_cost, status 
         FROM charging_sessions
         WHERE user_id = ?
-        ORDER BY id DESC LIMIT 50
     `;
-    db.query(sql, [req.user.id], (err, results) => {
+    let params = [req.user.id];
+
+    if (startDate && endDate) {
+        sql += ' AND start_time >= ? AND start_time <= ?';
+        params.push(`${startDate} 00:00:00`);
+        params.push(`${endDate} 23:59:59`);
+    }
+
+    sql += ' ORDER BY id DESC LIMIT 200';
+
+    db.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
         res.json({ success: true, data: results });
+    });
+});
+
+// API Xóa toàn bộ lịch sử sạc cá nhân
+app.delete('/api/sessions/history', verifyToken, (req, res) => {
+    db.query('DELETE FROM charging_sessions WHERE user_id = ?', [req.user.id], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
+        res.json({ success: true, message: 'Đã xóa toàn bộ lịch sử sạc thành công.' });
     });
 });
 

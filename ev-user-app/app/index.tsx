@@ -32,21 +32,31 @@ export default function App() {
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [topupAmount, setTopupAmount] = useState('');
   const [isPollingBalance, setIsPollingBalance] = useState(false);
-  const [topupHistory, setTopupHistory] = useState<any[]>([]); // [MỚI] State lưu lịch sử nạp tiền
-  const [topupHistoryModalVisible, setTopupHistoryModalVisible] = useState(false); // [MỚI] State hiển thị Modal lịch sử nạp
-  const [historyStartDate, setHistoryStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // 30 ngày trước
-  const [historyEndDate, setHistoryEndDate] = useState(new Date().toISOString().split('T')[0]); // Hôm nay
+  const [topupHistory, setTopupHistory] = useState<any[]>([]);
+  const [showTopupHistoryOnly, setShowTopupHistoryOnly] = useState(false);
+  const [historyStartDate, setHistoryStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [historyEndDate, setHistoryEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // State cho Bộ chọn ngày Tích hợp
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [pickingDateType, setPickingDateType] = useState<'start' | 'end'>('start');
+  const [tempDay, setTempDay] = useState(new Date().getDate());
+  const [tempMonth, setTempMonth] = useState(new Date().getMonth() + 1);
+  const [tempYear, setTempYear] = useState(new Date().getFullYear());
+  const [topupFilterMode, setTopupFilterMode] = useState('all');
+  const [historyFilterMode, setHistoryFilterMode] = useState('all');
+  const [selectedTopupDetail, setSelectedTopupDetail] = useState<any>(null);
 
   // State cho luồng Quên mật khẩu qua Email
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [fpStep, setFpStep] = useState(1);
   const [fpUsername, setFpUsername] = useState('');
-  const [fpEmail, setFpEmail] = useState(''); // [MỚI] Ô nhập email cho bảo mật chống spam
+  const [fpEmail, setFpEmail] = useState('');
   const [fpOtp, setFpOtp] = useState('');
   const [fpNewPassword, setFpNewPassword] = useState('');
   const [isFpLoading, setIsFpLoading] = useState(false);
   const [fpUsernameError, setFpUsernameError] = useState(false);
-  const [fpEmailError, setFpEmailError] = useState(false); // [MỚI] Lỗi ô nhập email
+  const [fpEmailError, setFpEmailError] = useState(false);
   const [fpOtpError, setFpOtpError] = useState(false);
   const [fpNewPasswordError, setFpNewPasswordError] = useState(false);
   const [showFpPassword, setShowFpPassword] = useState(false);
@@ -192,11 +202,15 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isLoggedIn, authToken, activeTab]);
 
-  // Hàm tải Lịch sử sạc từ Backend
-  const fetchHistory = async () => {
+  // Hàm tải Lịch sử sạc từ Backend (Hỗ trợ lọc theo Khoảng thời gian)
+  const fetchHistory = async (start = historyStartDate, end = historyEndDate, isReset = false) => {
     if (!authToken) return;
     try {
-      const response = await fetch(`${API_URL}/api/sessions/history`, {
+      const url = isReset
+        ? `${API_URL}/api/sessions/history`
+        : `${API_URL}/api/sessions/history?startDate=${start}&endDate=${end}`;
+
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       const data = await response.json();
@@ -228,10 +242,10 @@ export default function App() {
   const fetchTopupHistory = async (start = historyStartDate, end = historyEndDate, isReset = false) => {
     if (!authToken) return;
     try {
-      const url = isReset 
-        ? `${API_URL}/api/user/topup-history` 
+      const url = isReset
+        ? `${API_URL}/api/user/topup-history`
         : `${API_URL}/api/user/topup-history?startDate=${start}&endDate=${end}`;
-      
+
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
@@ -244,28 +258,38 @@ export default function App() {
     }
   };
 
-  // Hàm hỗ trợ chọn ngày kiểu phân cấp (Năm -> Tháng -> Ngày) - Phong cách ngân hàng
-  const pickDate = (title: string, callback: (dateStr: string) => void) => {
-    const years = ['2024', '2025', '2026'];
-    Alert.alert(title, "Chọn Năm", years.map(y => ({
-      text: `Năm ${y}`,
-      onPress: () => {
-        const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
-        Alert.alert(title, `Năm ${y} - Chọn Tháng`, months.map(m => ({
-          text: `Tháng ${m}`,
-          onPress: () => {
-            const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
-            Alert.alert(title, `Tháng ${m}/${y} - Chọn Ngày`, days.map(d => ({
-              text: `Ngày ${d}`,
-              onPress: () => {
-                const formattedDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                callback(formattedDate);
-              }
-            })));
-          }
-        })));
+  // Hàm mở bộ chọn ngày tích hợp
+  const openDatePicker = (type: 'start' | 'end') => {
+    setPickingDateType(type);
+    const currentDateStr = type === 'start' ? historyStartDate : historyEndDate;
+    const [y, m, d] = currentDateStr.split('-').map(Number);
+    setTempYear(y);
+    setTempMonth(m);
+    setTempDay(d);
+    setIsDatePickerVisible(true);
+  };
+
+  const handleConfirmDate = () => {
+    try {
+      // Đảm bảo ngày không vượt quá giới hạn của tháng đã chọn (double check)
+      const maxDays = new Date(tempYear, tempMonth, 0).getDate();
+      const validDay = tempDay > maxDays ? maxDays : tempDay;
+
+      const formattedDate = `${tempYear}-${tempMonth.toString().padStart(2, '0')}-${validDay.toString().padStart(2, '0')}`;
+      if (pickingDateType === 'start') {
+        setHistoryStartDate(formattedDate);
+        if (showTopupHistoryOnly) fetchTopupHistory(formattedDate, historyEndDate);
+        else if (activeTab === 'history') fetchHistory(formattedDate, historyEndDate);
+      } else {
+        setHistoryEndDate(formattedDate);
+        if (showTopupHistoryOnly) fetchTopupHistory(historyStartDate, formattedDate);
+        else if (activeTab === 'history') fetchHistory(historyStartDate, formattedDate);
       }
-    })));
+    } catch (error) {
+      console.error("Lỗi khi xác nhận ngày:", error);
+    } finally {
+      setIsDatePickerVisible(false); // Luôn đóng overlay dù có lỗi hay không
+    }
   };
 
   const clearTopupHistory = async () => {
@@ -600,6 +624,270 @@ export default function App() {
   }
 
   if (isLoggedIn) {
+    if (showTopupHistoryOnly) {
+      return (
+        <View style={[styles.mainContainer, { paddingTop: 60 }]}>
+          <TouchableOpacity
+            style={styles.absoluteBackButton}
+            onPress={() => setShowTopupHistoryOnly(false)}
+          >
+            <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
+            <Text style={styles.backButtonText}>Quay lại</Text>
+          </TouchableOpacity>
+
+          <View style={{ flex: 1, padding: 20 }}>
+            <Text style={[styles.title, { marginBottom: 20 }]}>Lịch sử nạp tiền</Text>
+
+            {/* BỘ LỌC PHONG CÁCH NGÂN HÀNG - Dàn đều cân xứng */}
+            <View style={{ marginBottom: 25 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
+                    backgroundColor: topupFilterMode === '7days' ? '#ebf5fb' : '#fff',
+                    borderColor: topupFilterMode === '7days' ? '#3498db' : '#ecf0f1'
+                  }}
+                  onPress={() => {
+                    const end = new Date().toISOString().split('T')[0];
+                    const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                    setHistoryStartDate(start); setHistoryEndDate(end); fetchTopupHistory(start, end);
+                    setTopupFilterMode('7days');
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: topupFilterMode === '7days' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>7 ngày qua</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
+                    backgroundColor: topupFilterMode === 'month' ? '#ebf5fb' : '#fff',
+                    borderColor: topupFilterMode === 'month' ? '#3498db' : '#ecf0f1'
+                  }}
+                  onPress={() => {
+                    const now = new Date();
+                    const start = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
+                    const end = now.toISOString().split('T')[0];
+                    setHistoryStartDate(start); setHistoryEndDate(end); fetchTopupHistory(start, end);
+                    setTopupFilterMode('month');
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: topupFilterMode === 'month' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tháng này</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1,
+                    backgroundColor: topupFilterMode === 'all' ? '#ebf5fb' : '#fff',
+                    borderColor: topupFilterMode === 'all' ? '#3498db' : '#ecf0f1'
+                  }}
+                  onPress={() => {
+                    fetchTopupHistory('', '', true);
+                    setTopupFilterMode('all');
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: topupFilterMode === 'all' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tất cả</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <TouchableOpacity
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ecf0f1', elevation: 2 }}
+                  onPress={() => openDatePicker('start')}
+                >
+                  <FontAwesome5 name="calendar-alt" size={14} color="#3498db" style={{ marginRight: 8 }} />
+                  <View>
+                    <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Từ ngày</Text>
+                    <Text style={{ fontSize: 13, color: '#2c3e50', fontWeight: 'bold' }}>{historyStartDate.split('-').reverse().join('/')}</Text>
+                  </View>
+                </TouchableOpacity>
+                <View style={{ width: 15, alignItems: 'center' }}><Text style={{ color: '#bdc3c7' }}>-</Text></View>
+                <TouchableOpacity
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ecf0f1', elevation: 2 }}
+                  onPress={() => openDatePicker('end')}
+                >
+                  <FontAwesome5 name="calendar-alt" size={14} color="#e74c3c" style={{ marginRight: 8 }} />
+                  <View>
+                    <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Đến ngày</Text>
+                    <Text style={{ fontSize: 13, color: '#2c3e50', fontWeight: 'bold' }}>{historyEndDate.split('-').reverse().join('/')}</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {topupHistory.length > 0 && (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                {topupHistory.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 }}
+                    onPress={() => setSelectedTopupDetail(item)}
+                  >
+                    {/* Icon biểu tượng giao dịch */}
+                    <View style={{ width: 45, height: 45, backgroundColor: '#e8f5e9', borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', marginRight: 15 }}>
+                      <FontAwesome5 name="arrow-down" size={18} color="#2ecc71" />
+                    </View>
+
+                    {/* Nội trung tâm: Tiêu đề & Ghi chú */}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2c3e50' }}>Nạp tiền VietQR</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                        <FontAwesome5 name="clock" size={10} color="#95a5a6" style={{ marginRight: 5 }} />
+                        <Text style={{ fontSize: 11, color: '#7f8c8d' }}>{new Date(item.created_at).toLocaleString('vi-VN')}</Text>
+                      </View>
+                    </View>
+
+                    {/* Bên phải: Số tiền & Trạng thái */}
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#2ecc71' }}>+{item.amount.toLocaleString('vi-VN')}đ</Text>
+                      <View style={{ backgroundColor: '#e8f5e9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, marginTop: 5 }}>
+                        <Text style={{ color: '#2ecc71', fontSize: 10, fontWeight: 'bold' }}>Thành công</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          {/* Nút Xóa lịch sử nạp: Đưa xuống dưới cùng trang và đổi tên */}
+          {topupHistory.length > 0 && (
+            <TouchableOpacity
+              onPress={clearTopupHistory}
+              style={{ marginTop: 10, marginBottom: 10, marginHorizontal: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 15, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}
+            >
+              <FontAwesome5 name="trash-alt" size={14} color="#e74c3c" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#e74c3c', fontWeight: 'bold' }}>Xóa lịch sử nạp</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* [BỘ CHỌN NGÀY POPUP CHUẨN - DÙNG MODAL ĐỂ ĐỒNG BỘ BACKDROP] */}
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={isDatePickerVisible}
+            onRequestClose={() => setIsDatePickerVisible(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+              onPress={() => setIsDatePickerVisible(false)}
+            >
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => { }}
+                style={{ width: '90%', backgroundColor: '#fff', borderRadius: 28, padding: 25, elevation: 25 }}
+              >
+                {/* Header Modal - Căn giữa tiêu đề, loại bỏ nút X dư thừa */}
+                <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                  <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#2c3e50' }}>
+                    {pickingDateType === 'start' ? 'Chọn ngày bắt đầu' : 'Chọn ngày kết thúc'}
+                  </Text>
+                </View>
+
+                {/* Khu vực chọn ngày với đường kẻ phân cách hợp lý */}
+                <View style={{ flexDirection: 'row', height: 300, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#f0f0f0', paddingTop: 15 }}>
+                  <View style={{ flex: 1.2 }}>
+                    <Text style={{ textAlign: 'center', fontSize: 13, color: '#bdc3c7', fontWeight: 'bold', marginBottom: 10 }}>NĂM</Text>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+                      {Array.from({ length: 11 }, (_, i) => 2020 + i).map(y => (
+                        <TouchableOpacity key={y} onPress={() => setTempYear(y)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempYear === y ? '#ebf5fb' : 'transparent', borderRadius: 12 }}>
+                          <Text style={{ fontSize: 18, color: tempYear === y ? '#3498db' : '#34495e', fontWeight: tempYear === y ? 'bold' : 'normal' }}>{y}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ textAlign: 'center', fontSize: 13, color: '#bdc3c7', fontWeight: 'bold', marginBottom: 10 }}>THÁNG</Text>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                        <TouchableOpacity key={m} onPress={() => setTempMonth(m)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempMonth === m ? '#ebf5fb' : 'transparent', borderRadius: 12 }}>
+                          <Text style={{ fontSize: 18, color: tempMonth === m ? '#3498db' : '#34495e', fontWeight: tempMonth === m ? 'bold' : 'normal' }}>Tháng {m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ textAlign: 'center', fontSize: 13, color: '#bdc3c7', fontWeight: 'bold', marginBottom: 10 }}>NGÀY</Text>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+                      {Array.from({ length: new Date(tempYear, tempMonth, 0).getDate() }, (_, i) => i + 1).map(d => (
+                        <TouchableOpacity key={d} onPress={() => setTempDay(d)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempDay === d ? '#ebf5fb' : 'transparent', borderRadius: 12 }}>
+                          <Text style={{ fontSize: 18, color: tempDay === d ? '#3498db' : '#34495e', fontWeight: tempDay === d ? 'bold' : 'normal' }}>{d}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 }}>
+                  <TouchableOpacity onPress={() => setIsDatePickerVisible(false)} style={{ flex: 1, paddingVertical: 18, marginRight: 15, alignItems: 'center', borderRadius: 15, backgroundColor: '#f1f2f6' }}>
+                    <Text style={{ color: '#7f8c8d', fontWeight: 'bold', fontSize: 16 }}>Hủy bỏ</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleConfirmDate} style={{ flex: 1, paddingVertical: 18, alignItems: 'center', borderRadius: 15, backgroundColor: '#3498db' }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Xác nhận</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </Modal>
+
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={!!selectedTopupDetail}
+            onRequestClose={() => setSelectedTopupDetail(null)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+              onPress={() => setSelectedTopupDetail(null)}
+            >
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => { }}
+                style={{ width: '90%', backgroundColor: '#fff', borderRadius: 28, padding: 25, elevation: 25 }}
+              >
+                {/* Header Modal - Căn giữa tiêu đề, loại bỏ nút X dư thừa */}
+                <View style={{ alignItems: 'center', marginBottom: 25 }}>
+                  <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#2c3e50' }}>Biên lai nạp tiền</Text>
+                </View>
+
+                {/* Nội dung biên lai */}
+                <View style={{ alignItems: 'center', marginBottom: 30 }}>
+                  <View style={{ width: 70, height: 70, backgroundColor: '#e8f5e9', borderRadius: 35, justifyContent: 'center', alignItems: 'center', marginBottom: 15 }}>
+                    <FontAwesome5 name="check" size={35} color="#2ecc71" />
+                  </View>
+                  <Text style={{ fontSize: 13, color: '#95a5a6', marginBottom: 5 }}>TRẠNG THÁI: THÀNH CÔNG</Text>
+                  <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#2ecc71' }}>+{selectedTopupDetail?.amount?.toLocaleString('vi-VN')} đ</Text>
+                </View>
+
+                {/* Thông số chi tiết */}
+                <View style={{ borderTopWidth: 1, borderColor: '#f0f0f0', paddingTop: 20 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                    <Text style={{ color: '#7f8c8d', fontSize: 15 }}>Thời gian</Text>
+                    <Text style={{ color: '#2c3e50', fontWeight: 'bold', fontSize: 15 }}>{selectedTopupDetail ? new Date(selectedTopupDetail.created_at).toLocaleString('vi-VN') : ''}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                    <Text style={{ color: '#7f8c8d', fontSize: 15 }}>Loại giao dịch</Text>
+                    <Text style={{ color: '#2c3e50', fontWeight: 'bold', fontSize: 15 }}>Nạp tiền qua VietQR</Text>
+                  </View>
+                  <View style={{ marginBottom: 15 }}>
+                    <Text style={{ color: '#7f8c8d', marginBottom: 8, fontSize: 15 }}>Nội dung chuyển khoản</Text>
+                    <Text style={{ color: '#34495e', backgroundColor: '#f8f9fa', padding: 15, borderRadius: 12, fontStyle: 'italic', lineHeight: 20 }}>
+                      {selectedTopupDetail?.note || 'Hệ thống tự động ghi nhận'}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setSelectedTopupDetail(null)}
+                  style={{ backgroundColor: '#2ecc71', paddingVertical: 16, borderRadius: 15, alignItems: 'center', marginTop: 15 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>XÁC NHẬN</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </Modal>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.mainContainer}>
         {/* Nút Quay lại cho trang Chi tiết Trạm sạc (cố định góc trên cùng giống trang Đăng ký) */}
@@ -607,6 +895,26 @@ export default function App() {
           <TouchableOpacity style={styles.absoluteBackButton} onPress={() => setSelectedStation(null)}>
             <FontAwesome5 name="arrow-left" size={16} color="#34495e" />
             <Text style={styles.backButtonText}>Quay lại</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Nút Đăng xuất cho trang Tài khoản - Đặt ở góc trên phải, có khung đỏ theo ý người dùng */}
+        {activeTab === 'account' && !showTopupHistoryOnly && (
+          <TouchableOpacity
+            style={[styles.absoluteBackButton, {
+              left: undefined,
+              right: 20,
+              paddingHorizontal: 15,
+              paddingVertical: 8,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#fdedec',
+              backgroundColor: '#fff5f5'
+            }]}
+            onPress={handleLogout}
+          >
+            <Text style={[styles.backButtonText, { color: '#e74c3c', marginLeft: 0, marginRight: 8 }]}>Đăng xuất</Text>
+            <FontAwesome5 name="sign-out-alt" size={16} color="#e74c3c" />
           </TouchableOpacity>
         )}
 
@@ -790,10 +1098,85 @@ export default function App() {
           )}
 
           {activeTab === 'history' && (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, padding: 20 }}>
               <Text style={styles.title}>Lịch sử sạc</Text>
+
+              {/* BỘ LỌC PHONG CÁCH NGÂN HÀNG - Đồng bộ với trang Nạp tiền */}
+              <View style={{ marginBottom: 25 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
+                      backgroundColor: historyFilterMode === '7days' ? '#ebf5fb' : '#fff',
+                      borderColor: historyFilterMode === '7days' ? '#3498db' : '#ecf0f1'
+                    }}
+                    onPress={() => {
+                      const end = new Date().toISOString().split('T')[0];
+                      const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      setHistoryStartDate(start); setHistoryEndDate(end); fetchHistory(start, end);
+                      setHistoryFilterMode('7days');
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, color: historyFilterMode === '7days' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>7 ngày qua</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
+                      backgroundColor: historyFilterMode === 'month' ? '#ebf5fb' : '#fff',
+                      borderColor: historyFilterMode === 'month' ? '#3498db' : '#ecf0f1'
+                    }}
+                    onPress={() => {
+                      const now = new Date();
+                      const start = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
+                      const end = now.toISOString().split('T')[0];
+                      setHistoryStartDate(start); setHistoryEndDate(end); fetchHistory(start, end);
+                      setHistoryFilterMode('month');
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, color: historyFilterMode === 'month' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tháng này</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1,
+                      backgroundColor: historyFilterMode === 'all' ? '#ebf5fb' : '#fff',
+                      borderColor: historyFilterMode === 'all' ? '#3498db' : '#ecf0f1'
+                    }}
+                    onPress={() => {
+                      fetchHistory('', '', true);
+                      setHistoryFilterMode('all');
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, color: historyFilterMode === 'all' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tất cả</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ecf0f1', elevation: 2 }}
+                    onPress={() => openDatePicker('start')}
+                  >
+                    <FontAwesome5 name="calendar-alt" size={14} color="#3498db" style={{ marginRight: 8 }} />
+                    <View>
+                      <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Từ ngày</Text>
+                      <Text style={{ fontSize: 13, color: '#2c3e50', fontWeight: 'bold' }}>{historyStartDate.split('-').reverse().join('/')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <View style={{ width: 15, alignItems: 'center' }}><Text style={{ color: '#bdc3c7' }}>-</Text></View>
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ecf0f1', elevation: 2 }}
+                    onPress={() => openDatePicker('end')}
+                  >
+                    <FontAwesome5 name="calendar-alt" size={14} color="#e74c3c" style={{ marginRight: 8 }} />
+                    <View>
+                      <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Đến ngày</Text>
+                      <Text style={{ fontSize: 13, color: '#2c3e50', fontWeight: 'bold' }}>{historyEndDate.split('-').reverse().join('/')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {history.length === 0 ? (
-                <View style={styles.centerContent}>
+                <View style={[styles.centerContent, { marginTop: 40 }]}>
                   <Text style={styles.subtitle}>Chưa có dữ liệu giao dịch.</Text>
                 </View>
               ) : (
@@ -816,6 +1199,37 @@ export default function App() {
                     </View>
                   ))}
                 </ScrollView>
+              )}
+              {/* Nút Xóa lịch sử sạc: Kết nối API thật */}
+              {history.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Alert.alert("Xác nhận", "Bạn có muốn xóa toàn bộ lịch sử sạc?", [
+                      { text: "Hủy", style: "cancel" },
+                      {
+                        text: "Xóa sạch", onPress: async () => {
+                          try {
+                            const response = await fetch(`${API_URL}/api/sessions/history`, {
+                              method: 'DELETE',
+                              headers: { 'Authorization': `Bearer ${authToken}` }
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                              Alert.alert('Thành công', data.message);
+                              fetchHistory('', '', true);
+                            }
+                          } catch (error) {
+                            Alert.alert('Lỗi', 'Không thể kết nối đến Server');
+                          }
+                        }
+                      }
+                    ])
+                  }}
+                  style={{ marginTop: 10, marginBottom: 10, marginHorizontal: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 15, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}
+                >
+                  <FontAwesome5 name="trash-alt" size={14} color="#e74c3c" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#e74c3c', fontWeight: 'bold' }}>Xóa lịch sử sạc</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -841,17 +1255,13 @@ export default function App() {
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.walletActionButton} onPress={() => {
                     fetchTopupHistory();
-                    setTopupHistoryModalVisible(true);
+                    setShowTopupHistoryOnly(true);
                   }}>
                     <View style={[styles.walletActionIcon, { backgroundColor: '#f39c12' }]}><FontAwesome5 name="history" size={16} color="#fff" /></View>
-                    <Text style={styles.walletActionText}>Lịch sử nạp</Text>
+                    <Text style={styles.walletActionText}>Lịch sử</Text>
                   </TouchableOpacity>
                 </View>
               </View>
-
-              <TouchableOpacity style={[styles.button, styles.logoutBtn, { width: '100%' }]} onPress={handleLogout}>
-                <Text style={styles.buttonText}>Đăng xuất</Text>
-              </TouchableOpacity>
             </ScrollView>
           )}
         </View>
@@ -904,7 +1314,7 @@ export default function App() {
                   }
                 }}
               >
-                <Text style={styles.buttonText}>Tạo mã QR Nạp</Text>
+                <Text style={styles.buttonText}>Tạo mã QR</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -992,159 +1402,8 @@ export default function App() {
           </View>
         </Modal>
 
-        {/* Modal: LỊCH SỬ NẠP TIỀN */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={topupHistoryModalVisible}
-          onRequestClose={() => setTopupHistoryModalVisible(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{
-              width: '90%',
-              backgroundColor: '#fff',
-              borderRadius: 20,
-              height: '70%',
-              padding: 25,
-              elevation: 10
-            }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2c3e50' }}>Lịch sử nạp tiền</Text>
-                <TouchableOpacity onPress={() => setTopupHistoryModalVisible(false)}>
-                  <FontAwesome5 name="times" size={24} color="#7f8c8d" />
-                </TouchableOpacity>
-              </View>
+        {/* Modal: LỊCH SỬ NẠP TIỀN - ĐÃ CHUYỂN THÀNH TRANG FULL SCREEN Ở TRÊN */}
 
-              {/* BỘ LỌC PHONG CÁCH NGÂN HÀNG (Quick Filters & Date Range) */}
-              <View style={{ marginBottom: 20 }}>
-                {/* 1. Phím tắt nhanh */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                  <TouchableOpacity 
-                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#f1f2f6', borderRadius: 20, marginRight: 8 }}
-                    onPress={() => {
-                      const end = new Date().toISOString().split('T')[0];
-                      const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                      setHistoryStartDate(start); setHistoryEndDate(end);
-                      fetchTopupHistory(start, end);
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, color: '#2c3e50' }}>7 ngày qua</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#f1f2f6', borderRadius: 20, marginRight: 8 }}
-                    onPress={() => {
-                      const now = new Date();
-                      const start = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
-                      const end = now.toISOString().split('T')[0];
-                      setHistoryStartDate(start); setHistoryEndDate(end);
-                      fetchTopupHistory(start, end);
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, color: '#2c3e50' }}>Tháng này</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#f1f2f6', borderRadius: 20, marginRight: 8 }}
-                    onPress={() => {
-                      const now = new Date();
-                      now.setMonth(now.getMonth() - 1);
-                      const start = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
-                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                      const end = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${lastDay}`;
-                      setHistoryStartDate(start); setHistoryEndDate(end);
-                      fetchTopupHistory(start, end);
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, color: '#2c3e50' }}>Tháng trước</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#ebf5fb', borderRadius: 20 }}
-                    onPress={() => {
-                      fetchTopupHistory('', '', true);
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, color: '#3498db', fontWeight: 'bold' }}>Tất cả</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-
-                {/* 2. Ô chọn khoảng thời gian */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <TouchableOpacity 
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ecf0f1' }}
-                    onPress={() => pickDate("Chọn Ngày Bắt Đầu", (d) => { setHistoryStartDate(d); fetchTopupHistory(d, historyEndDate); })}
-                  >
-                    <FontAwesome5 name="calendar-alt" size={14} color="#3498db" style={{ marginRight: 8 }} />
-                    <View>
-                      <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Từ ngày</Text>
-                      <Text style={{ fontSize: 12, color: '#2c3e50', fontWeight: 'bold' }}>{historyStartDate.split('-').reverse().join('/')}</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <View style={{ width: 15, alignItems: 'center' }}>
-                    <Text style={{ color: '#bdc3c7' }}>-</Text>
-                  </View>
-
-                  <TouchableOpacity 
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ecf0f1' }}
-                    onPress={() => pickDate("Chọn Ngày Kết Thúc", (d) => { setHistoryEndDate(d); fetchTopupHistory(historyStartDate, d); })}
-                  >
-                    <FontAwesome5 name="calendar-alt" size={14} color="#e74c3c" style={{ marginRight: 8 }} />
-                    <View>
-                      <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Đến ngày</Text>
-                      <Text style={{ fontSize: 12, color: '#2c3e50', fontWeight: 'bold' }}>{historyEndDate.split('-').reverse().join('/')}</Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {topupHistory.length === 0 ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <FontAwesome5 name="box-open" size={50} color="#bdc3c7" style={{ marginBottom: 15 }} />
-                  <Text style={{ color: '#7f8c8d' }}>Chưa có giao dịch nạp tiền nào.</Text>
-                </View>
-              ) : (
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {topupHistory.map((item, index) => (
-                    <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' }}>
-                      <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2ecc71' }}>+{item.amount.toLocaleString('vi-VN')} đ</Text>
-                        <Text style={{ fontSize: 12, color: '#7f8c8d', marginTop: 4 }}>{new Date(item.created_at).toLocaleString('vi-VN')}</Text>
-                        <View style={{ backgroundColor: '#f8f9fa', padding: 8, borderRadius: 8, marginTop: 8 }}>
-                          <Text style={{ fontSize: 12, color: '#34495e', fontStyle: 'italic', lineHeight: 18 }}>
-                            {item.note}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={{ backgroundColor: '#e8f5e9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
-                        <Text style={{ color: '#2ecc71', fontSize: 11, fontWeight: 'bold' }}>Thành công</Text>
-                      </View>
-                    </View>
-                  ))}
-
-                </ScrollView>
-              )}
-
-              {/* CHỖ MỚI: Nút xóa nằm cố định ở dưới cùng của Popup */}
-              {topupHistory.length > 0 && (
-                <TouchableOpacity
-                  onPress={clearTopupHistory}
-                  style={{
-                    marginTop: 20,
-                    marginBottom: -20,
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    paddingVertical: 12,
-                    borderTopWidth: 1,
-                    borderTopColor: '#ecf0f1',
-                  }}
-                >
-                  <FontAwesome5 name="trash-alt" size={12} color="#e74c3c" style={{ marginRight: 8 }} />
-                  <Text style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: 13 }}>Xóa lịch sử nạp</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </Modal>
 
         {/* Bottom Tab Bar */}
         <View style={styles.tabBar}>
