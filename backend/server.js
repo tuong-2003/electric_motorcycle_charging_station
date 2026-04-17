@@ -741,7 +741,7 @@ app.post('/api/payment/webhook', (req, res) => {
             }
 
             console.log(`🔥 [Webhook] Tự động CỘNG ${transferAmount}đ vào ví của User "${username}" thành công!`);
-            
+
             // [MỚI] Ghi log vào bảng topup_history
             db.query('INSERT INTO topup_history (username, amount, note) VALUES (?, ?, ?)', [username, transferAmount, content], (hErr) => {
                 if (hErr) console.error('⚠️ [Webhook] Lỗi ghi log nạp tiền:', hErr.message);
@@ -756,7 +756,7 @@ app.post('/api/payment/webhook', (req, res) => {
     }
 });
 
-// [MỚI] API lấy lịch sử nạp tiền của người dùng
+// [MỚI] API lấy lịch sử nạp tiền của người dùng (Hỗ trợ lọc theo Khoảng thời gian)
 app.get('/api/user/topup-history', (req, res) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader) return res.status(401).json({ success: false, message: 'Thiếu Token' });
@@ -766,9 +766,40 @@ app.get('/api/user/topup-history', (req, res) => {
         if (err) return res.status(401).json({ success: false, message: 'Token hết hạn' });
 
         const username = decoded.username;
-        db.query('SELECT amount, note, created_at FROM topup_history WHERE username = ? ORDER BY created_at DESC LIMIT 50', [username], (err, results) => {
+        const { startDate, endDate } = req.query; // Nhận tham số lọc: startDate, endDate (YYYY-MM-DD)
+
+        let sql = 'SELECT amount, note, created_at FROM topup_history WHERE username = ?';
+        let params = [username];
+
+        if (startDate && endDate) {
+            // Lọc trong khoảng từ 00:00:00 ngày bắt đầu đến 23:59:59 ngày kết thúc
+            sql += ' AND created_at >= ? AND created_at <= ?';
+            params.push(`${startDate} 00:00:00`);
+            params.push(`${endDate} 23:59:59`);
+        }
+
+        sql += ' ORDER BY created_at DESC LIMIT 200'; // Tăng giới hạn bản ghi khi xem theo khoảng thời gian
+
+        db.query(sql, params, (err, results) => {
             if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
             res.json({ success: true, data: results });
+        });
+    });
+});
+
+// [MỚI] API xóa toàn bộ lịch sử nạp tiền của người dùng
+app.delete('/api/user/topup-history', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) return res.status(401).json({ success: false, message: 'Thiếu Token' });
+
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) return res.status(401).json({ success: false, message: 'Token hết hạn' });
+
+        const username = decoded.username;
+        db.query('DELETE FROM topup_history WHERE username = ?', [username], (err, result) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
+            res.json({ success: true, message: 'Đã xóa toàn bộ lịch sử nạp tiền' });
         });
     });
 });

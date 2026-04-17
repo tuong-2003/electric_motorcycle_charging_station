@@ -34,6 +34,8 @@ export default function App() {
   const [isPollingBalance, setIsPollingBalance] = useState(false);
   const [topupHistory, setTopupHistory] = useState<any[]>([]); // [MỚI] State lưu lịch sử nạp tiền
   const [topupHistoryModalVisible, setTopupHistoryModalVisible] = useState(false); // [MỚI] State hiển thị Modal lịch sử nạp
+  const [historyStartDate, setHistoryStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // 30 ngày trước
+  const [historyEndDate, setHistoryEndDate] = useState(new Date().toISOString().split('T')[0]); // Hôm nay
 
   // State cho luồng Quên mật khẩu qua Email
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -222,11 +224,15 @@ export default function App() {
     return () => clearInterval(intervalId); // Dọn dẹp khi đăng xuất
   }, [isLoggedIn, authToken]);
 
-  // [MỚI] Hàm tải lịch sử nạp tiền
-  const fetchTopupHistory = async () => {
+  // [MỚI] Hàm tải lịch sử nạp tiền (Hỗ trợ lọc theo Khoảng thời gian)
+  const fetchTopupHistory = async (start = historyStartDate, end = historyEndDate, isReset = false) => {
     if (!authToken) return;
     try {
-      const response = await fetch(`${API_URL}/api/user/topup-history`, {
+      const url = isReset 
+        ? `${API_URL}/api/user/topup-history` 
+        : `${API_URL}/api/user/topup-history?startDate=${start}&endDate=${end}`;
+      
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       const data = await response.json();
@@ -236,6 +242,60 @@ export default function App() {
     } catch (error) {
       console.error('Lỗi tải lịch sử nạp:', error);
     }
+  };
+
+  // Hàm hỗ trợ chọn ngày kiểu phân cấp (Năm -> Tháng -> Ngày) - Phong cách ngân hàng
+  const pickDate = (title: string, callback: (dateStr: string) => void) => {
+    const years = ['2024', '2025', '2026'];
+    Alert.alert(title, "Chọn Năm", years.map(y => ({
+      text: `Năm ${y}`,
+      onPress: () => {
+        const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+        Alert.alert(title, `Năm ${y} - Chọn Tháng`, months.map(m => ({
+          text: `Tháng ${m}`,
+          onPress: () => {
+            const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+            Alert.alert(title, `Tháng ${m}/${y} - Chọn Ngày`, days.map(d => ({
+              text: `Ngày ${d}`,
+              onPress: () => {
+                const formattedDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                callback(formattedDate);
+              }
+            })));
+          }
+        })));
+      }
+    })));
+  };
+
+  const clearTopupHistory = async () => {
+    if (!authToken) return;
+    Alert.alert(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa toàn bộ lịch sử nạp tiền không?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa sạch",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_URL}/api/user/topup-history`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` }
+              });
+              const data = await response.json();
+              if (data.success) {
+                setTopupHistory([]);
+                Alert.alert("Thành công", "Đã xóa toàn bộ lịch sử.");
+              }
+            } catch (error) {
+              Alert.alert("Lỗi", "Không thể xóa lịch sử lúc này.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   // Hàm xử lý khi người dùng chọn sạc trực tiếp trên App thay vì quét QR
@@ -934,18 +994,106 @@ export default function App() {
 
         {/* Modal: LỊCH SỬ NẠP TIỀN */}
         <Modal
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           visible={topupHistoryModalVisible}
           onRequestClose={() => setTopupHistoryModalVisible(false)}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, height: '70%', padding: 25 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{
+              width: '90%',
+              backgroundColor: '#fff',
+              borderRadius: 20,
+              height: '70%',
+              padding: 25,
+              elevation: 10
+            }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2c3e50' }}>Lịch sử nạp tiền</Text>
                 <TouchableOpacity onPress={() => setTopupHistoryModalVisible(false)}>
                   <FontAwesome5 name="times" size={24} color="#7f8c8d" />
                 </TouchableOpacity>
+              </View>
+
+              {/* BỘ LỌC PHONG CÁCH NGÂN HÀNG (Quick Filters & Date Range) */}
+              <View style={{ marginBottom: 20 }}>
+                {/* 1. Phím tắt nhanh */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  <TouchableOpacity 
+                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#f1f2f6', borderRadius: 20, marginRight: 8 }}
+                    onPress={() => {
+                      const end = new Date().toISOString().split('T')[0];
+                      const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      setHistoryStartDate(start); setHistoryEndDate(end);
+                      fetchTopupHistory(start, end);
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: '#2c3e50' }}>7 ngày qua</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#f1f2f6', borderRadius: 20, marginRight: 8 }}
+                    onPress={() => {
+                      const now = new Date();
+                      const start = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
+                      const end = now.toISOString().split('T')[0];
+                      setHistoryStartDate(start); setHistoryEndDate(end);
+                      fetchTopupHistory(start, end);
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: '#2c3e50' }}>Tháng này</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#f1f2f6', borderRadius: 20, marginRight: 8 }}
+                    onPress={() => {
+                      const now = new Date();
+                      now.setMonth(now.getMonth() - 1);
+                      const start = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
+                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                      const end = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${lastDay}`;
+                      setHistoryStartDate(start); setHistoryEndDate(end);
+                      fetchTopupHistory(start, end);
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: '#2c3e50' }}>Tháng trước</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ paddingHorizontal: 15, paddingVertical: 6, backgroundColor: '#ebf5fb', borderRadius: 20 }}
+                    onPress={() => {
+                      fetchTopupHistory('', '', true);
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: '#3498db', fontWeight: 'bold' }}>Tất cả</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+
+                {/* 2. Ô chọn khoảng thời gian */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <TouchableOpacity 
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ecf0f1' }}
+                    onPress={() => pickDate("Chọn Ngày Bắt Đầu", (d) => { setHistoryStartDate(d); fetchTopupHistory(d, historyEndDate); })}
+                  >
+                    <FontAwesome5 name="calendar-alt" size={14} color="#3498db" style={{ marginRight: 8 }} />
+                    <View>
+                      <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Từ ngày</Text>
+                      <Text style={{ fontSize: 12, color: '#2c3e50', fontWeight: 'bold' }}>{historyStartDate.split('-').reverse().join('/')}</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <View style={{ width: 15, alignItems: 'center' }}>
+                    <Text style={{ color: '#bdc3c7' }}>-</Text>
+                  </View>
+
+                  <TouchableOpacity 
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ecf0f1' }}
+                    onPress={() => pickDate("Chọn Ngày Kết Thúc", (d) => { setHistoryEndDate(d); fetchTopupHistory(historyStartDate, d); })}
+                  >
+                    <FontAwesome5 name="calendar-alt" size={14} color="#e74c3c" style={{ marginRight: 8 }} />
+                    <View>
+                      <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Đến ngày</Text>
+                      <Text style={{ fontSize: 12, color: '#2c3e50', fontWeight: 'bold' }}>{historyEndDate.split('-').reverse().join('/')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {topupHistory.length === 0 ? (
@@ -957,17 +1105,42 @@ export default function App() {
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {topupHistory.map((item, index) => (
                     <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' }}>
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, paddingRight: 10 }}>
                         <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2ecc71' }}>+{item.amount.toLocaleString('vi-VN')} đ</Text>
                         <Text style={{ fontSize: 12, color: '#7f8c8d', marginTop: 4 }}>{new Date(item.created_at).toLocaleString('vi-VN')}</Text>
-                        <Text style={{ fontSize: 13, color: '#34495e', marginTop: 4 }} numberOfLines={1}>{item.note}</Text>
+                        <View style={{ backgroundColor: '#f8f9fa', padding: 8, borderRadius: 8, marginTop: 8 }}>
+                          <Text style={{ fontSize: 12, color: '#34495e', fontStyle: 'italic', lineHeight: 18 }}>
+                            {item.note}
+                          </Text>
+                        </View>
                       </View>
                       <View style={{ backgroundColor: '#e8f5e9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
                         <Text style={{ color: '#2ecc71', fontSize: 11, fontWeight: 'bold' }}>Thành công</Text>
                       </View>
                     </View>
                   ))}
+
                 </ScrollView>
+              )}
+
+              {/* CHỖ MỚI: Nút xóa nằm cố định ở dưới cùng của Popup */}
+              {topupHistory.length > 0 && (
+                <TouchableOpacity
+                  onPress={clearTopupHistory}
+                  style={{
+                    marginTop: 20,
+                    marginBottom: -20,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: '#ecf0f1',
+                  }}
+                >
+                  <FontAwesome5 name="trash-alt" size={12} color="#e74c3c" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: 13 }}>Xóa lịch sử nạp</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
