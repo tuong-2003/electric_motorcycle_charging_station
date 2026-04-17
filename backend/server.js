@@ -688,7 +688,17 @@ setInterval(() => {
 // ==========================================
 // 5. WEBHOOK NẠP TIỀN TỰ ĐỘNG (OPEN BANKING / SEPAY)
 // ==========================================
+// Khóa bảo mật: Lấy từ biến môi trường hoặc dùng khóa mặc định. Tuyệt đối KHÔNG chia sẻ chìa khóa này.
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'EV_CHARGING_SECRET_KEY';
+
 app.post('/api/payment/webhook', (req, res) => {
+    // 1. Kiểm tra lính gác: Auth Header
+    const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
+    if (!authHeader.includes(WEBHOOK_SECRET)) {
+        console.warn(`🚨 [Security] Ai đó đang cố giả mạo Webhook Nạp tiền! (Sai API Token)`);
+        return res.status(401).json({ success: false, message: 'Unauthorized (Lỗi xác thực)' });
+    }
+
     // Expected Payload từ SePay: { transferAmount: 50000, transactionContent: "NAP TRAM admin" }
     const { transferAmount, transactionContent } = req.body;
     
