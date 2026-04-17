@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -17,8 +17,9 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState(false);
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'history', 'account'
-  const [stations, setStations] = useState([]); // State lưu danh sách trạm
+  const [stations, setStations] = useState<any[]>([]); // State lưu danh sách trạm
   const [selectedStation, setSelectedStation] = useState<any>(null); // State lưu trạm đang xem chi tiết
+  const [selectedOutletModal, setSelectedOutletModal] = useState<any>(null); // State Popup cấu hình Ổ cắm Nâng cao
   const [history, setHistory] = useState([]); // State lưu lịch sử giao dịch
   const [showPassword, setShowPassword] = useState(false);
 
@@ -154,7 +155,14 @@ export default function App() {
   useEffect(() => {
     if (selectedStation) {
       const updated = stations.find((s: any) => s.station_id === selectedStation.station_id);
-      if (updated) setSelectedStation(updated);
+      if (updated) {
+        setSelectedStation(updated);
+        // Nếu Modal thông số đang mở, cập nhật luôn dữ liệu bên trong đó
+        if (selectedOutletModal) {
+          const updatedOutlet = updated.outlets?.find((o: any) => o.id === selectedOutletModal.id);
+          if (updatedOutlet) setSelectedOutletModal(updatedOutlet);
+        }
+      }
     }
   }, [stations]);
 
@@ -510,10 +518,10 @@ export default function App() {
                   ]).map((outlet: any) => {
                     let outletColor = "#2ecc71"; // Xanh mặc định
                     let statusText = "Trống";
-                    
+
                     if (outlet.status === 'charging_by_me') {
                       outletColor = "#e67e22"; // Cam nếu mình đang sạc
-                      statusText = `Đang sạc (${Math.floor(outlet.duration_sec / 60)}p)`;
+                      statusText = `Đang sạc (${Math.floor((outlet.duration_sec || 0) / 60)}p)`;
                     } else if (outlet.status === 'charging_by_other') {
                       outletColor = "#e74c3c"; // Đỏ nếu người khác sạc
                       statusText = "Đang bận";
@@ -523,29 +531,7 @@ export default function App() {
                       <TouchableOpacity
                         key={outlet.id}
                         style={[styles.outletCard, { borderColor: outletColor, borderWidth: 1 }]}
-                        onPress={() => {
-                          if (outlet.status === 'available') {
-                            Alert.alert(
-                              'Bắt đầu sạc',
-                              `Kích hoạt sạc tại ${selectedStation.name} - Ổ ${outlet.id}?`,
-                              [
-                                { text: 'Xác nhận', onPress: () => startChargeFromList(selectedStation.station_id, outlet.id) },
-                                { text: 'Hủy', style: 'cancel' }
-                              ]
-                            );
-                          } else if (outlet.status === 'charging_by_me') {
-                            Alert.alert(
-                              'Ngắt sạc',
-                              `Bạn muốn chốt hóa đơn cho Ổ ${outlet.id}?`,
-                              [
-                                { text: 'Xác nhận dừng (Chốt tiền)', onPress: () => stopCharge(selectedStation.station_id, outlet.id), style: 'destructive' },
-                                { text: 'Hủy', style: 'cancel' }
-                              ]
-                            );
-                          } else {
-                            Alert.alert('Không khả dụng', 'Ổ cắm này đang được người khác sử dụng!');
-                          }
-                        }}
+                        onPress={() => setSelectedOutletModal(outlet)}
                       >
                         <FontAwesome5 name="plug" size={30} color={outletColor} style={{ marginBottom: 10 }} />
                         <Text style={styles.outletName}>Ổ cắm {outlet.id}</Text>
@@ -554,6 +540,90 @@ export default function App() {
                     );
                   })}
                 </View>
+
+                {/* Modal Cấu hình Ổ cắm Nâng cao (HUD) */}
+                <Modal
+                  animationType="slide"
+                  transparent={true}
+                  visible={selectedOutletModal !== null}
+                  onRequestClose={() => setSelectedOutletModal(null)}
+                >
+                  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ width: '90%', backgroundColor: '#fff', borderRadius: 20, padding: 25, elevation: 10 }}>
+                      {selectedOutletModal && (() => {
+                        let badgeColor = "#2ecc71";
+                        let badgeText = "Sẵn sàng sạc";
+                        let actionBtnText = "TIẾN HÀNH SẠC TẠI ĐÂY";
+                        let actionBtnColor = "#2ecc71";
+
+                        if (selectedOutletModal.status === 'charging_by_me') {
+                          badgeColor = "#e67e22";
+                          badgeText = `Đang sạc (${Math.floor((selectedOutletModal.duration_sec || 0) / 60)} phút)`;
+                          actionBtnText = "DỪNG SẠC & THANH TOÁN";
+                          actionBtnColor = "#e74c3c";
+                        } else if (selectedOutletModal.status === 'charging_by_other') {
+                          badgeColor = "#e74c3c";
+                          badgeText = "Đang có người sử dụng";
+                        }
+
+                        return (
+                          <View>
+                            {/* Header Modal */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                              <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Ổ cắm {selectedOutletModal.id}</Text>
+                              <TouchableOpacity onPress={() => setSelectedOutletModal(null)}>
+                                <FontAwesome5 name="times" size={24} color="#7f8c8d" />
+                              </TouchableOpacity>
+                            </View>
+
+                            {/* Icon Trạng Thái Bự */}
+                            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                              <FontAwesome5 name="plug" size={50} color={badgeColor} style={{ marginBottom: 15 }} />
+                              <Text style={{ fontSize: 18, fontWeight: 'bold', color: badgeColor }}>{badgeText}</Text>
+                            </View>
+
+                            {/* Bảng Kỹ Thuật (HUD) V, A, W */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#f8f9fa', padding: 15, borderRadius: 15, marginBottom: 25 }}>
+                              <View style={{ alignItems: 'center' }}>
+                                <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>ĐIỆN ÁP</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#2c3e50' }}>{selectedOutletModal.voltage || 0} V</Text>
+                              </View>
+                              <View style={{ alignItems: 'center' }}>
+                                <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>DÒNG ĐIỆN</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#3498db' }}>{selectedOutletModal.current || 0} A</Text>
+                              </View>
+                              <View style={{ alignItems: 'center' }}>
+                                <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>CÔNG SUẤT</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#e74c3c' }}>{selectedOutletModal.power || 0} W</Text>
+                              </View>
+                            </View>
+
+                            {/* Nút Điều Khiển Mạch */}
+                            {selectedOutletModal.status !== 'charging_by_other' ? (
+                              <TouchableOpacity
+                                style={{ backgroundColor: actionBtnColor, paddingVertical: 15, borderRadius: 10, alignItems: 'center' }}
+                                onPress={() => {
+                                  if (selectedOutletModal.status === 'available') {
+                                    startChargeFromList(selectedStation.station_id, selectedOutletModal.id);
+                                  } else {
+                                    stopCharge(selectedStation.station_id, selectedOutletModal.id);
+                                  }
+                                  setSelectedOutletModal(null); // Đóng popup sau khi nhấn
+                                }}
+                              >
+                                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>{actionBtnText}</Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={{ backgroundColor: '#bdc3c7', paddingVertical: 15, borderRadius: 10, alignItems: 'center' }}>
+                                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>KHÔNG KHẢ DỤNG</Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })()}
+                    </View>
+                  </View>
+                </Modal>
               </ScrollView>
             </View>
           )}

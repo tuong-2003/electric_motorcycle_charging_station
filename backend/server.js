@@ -120,6 +120,13 @@ client.on('message', (topic, message) => {
             if (tempVal !== null) liveDataCache[stationId].temperature = tempVal;
             if (humVal !== null) liveDataCache[stationId].humidity = humVal;
 
+            if (!liveDataCache[stationId].outletsData) liveDataCache[stationId].outletsData = {};
+            liveDataCache[stationId].outletsData[outletId] = {
+                voltage: data.voltage || 0,
+                current: data.current || 0,
+                power: data.power || 0
+            };
+
             const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
             db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err) => {
                 if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
@@ -480,13 +487,21 @@ app.get('/api/stations', verifyToken, (req, res) => {
                 const outlets = [1, 2].map(outletId => {
                     const fullId = `${st.station_id}.${outletId}`;
                     const sessionInfo = activeMap[fullId];
+                    const outData = (liveDataCache[st.station_id] && liveDataCache[st.station_id].outletsData && liveDataCache[st.station_id].outletsData[outletId]) || { voltage: 0, current: 0, power: 0 };
+
+                    let baseOutlet = {
+                        id: outletId,
+                        voltage: outData.voltage,
+                        current: outData.current,
+                        power: outData.power
+                    };
 
                     if (!sessionInfo) {
-                        return { id: outletId, status: 'available' };
+                        return { ...baseOutlet, status: 'available' };
                     } else if (sessionInfo.user_id === req.user.id) {
-                        return { id: outletId, status: 'charging_by_me', duration_sec: sessionInfo.duration_sec };
+                        return { ...baseOutlet, status: 'charging_by_me', duration_sec: sessionInfo.duration_sec };
                     } else {
-                        return { id: outletId, status: 'charging_by_other' };
+                        return { ...baseOutlet, status: 'charging_by_other' };
                     }
                 });
 
