@@ -509,7 +509,7 @@ export default function App() {
                   </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>Chọn ổ cắm để sạc</Text>
+                <Text style={styles.sectionTitle}>Chọn cổng sạc</Text>
 
                 <View style={styles.outletsContainer}>
                   {(selectedStation.outlets || [
@@ -534,7 +534,7 @@ export default function App() {
                         onPress={() => setSelectedOutletModal(outlet)}
                       >
                         <FontAwesome5 name="plug" size={30} color={outletColor} style={{ marginBottom: 10 }} />
-                        <Text style={styles.outletName}>Ổ cắm {outlet.id}</Text>
+                        <Text style={styles.outletName}>Cổng sạc {outlet.id}</Text>
                         <Text style={[styles.outletStatus, { color: outletColor }]}>{statusText}</Text>
                       </TouchableOpacity>
                     );
@@ -570,7 +570,7 @@ export default function App() {
                           <View>
                             {/* Header Modal */}
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                              <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Ổ cắm {selectedOutletModal.id}</Text>
+                              <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Cổng sạc {selectedOutletModal.id}</Text>
                               <TouchableOpacity onPress={() => setSelectedOutletModal(null)}>
                                 <FontAwesome5 name="times" size={24} color="#7f8c8d" />
                               </TouchableOpacity>
