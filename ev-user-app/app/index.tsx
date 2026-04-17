@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 
 // Đổi đường link này thành link Render thực tế của bạn
 const API_URL = 'https://electric-motorcycle-charging-station.onrender.com';
@@ -271,6 +273,28 @@ export default function App() {
   const copyToClipboard = async (text: string, title: string) => {
     await Clipboard.setStringAsync(text);
     Alert.alert('Đã sao chép!', `${title} đã được lưu vào khay nhớ tạm.`);
+  };
+
+  const saveQrToGallery = async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Chưa cấp quyền', 'Vui lòng cho phép ứng dụng truy cập Ảnh để lưu mã QR.');
+        return;
+      }
+      
+      Alert.alert('Đang lưu', 'Hệ thống đang tải ảnh về máy...');
+      const qrUrl = `https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=NGUYEN%20VAN%20A`;
+      const fileUri = FileSystem.documentDirectory + `vietqr_${new Date().getTime()}.png`;
+      
+      const { uri } = await FileSystem.downloadAsync(qrUrl, fileUri);
+      await MediaLibrary.saveToLibraryAsync(uri);
+      
+      Alert.alert('Thành công', 'Đã lưu mã QR vào thư viện Ảnh của bạn! Hãy mở app Ngân hàng để quét.');
+    } catch (e) {
+      console.log(e);
+      Alert.alert('Lỗi', 'Không thể lưu ảnh mã QR ngay lúc này. Vui lòng thử chụp màn hình lại!');
+    }
   };
 
   // Hàm gửi yêu cầu lấy OTP qua Email
@@ -786,12 +810,12 @@ export default function App() {
                 />
               </View>
 
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={{ flexDirection: 'row', backgroundColor: '#e8f4f8', padding: 10, borderRadius: 10, marginBottom: 20 }}
-                onPress={() => Linking.openURL('sms:?body=Tải ảnh từ thư viện để chuyển khoản nhé').catch(() => Alert.alert('TIPS', 'Hãy chụp màn hình lại và tải lên app Ngân hàng'))}
+                onPress={saveQrToGallery}
               >
                 <FontAwesome5 name="download" size={16} color="#3498db" style={{ marginRight: 8, marginTop: 2 }} />
-                <Text style={{ color: '#3498db', fontWeight: 'bold' }}>Lưu mã QR (Chụp màn hình)</Text>
+                <Text style={{ color: '#3498db', fontWeight: 'bold' }}>Tải mã QR xuống máy</Text>
               </TouchableOpacity>
 
               {/* BẢNG TEXT COPY THỦ CÔNG */}
