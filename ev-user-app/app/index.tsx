@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 
 // Đổi đường link này thành link Render thực tế của bạn
@@ -282,14 +282,14 @@ export default function App() {
         Alert.alert('Chưa cấp quyền', 'Vui lòng cho phép ứng dụng truy cập Ảnh để lưu mã QR.');
         return;
       }
-      
+
       Alert.alert('Đang lưu', 'Hệ thống đang tải ảnh về máy...');
       const qrUrl = `https://img.vietqr.io/image/970422-0123456789-compact2.png?amount=${topupAmount}&addInfo=NAP%20TRAM%20${username}&accountName=NGUYEN%20VAN%20A`;
       const fileUri = FileSystem.documentDirectory + `vietqr_${new Date().getTime()}.png`;
-      
+
       const { uri } = await FileSystem.downloadAsync(qrUrl, fileUri);
       await MediaLibrary.saveToLibraryAsync(uri);
-      
+
       Alert.alert('Thành công', 'Đã lưu mã QR vào thư viện Ảnh của bạn! Hãy mở app Ngân hàng để quét.');
     } catch (e) {
       console.log(e);
@@ -810,7 +810,7 @@ export default function App() {
                 />
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{ flexDirection: 'row', backgroundColor: '#e8f4f8', padding: 10, borderRadius: 10, marginBottom: 20 }}
                 onPress={saveQrToGallery}
               >
