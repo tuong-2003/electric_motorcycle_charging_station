@@ -577,8 +577,8 @@
             }
         });
 
-    // Kết nối đến HiveMQ bằng Secure WebSockets (Cổng 8443) dùng cho môi trường HTTPS
-    const client = mqtt.connect('wss://broker.hivemq.com:8443/mqtt');
+    // Kết nối đến HiveMQ bằng Secure WebSockets (Cổng 8884) dùng cho môi trường HTTPS
+    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
     
     // Dùng wildcard (+) cho CẢ ID TỦ VÀ ID Ổ CẮM
     const TOPIC_STATUS_WILDCARD = 'ev_station/+/outlet/+/status';
