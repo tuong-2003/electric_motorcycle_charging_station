@@ -69,6 +69,7 @@ db.connect((err) => {
         const createTopupTable = `
         CREATE TABLE IF NOT EXISTS topup_history (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            transaction_id VARCHAR(100) UNIQUE,
             username VARCHAR(100) NOT NULL,
             amount INT NOT NULL,
             note TEXT,
@@ -76,7 +77,10 @@ db.connect((err) => {
         );`;
         db.query(createTopupTable, (err) => {
             if (err) console.error('⚠️ [MySQL] Lỗi tạo bảng topup_history:', err.message);
-            else console.log('✅ [MySQL] Bảng topup_history đã sẵn sàng.');
+            else {
+                console.log('✅ [MySQL] Bảng topup_history đã sẵn sàng.');
+                db.query("ALTER TABLE topup_history ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(100) UNIQUE AFTER id", () => {});
+            }
         });
     }
 });
@@ -88,6 +92,7 @@ db.connect((err) => {
 const GAS_MAIL_URL = process.env.GAS_MAIL_URL || '';
 
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
+const processingLocks = new Set(); // [CHỐNG SPAM/BẤM ĐÚP] Lock tạm thời cho các API POST
 
 // [TỐI ƯU] Tự động dọn rác (Garbage Collection) các mã OTP hết hạn mỗi 10 phút để chống rò rỉ RAM
 setInterval(() => {
@@ -372,22 +377,35 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
     const userId = req.user.id;
     const { stationId, outletId } = req.body; // Nhận ID ổ cắm từ web
 
+    // Tạo Idempotency Key tạm thời
+    const lockKey = `start_${userId}_${stationId}_${outletId}`;
+    if (processingLocks.has(lockKey)) {
+        return res.status(429).json({ success: false, message: 'Hệ thống đang xử lý lệnh sạc của bạn, vui lòng không bấm đúp!' });
+    }
+    processingLocks.add(lockKey);
+    const releaseLock = () => processingLocks.delete(lockKey);
+
     // 1. Kiểm tra số dư người dùng
     db.query('SELECT balance FROM users WHERE id = ?', [userId], (err, results) => {
-        if (err || results.length === 0) return res.status(500).json({ success: false, message: 'Lỗi DB' });
+        if (err || results.length === 0) { releaseLock(); return res.status(500).json({ success: false, message: 'Lỗi DB' }); }
 
         if (results[0].balance <= 0) {
+            releaseLock();
             return res.status(400).json({ success: false, message: '⛔ Số dư ví không đủ để sạc!' });
         }
 
         // 2. Kiểm tra xem trụ sạc có đang rảnh không
         db.query('SELECT id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [`${stationId}.${outletId}`], (err, sessions) => {
             if (sessions.length > 0) {
+                releaseLock();
                 return res.status(400).json({ success: false, message: '⛔ Trụ sạc này đang được sử dụng!' });
             }
 
             // 3. Tạo Phiên sạc mới
             db.query('INSERT INTO charging_sessions (station_id, user_id, status) VALUES (?, ?, "ongoing")', [`${stationId}.${outletId}`, userId], (err) => {
+                releaseLock();
+                if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc!' });
+
                 console.log(`📲 [API] User [${req.user.username}] bắt đầu sạc tại Tủ ${stationId}, Ổ ${outletId}`);
                 const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
                 client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
@@ -416,7 +434,14 @@ function processStopCharge(stationId, outletId, userId, callback) {
             const totalKwh = (avgPower / 1000) * durationHours;
             const totalCost = totalKwh * UNIT_PRICE;
 
-            db.query('UPDATE charging_sessions SET end_time = NOW(), total_kwh = ?, total_cost = ?, status = "completed" WHERE id = ?', [totalKwh, totalCost, sessionId], () => {
+            // [FIX Idempotency / Race Condition] Thêm điều kiện status = "ongoing" vào WHERE. 
+            // Nếu Worker và User gọi Stop cùng lúc, chỉ có 1 bên thực hiện thành công (affectedRows = 1)
+            db.query('UPDATE charging_sessions SET end_time = NOW(), total_kwh = ?, total_cost = ?, status = "completed" WHERE id = ? AND status = "ongoing"', [totalKwh, totalCost, sessionId], (err, result) => {
+                if (err || result.affectedRows === 0) {
+                    // Phiên sạc đã được chốt bởi 1 luồng khác (vd: Worker tự động cắt)
+                    return callback(false, 'Phiên sạc đã được chốt trước đó!');
+                }
+
                 db.query('UPDATE users SET balance = balance - ? WHERE id = ?', [totalCost, userId], () => {
                     client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
                     callback(true, `Đã chốt hóa đơn!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh\n- Thành tiền: ${totalCost.toFixed(0)} VNĐ`);
@@ -427,8 +452,18 @@ function processStopCharge(stationId, outletId, userId, callback) {
 }
 
 app.post('/api/charge/stop', verifyToken, (req, res) => {
+    const userId = req.user.id;
+    const { stationId, outletId } = req.body;
+
+    const lockKey = `stop_${userId}_${stationId}_${outletId}`;
+    if (processingLocks.has(lockKey)) {
+        return res.status(429).json({ success: false, message: 'Đang chốt hóa đơn, vui lòng không bấm đúp!' });
+    }
+    processingLocks.add(lockKey);
+
     console.log(`📲 [API] User [${req.user.username}] yêu cầu CHỐT phiên sạc`);
-    processStopCharge(req.body.stationId, req.body.outletId, req.user.id, (success, message) => {
+    processStopCharge(stationId, outletId, userId, (success, message) => {
+        processingLocks.delete(lockKey);
         res.json({ success, message });
     });
 });
@@ -732,47 +767,57 @@ app.post('/api/payment/webhook', (req, res) => {
         return res.status(401).json({ success: false, message: 'Unauthorized (Lỗi xác thực)' });
     }
 
-    // Payload thực tế từ SePay: { transferAmount, content, gateway, ... }
-    const { transferAmount, content } = req.body;
+    // Payload thực tế từ SePay: { id, transferAmount, content, gateway, ... }
+    const { id: transactionId, transferAmount, content } = req.body;
 
-    if (!transferAmount || !content) {
+    if (!transferAmount || !content || !transactionId) {
         return res.status(400).json({ success: false, message: 'Dữ liệu Webhook không hợp lệ' });
     }
 
-    // Phân tích mã nội dung (Tìm chữ "NAP TRAM [username]")
-    const splitContent = content.toUpperCase().split(' ');
-    const napIndex = splitContent.indexOf('NAP');
-    const tramIndex = splitContent.indexOf('TRAM');
+    // Kiểm tra Idempotency: Giao dịch này đã xử lý chưa?
+    db.query('SELECT id FROM topup_history WHERE transaction_id = ?', [transactionId], (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB kiểm tra giao dịch' });
+        
+        if (results.length > 0) {
+            console.log(`⚠️ [Webhook] Bỏ qua giao dịch ${transactionId} do đã được xử lý trước đó (Idempotent).`);
+            return res.status(200).json({ success: true, message: 'Webhook đã được xử lý trước đó' });
+        }
 
-    // Chống hack: Chỉ mở cổng cộng tiền nếu nội dung bắt đầu bằng lệnh chỉ định
-    if (napIndex !== -1 && tramIndex === napIndex + 1 && splitContent.length > tramIndex + 1) {
-        // [FIX] Lọc bỏ ký tự đặc biệt (dấu -/. do ngân hàng tự thêm) để khớp đúng username trong DB
-        const username = splitContent[tramIndex + 1].toLowerCase().replace(/[^a-z0-9]/g, '');
+        // Phân tích mã nội dung (Tìm chữ "NAP TRAM [username]")
+        const splitContent = content.toUpperCase().split(' ');
+        const napIndex = splitContent.indexOf('NAP');
+        const tramIndex = splitContent.indexOf('TRAM');
 
-        db.query('UPDATE users SET balance = balance + ? WHERE username = ?', [transferAmount, username], (err, result) => {
-            if (err) {
-                console.error('⚠️ [Webhook] Lỗi cộng tiền:', err.message);
-                return res.status(500).json({ success: false, message: 'Lỗi DB' });
-            }
-            if (result.affectedRows === 0) {
-                console.log(`⚠️ [Webhook] Nhận được ${transferAmount}đ nhưng không tìm thấy tài khoản "${username}". Vui lòng xử lý tay!`);
-                return res.status(404).json({ success: false, message: 'User không tồn tại' });
-            }
+        // Chống hack: Chỉ mở cổng cộng tiền nếu nội dung bắt đầu bằng lệnh chỉ định
+        if (napIndex !== -1 && tramIndex === napIndex + 1 && splitContent.length > tramIndex + 1) {
+            // [FIX] Lọc bỏ ký tự đặc biệt (dấu -/. do ngân hàng tự thêm) để khớp đúng username trong DB
+            const username = splitContent[tramIndex + 1].toLowerCase().replace(/[^a-z0-9]/g, '');
 
-            console.log(`🔥 [Webhook] Tự động CỘNG ${transferAmount}đ vào ví của User "${username}" thành công!`);
+            db.query('UPDATE users SET balance = balance + ? WHERE username = ?', [transferAmount, username], (err, result) => {
+                if (err) {
+                    console.error('⚠️ [Webhook] Lỗi cộng tiền:', err.message);
+                    return res.status(500).json({ success: false, message: 'Lỗi DB' });
+                }
+                if (result.affectedRows === 0) {
+                    console.log(`⚠️ [Webhook] Nhận được ${transferAmount}đ nhưng không tìm thấy tài khoản "${username}". Vui lòng xử lý tay!`);
+                    return res.status(404).json({ success: false, message: 'User không tồn tại' });
+                }
 
-            // [MỚI] Ghi log vào bảng topup_history
-            db.query('INSERT INTO topup_history (username, amount, note) VALUES (?, ?, ?)', [username, transferAmount, content], (hErr) => {
-                if (hErr) console.error('⚠️ [Webhook] Lỗi ghi log nạp tiền:', hErr.message);
+                console.log(`🔥 [Webhook] Tự động CỘNG ${transferAmount}đ vào ví của User "${username}" thành công!`);
+
+                // [MỚI] Ghi log và chốt Transaction ID để chống cộng tiền đúp
+                db.query('INSERT INTO topup_history (transaction_id, username, amount, note) VALUES (?, ?, ?, ?)', [transactionId, username, transferAmount, content], (hErr) => {
+                    if (hErr) console.error('⚠️ [Webhook] Lỗi ghi log nạp tiền:', hErr.message);
+                });
+
+                return res.json({ success: true, message: 'Đã nạp tiền thành công' });
             });
-
-            return res.json({ success: true, message: 'Đã nạp tiền thành công' });
-        });
-    } else {
-        // Có người chuyển tiền không đúng cú pháp, ghi log lại báo cho Admin
-        console.log(`⚠️ [Webhook] Giao dịch ${transferAmount}đ KHÔNG đúng Cú pháp. Lời nhắn: "${transactionContent}"`);
-        return res.status(200).json({ success: true, message: 'Webhook đã ghi nhận (Bỏ qua nạp tự động do sai cú pháp)' });
-    }
+        } else {
+            // Có người chuyển tiền không đúng cú pháp, ghi log lại báo cho Admin
+            console.log(`⚠️ [Webhook] Giao dịch ${transferAmount}đ KHÔNG đúng Cú pháp. Lời nhắn: "${content}"`);
+            return res.status(200).json({ success: true, message: 'Webhook đã ghi nhận (Bỏ qua nạp tự động do sai cú pháp)' });
+        }
+    });
 });
 
 // [MỚI] API lấy lịch sử nạp tiền của người dùng (Hỗ trợ lọc theo Khoảng thời gian)
