@@ -1,0 +1,89 @@
+// ==========================================
+// Ngôn ngữ: DBML (Database Markup Language)
+// Để vẽ sơ đồ, hãy truy cập: https://dbdiagram.io/d và dán mã này vào.
+// ==========================================
+
+// ==========================================
+// ĐỊNH NGHĨA CÁC KIỂU DỮ LIỆU ENUM (Chuẩn DBML)
+// ==========================================
+Enum user_role {
+  admin
+  user
+}
+
+Enum station_status {
+  online
+  maintenance
+}
+
+Enum session_status {
+  ongoing
+  completed
+}
+
+// ==========================================
+// ĐỊNH NGHĨA CÁC BẢNG (TABLES)
+// ==========================================
+// CỤM 1: NGƯỜI DÙNG & TÀI CHÍNH
+// Sắp xếp users và topup_history gần nhau
+
+Table users [headercolor: #3498db] {
+  id int [pk, increment]
+  username varchar(100) [unique, not null, note: 'Tên đăng nhập']
+  email varchar(255) [unique, not null]
+  password varchar(255) [not null, note: 'Bcrypt Hash']
+  role user_role [not null, default: 'user']
+  balance int [not null, default: 0, note: 'Số dư ví (VNĐ)']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table topup_history [headercolor: #9b59b6] {
+  id int [pk, increment]
+  transaction_id varchar(100) [unique, note: 'Mã GD từ ngân hàng']
+  username varchar(100) [ref: > users.username, not null]
+  amount int [not null]
+  note text
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// CỤM 2: PHẦN CỨNG & DỮ LIỆU LOG
+Table stations [headercolor: #e74c3c] {
+  station_id varchar(10) [pk, note: 'Mã tủ sạc (VD: 001, 002)']
+  name varchar(255)
+  location varchar(255)
+  unit_price int [not null, default: 3500, note: 'Giá điện VNĐ/kWh']
+  status station_status [not null, default: 'online']
+}
+
+Table telemetry [headercolor: #f39c12] {
+  id bigint [pk, increment]
+  station_id varchar(20) [not null, note: 'Mã ổ cắm (VD: 001.1)\nLiên kết logic với bảng stations qua tiền tố.']
+  status varchar(50)
+  voltage float
+  current float
+  power float
+  temperature float
+  humidity float
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+// CỤM 3: BẢNG GIAO DỊCH TRUNG GIAN
+Table charging_sessions [headercolor: #2ecc71] {
+  id int [pk, increment]
+  user_id int [ref: > users.id, not null]
+  station_id varchar(20) [not null, note: 'Mã ổ cắm (VD: 001.1, 001.2)\nLiên kết logic với bảng stations qua tiền tố.']
+  start_time timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  end_time timestamp
+  total_kwh float
+  total_cost int
+  status session_status [not null, default: 'ongoing']
+}
+
+// ==========================================
+// KHAI BÁO LIÊN KẾT ĐỂ VẼ SƠ ĐỒ ERD (Logical Relationships)
+// ==========================================
+Ref: stations.station_id < charging_sessions.station_id
+Ref: stations.station_id < telemetry.station_id
+// Khai báo lại các liên kết đã có để đảm bảo chúng luôn được vẽ
+Ref: users.id < charging_sessions.user_id
+Ref: users.username < topup_history.username

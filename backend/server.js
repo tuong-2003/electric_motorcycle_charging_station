@@ -417,10 +417,11 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
 
 // Hàm xử lý chốt phiên sạc dùng chung cho API và Worker
 function processStopCharge(stationId, outletId, userId, callback) {
-    const UNIT_PRICE = 3500;
     const fullStationId = `${stationId}.${outletId}`;
 
-    db.query('SELECT id, start_time, TIMESTAMPDIFF(SECOND, start_time, NOW()) as duration_sec FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [fullStationId], (err, sessions) => {
+    // [TỐI ƯU] JOIN với bảng stations để lấy unit_price thực tế của trạm thay vì fix cứng 3500
+    const sql = 'SELECT s.id, s.start_time, st.unit_price, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN stations st ON st.station_id = ? WHERE s.station_id = ? AND s.status = "ongoing"';
+    db.query(sql, [stationId, fullStationId], (err, sessions) => {
         if (err || sessions.length === 0) {
             client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
             return callback(true, 'Đã ngắt Relay (Không có phiên sạc nào cần chốt tiền).');
@@ -428,11 +429,12 @@ function processStopCharge(stationId, outletId, userId, callback) {
 
         const sessionId = sessions[0].id;
         const durationHours = sessions[0].duration_sec / 3600.0;
+        const dynamicUnitPrice = sessions[0].unit_price || 3500; // Fallback an toàn
 
         db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [fullStationId, sessions[0].start_time], (err, tele) => {
             let avgPower = (tele && tele.length > 0 && tele[0].avg_power != null) ? tele[0].avg_power : 0;
             const totalKwh = (avgPower / 1000) * durationHours;
-            const totalCost = totalKwh * UNIT_PRICE;
+            const totalCost = totalKwh * dynamicUnitPrice;
 
             // [FIX Idempotency / Race Condition] Thêm điều kiện status = "ongoing" vào WHERE. 
             // Nếu Worker và User gọi Stop cùng lúc, chỉ có 1 bên thực hiện thành công (affectedRows = 1)
@@ -710,7 +712,8 @@ app.delete('/api/users/:id', verifyToken, (req, res) => {
 function runBackgroundWorker() {
 
     // Lấy tất cả các phiên đang sạc của User
-    db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN users u ON s.user_id = u.id WHERE s.status = "ongoing"', (err, sessions) => {
+    // [TỐI ƯU] Bổ sung JOIN với bảng stations để tính trước tiền điện dựa trên giá của từng trạm
+    db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance, st.unit_price, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN users u ON s.user_id = u.id JOIN stations st ON st.station_id = SUBSTRING_INDEX(s.station_id, ".", 1) WHERE s.status = "ongoing"', (err, sessions) => {
         if (err || sessions.length === 0) return;
 
         sessions.forEach(session => {
@@ -731,7 +734,8 @@ function runBackgroundWorker() {
                 const durationHours = session.duration_sec / 3600.0;
                 db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele2) => {
                     let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;
-                    const tempCost = (avgPower / 1000) * durationHours * 3500;
+                    const unitPrice = session.unit_price || 3500;
+                    const tempCost = (avgPower / 1000) * durationHours * unitPrice;
 
                     if (tempCost >= session.balance) {
                         console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
