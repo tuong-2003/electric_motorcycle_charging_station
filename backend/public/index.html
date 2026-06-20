@@ -939,6 +939,14 @@
 
         // Khoi phục login khi F5
         if (authToken) {
+            // Hiển thị khung ví tiền ngay lập tức với số dư đệm để tránh giật/nhảy giao diện khi tải trang
+            const walletInfo = document.getElementById('wallet_info');
+            if (walletInfo) {
+                walletInfo.classList.remove('d-none');
+                const cachedBalance = localStorage.getItem('ev_balance') || '--';
+                const balanceEl = document.getElementById('wallet_balance');
+                if (balanceEl) balanceEl.innerText = cachedBalance;
+            }
             fetchUserProfile();
         }
 
@@ -952,7 +960,9 @@
                 .then(data => {
                     if (data.success) {
                         document.getElementById('wallet_info').classList.remove('d-none');
-                        document.getElementById('wallet_balance').innerText = parseInt(data.data.balance).toLocaleString('vi-VN');
+                        const balanceStr = parseInt(data.data.balance).toLocaleString('vi-VN');
+                        document.getElementById('wallet_balance').innerText = balanceStr;
+                        localStorage.setItem('ev_balance', balanceStr); // Lưu số dư đệm để dùng khi reload
 
                         // Giao diện ChatGPT: Cập nhật Tên, Avatar (Chữ cái đầu tiên)
                         document.getElementById('sidebar_admin_name').innerText = data.data.username;
@@ -1009,6 +1019,7 @@
         function doLogout(showAlert) {
             authToken = '';
             localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
+            localStorage.removeItem('ev_balance'); // Xóa số dư đệm
             document.getElementById('wallet_info').classList.add('d-none');
             document.getElementById('sidebar_unauth').classList.remove('d-none');
             document.getElementById('sidebar_auth').classList.add('d-none');
