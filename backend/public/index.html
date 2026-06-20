@@ -141,6 +141,14 @@
             margin-right: 6px;
             display: inline-block;
         }
+        
+        /* Cố định kích thước ví tiền để tránh dịch chuyển layout khi số tiền thay đổi */
+        #wallet_info .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 110px;
+        }
     </style>
 </head>
 
@@ -233,6 +241,13 @@
                                 <i class="fas fa-wallet me-2"></i><span id="wallet_balance">0</span> đ
                             </span>
                         </div>
+                        <script>
+                            // Chạy đồng bộ ngay lập tức trước khi render để hiện ví và tránh nhảy layout
+                            if (localStorage.getItem('ev_token')) {
+                                document.getElementById('wallet_info').classList.remove('d-none');
+                                document.getElementById('wallet_balance').innerText = localStorage.getItem('ev_balance') || '--';
+                            }
+                        </script>
                     </div>
                 </nav>
 
