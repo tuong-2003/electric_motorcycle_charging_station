@@ -149,6 +149,61 @@
             justify-content: center;
             min-width: 110px;
         }
+
+        /* Dropdown Alert Styles */
+        .no-caret::after {
+            display: none !important;
+        }
+        
+        .alert-dropdown-menu {
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        .alert-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: flex-start;
+            transition: background-color 0.2s ease;
+        }
+        
+        .alert-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .alert-item:last-child {
+            border-bottom: none;
+        }
+        
+        .alert-item-icon {
+            margin-right: 10px;
+            margin-top: 3px;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .alert-item-content {
+            flex-grow: 1;
+        }
+        
+        .alert-item-desc {
+            color: #333333;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+        
+        .alert-item-time {
+            display: block;
+            color: #888888;
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+        
+        .bg-light-unread {
+            background-color: rgba(13, 110, 253, 0.03);
+        }
     </style>
 </head>
 
@@ -221,12 +276,21 @@
                     </div>
 
                     <div class="ms-auto d-flex align-items-center">
-                        <!-- Quả chuông thông báo -->
-                        <div class="position-relative me-4" style="cursor: pointer;" title="Cảnh báo">
-                            <i class="fas fa-bell fs-5 text-secondary"></i>
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none"
-                                id="nav_alert_dot"></span>
+                        <!-- Quả chuông thông báo (Dropdown Alert) -->
+                        <div class="dropdown me-4" id="alertDropdown">
+                            <a class="position-relative text-secondary dropdown-toggle no-caret" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cảnh báo" onclick="markAlertsAsRead()">
+                                <i class="fas fa-bell fs-5"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="nav_alert_dot"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-0 alert-dropdown-menu" style="min-width: 300px; max-height: 350px; overflow-y: auto;" aria-labelledby="alertDropdown">
+                                <li class="p-2 border-bottom bg-light d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold small text-dark">Cảnh báo hệ thống</span>
+                                    <span class="badge bg-danger rounded-pill d-none" id="alert_count_badge">0</span>
+                                </li>
+                                <div id="alert_list">
+                                    <li class="dropdown-item text-center py-3 text-muted small" id="no_alerts_msg">Không có cảnh báo nào</li>
+                                </div>
+                            </ul>
                         </div>
 
                         <div id="system_status_badge" class="status-badge warning me-4 d-none d-sm-flex align-items-center" title="Trạng thái kết nối máy chủ">
@@ -756,6 +820,125 @@
     <!-- Thêm thư viện MQTT.js -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script>
+        // --- HỆ THỐNG CẢNH BÁO (ALERTS ENGINE) ---
+        let systemAlerts = [];
+
+        function addSystemAlert(id, message, type) {
+            const existing = systemAlerts.find(a => a.id === id);
+            if (existing) {
+                existing.message = message;
+                existing.type = type;
+                existing.timestamp = Date.now();
+                existing.isRead = false;
+            } else {
+                systemAlerts.push({
+                    id: id,
+                    message: message,
+                    type: type,
+                    timestamp: Date.now(),
+                    isRead: false
+                });
+            }
+            
+            systemAlerts.sort((a, b) => b.timestamp - a.timestamp);
+            
+            const alertDot = document.getElementById('nav_alert_dot');
+            if (alertDot && systemAlerts.some(a => !a.isRead)) {
+                alertDot.classList.remove('d-none');
+            }
+            
+            renderAlertList();
+            updateAlertStatsCard();
+        }
+
+        function removeSystemAlert(id) {
+            const initialLength = systemAlerts.length;
+            systemAlerts = systemAlerts.filter(a => a.id !== id);
+            
+            if (systemAlerts.length !== initialLength) {
+                const hasUnread = systemAlerts.some(a => !a.isRead);
+                const alertDot = document.getElementById('nav_alert_dot');
+                if (alertDot && !hasUnread) {
+                    alertDot.classList.add('d-none');
+                }
+                
+                renderAlertList();
+                updateAlertStatsCard();
+            }
+        }
+
+        function renderAlertList() {
+            const alertList = document.getElementById('alert_list');
+            const alertCountBadge = document.getElementById('alert_count_badge');
+            
+            if (alertCountBadge) {
+                alertCountBadge.innerText = systemAlerts.length;
+                if (systemAlerts.length > 0) {
+                    alertCountBadge.classList.remove('d-none');
+                } else {
+                    alertCountBadge.classList.add('d-none');
+                }
+            }
+            
+            if (!alertList) return;
+            
+            if (systemAlerts.length === 0) {
+                alertList.innerHTML = `<li class="dropdown-item text-center py-3 text-muted small" id="no_alerts_msg">Không có cảnh báo nào</li>`;
+                return;
+            }
+            
+            let html = '';
+            systemAlerts.forEach(alert => {
+                const timeStr = new Date(alert.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                
+                let iconClass = 'fa-exclamation-circle text-warning';
+                if (alert.type === 'danger') {
+                    iconClass = 'fa-circle-exclamation text-danger';
+                } else if (alert.type === 'info') {
+                    iconClass = 'fa-info-circle text-info';
+                }
+                
+                const unreadBg = alert.isRead ? '' : 'bg-light-unread';
+                
+                html += `
+                <li class="alert-item ${unreadBg}">
+                    <i class="fas ${iconClass} alert-item-icon"></i>
+                    <div class="alert-item-content">
+                        <div class="alert-item-desc">${alert.message}</div>
+                        <span class="alert-item-time">${timeStr}</span>
+                    </div>
+                </li>
+                `;
+            });
+            alertList.innerHTML = html;
+        }
+
+        function markAlertsAsRead() {
+            systemAlerts.forEach(alert => {
+                alert.isRead = true;
+            });
+            
+            const alertDot = document.getElementById('nav_alert_dot');
+            if (alertDot) alertDot.classList.add('d-none');
+            
+            renderAlertList();
+        }
+
+        function updateAlertStatsCard() {
+            const alertCount = systemAlerts.length;
+            const valAlerts = document.getElementById('val_alerts');
+            if (valAlerts) valAlerts.innerText = alertCount;
+            
+            const valStatus = document.getElementById('val_system_status');
+            if (valStatus) {
+                if (alertCount > 0) {
+                    valStatus.innerHTML = `<span class="text-danger fw-semibold">Có ${alertCount} cảnh báo</span>`;
+                } else {
+                    valStatus.innerText = 'Trạng thái: Ổn định';
+                }
+            }
+        }
+
         // --- KHỞI TẠO BIỂU ĐỒ ---
         const ctx = document.getElementById('powerChart').getContext('2d');
         const powerChart = new Chart(ctx, {
@@ -844,6 +1027,9 @@
 
                 lastSeenTime[uniqueId] = Date.now(); // Cập nhật nhịp tim
 
+                // Xóa cảnh báo mất kết nối nếu có
+                removeSystemAlert('offline_' + uniqueId);
+
                 // Cập nhật giao diện cho đúng ổ cắm
                 const badgeElem = document.getElementById('stat_badge_' + uniqueId);
                 if (badgeElem) {
@@ -858,6 +1044,13 @@
                 if (data.temperature !== undefined) {
                     const tempEl = document.getElementById('temp_' + stationId);
                     if (tempEl) tempEl.innerText = data.temperature;
+
+                    // Thêm/Xóa cảnh báo quá nhiệt (nếu > 60 độ C)
+                    if (data.temperature > 60) {
+                        addSystemAlert('temp_' + stationId, `Nhiệt độ Tủ sạc ${stationId} quá cao: ${data.temperature}°C!`, 'warning');
+                    } else {
+                        removeSystemAlert('temp_' + stationId);
+                    }
                 }
                 if (data.humidity !== undefined) {
                     const humEl = document.getElementById('hum_' + stationId);
@@ -1304,12 +1497,16 @@
                         document.getElementById('stat_p_' + uniqueId).innerText = '0.0';
                         currentPower[uniqueId] = 0; // Đưa công suất về 0
                         changed = true;
+
+                        // Thêm cảnh báo mất mạng vào hệ thống
+                        const parts = uniqueId.split('_');
+                        const stationId = parts[0];
+                        const outletId = parts[1];
+                        addSystemAlert('offline_' + uniqueId, `Ổ cắm ${outletId} - Tủ sạc ${stationId} mất kết nối!`, 'danger');
                     }
                 }
             }
             if (changed) {
-                // Hiển thị chấm đỏ cảnh báo trên Navbar
-                document.getElementById('nav_alert_dot').classList.remove('d-none');
 
                 let totalPower = 0;
                 for (let key in currentPower) totalPower += currentPower[key];

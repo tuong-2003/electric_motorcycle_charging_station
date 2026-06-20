@@ -25,19 +25,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ==========================================
 // 1. CẤU HÌNH CƠ SỞ DỮ LIỆU MYSQL
 // ==========================================
-const db = mysql.createConnection({
+const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'ev_station',
-    port: process.env.DB_PORT || 3306
+    port: process.env.DB_PORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-db.connect((err) => {
+db.getConnection((err, connection) => {
     if (err) {
         console.error('❌ [MySQL] Không thể kết nối! Chi tiết lỗi:', err.message);
     } else {
-        console.log('🗄️ [MySQL] Đã kết nối tới Database thành công!');
+        console.log('🗄️ [MySQL] Đã kết nối tới Database thành công (Connection Pool)!');
+        connection.release(); // Trả kết nối lại cho pool
+
         // [FIX] Ép múi giờ của Database về giờ Việt Nam (GMT+7) cho mọi truy vấn
         db.query("SET time_zone = '+07:00';", (err) => {
             if (err) console.error('⚠️ [MySQL] Không thể set timezone:', err.message);
