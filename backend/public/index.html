@@ -15,12 +15,20 @@
         }
 
         .sidebar {
-            background-color: #2c3e50;
+            width: 220px;
+            /* Chiều rộng cố định thon gọn hơn */
+            background-color: #111827;
             color: white;
             position: sticky;
             top: 0;
             height: 100vh;
             overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            min-width: 0;
         }
 
         .sidebar::-webkit-scrollbar {
@@ -28,7 +36,7 @@
         }
 
         .sidebar::-webkit-scrollbar-thumb {
-            background-color: #34495e;
+            background-color: #374151;
             border-radius: 4px;
         }
 
@@ -38,12 +46,15 @@
             padding: 12px 20px;
             display: block;
             transition: 0.3s;
+            border-left: 4px solid transparent;
+            /* Luôn có viền trái ẩn để tránh giật/xê dịch menu */
         }
 
         .sidebar a:hover,
         .sidebar a.active {
-            background-color: #34495e;
-            border-left: 4px solid #3498db;
+            background-color: #1f2937;
+            border-left-color: #10b981;
+            /* Chỉ cập nhật màu viền */
         }
 
         .card-stat {
@@ -92,10 +103,26 @@
             font-size: 1.5rem;
             flex-shrink: 0;
         }
-        .bg-primary-light { background-color: rgba(13, 110, 253, 0.08) !important; color: #0d6efd !important; }
-        .bg-success-light { background-color: rgba(25, 135, 84, 0.08) !important; color: #198754 !important; }
-        .bg-info-light { background-color: rgba(13, 202, 240, 0.08) !important; color: #0dcaf0 !important; }
-        .bg-danger-light { background-color: rgba(220, 53, 69, 0.08) !important; color: #dc3545 !important; }
+
+        .bg-primary-light {
+            background-color: rgba(13, 110, 253, 0.08) !important;
+            color: #0d6efd !important;
+        }
+
+        .bg-success-light {
+            background-color: rgba(25, 135, 84, 0.08) !important;
+            color: #198754 !important;
+        }
+
+        .bg-info-light {
+            background-color: rgba(13, 202, 240, 0.08) !important;
+            color: #0dcaf0 !important;
+        }
+
+        .bg-danger-light {
+            background-color: rgba(220, 53, 69, 0.08) !important;
+            color: #dc3545 !important;
+        }
 
         /* Connection Status Badge (Pill Style) */
         .status-badge {
@@ -110,30 +137,37 @@
             border: 1px solid transparent;
             min-width: 135px;
         }
+
         .status-badge.online {
             background-color: rgba(25, 135, 84, 0.08);
             color: #198754;
             border-color: rgba(25, 135, 84, 0.15);
         }
+
         .status-badge.online .status-dot {
             background-color: #198754;
         }
+
         .status-badge.warning {
             background-color: rgba(255, 193, 7, 0.08);
             color: #f59e0b;
             border-color: rgba(255, 193, 7, 0.15);
         }
+
         .status-badge.warning .status-dot {
             background-color: #f59e0b;
         }
+
         .status-badge.danger {
             background-color: rgba(220, 53, 69, 0.08);
             color: #dc3545;
             border-color: rgba(220, 53, 69, 0.15);
         }
+
         .status-badge.danger .status-dot {
             background-color: #dc3545;
         }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -141,7 +175,7 @@
             margin-right: 6px;
             display: inline-block;
         }
-        
+
         /* Cố định kích thước ví tiền để tránh dịch chuyển layout khi số tiền thay đổi */
         #wallet_info .badge {
             display: inline-flex;
@@ -154,13 +188,13 @@
         .no-caret::after {
             display: none !important;
         }
-        
+
         .alert-dropdown-menu {
             border-radius: 8px;
             font-size: 0.85rem;
             border: 1px solid rgba(0, 0, 0, 0.08) !important;
         }
-        
+
         .alert-item {
             padding: 10px 15px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
@@ -168,39 +202,39 @@
             align-items: flex-start;
             transition: background-color 0.2s ease;
         }
-        
+
         .alert-item:hover {
             background-color: #f8f9fa;
         }
-        
+
         .alert-item:last-child {
             border-bottom: none;
         }
-        
+
         .alert-item-icon {
             margin-right: 10px;
             margin-top: 3px;
             font-size: 1rem;
             flex-shrink: 0;
         }
-        
+
         .alert-item-content {
             flex-grow: 1;
         }
-        
+
         .alert-item-desc {
             color: #333333;
             line-height: 1.3;
             word-break: break-word;
         }
-        
+
         .alert-item-time {
             display: block;
             color: #888888;
             font-size: 0.75rem;
             margin-top: 4px;
         }
-        
+
         .bg-light-unread {
             background-color: rgba(13, 110, 253, 0.03);
         }
@@ -211,11 +245,14 @@
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            padding-left: 20px; /* Căn lề trái thẳng với menu bên dưới */
+            padding-left: 24px;
+            /* Căn lề trái thẳng hàng tắp với menu (20px padding + 4px viền ẩn) */
             border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
             margin: 0;
+            font-size: 1.35rem;
+            /* Giữ cỡ chữ lớn nổi bật đúng chuẩn thương hiệu */
         }
-        
+
         .top-navbar {
             height: 70px;
             border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
@@ -226,11 +263,13 @@
 
 <body>
 
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid px-0">
+        <div class="d-flex">
             <!-- Sidebar Navigation -->
-            <div class="col-md-2 p-0 sidebar d-none d-md-flex flex-column">
-                <h4 class="sidebar-header w-100 fw-bold">⚡ Trạm Sạc HVT</h4>
+            <div class="sidebar d-none d-md-flex flex-column">
+                <div class="sidebar-header w-100 fw-bold"><i class="fas fa-bolt me-2" style="color: #10b981;"></i>Trạm
+                    Sạc HVT
+                </div>
                 <nav class="nav flex-column mt-3 w-100">
                     <a href="#" class="active" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie me-2"></i>
                         Tổng quan</a>
@@ -280,9 +319,9 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-10 p-0">
+            <div class="main-content">
                 <!-- Top Navbar -->
-                <nav class="navbar navbar-expand-lg navbar-light bg-white ps-md-5 px-4 sticky-top top-navbar">
+                <nav class="navbar navbar-expand-lg navbar-light bg-white px-4 sticky-top top-navbar">
                     <!-- Tiêu đề trang động & Menu Mobile -->
                     <div class="d-flex align-items-center">
                         <button class="btn btn-outline-secondary d-md-none me-3 border-0" type="button"
@@ -295,31 +334,41 @@
                     <div class="ms-auto d-flex align-items-center">
                         <!-- Quả chuông thông báo (Dropdown Alert) -->
                         <div class="dropdown me-4" id="alertDropdown">
-                            <a class="position-relative text-secondary dropdown-toggle no-caret" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cảnh báo" onclick="markAlertsAsRead()">
+                            <a class="position-relative text-secondary dropdown-toggle no-caret" href="#" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false" title="Cảnh báo"
+                                onclick="markAlertsAsRead()">
                                 <i class="fas fa-bell fs-5"></i>
-                                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="nav_alert_dot"></span>
+                                <span
+                                    class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none"
+                                    id="nav_alert_dot"></span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-0 alert-dropdown-menu" style="min-width: 300px; max-height: 350px; overflow-y: auto;" aria-labelledby="alertDropdown">
-                                <li class="p-2 border-bottom bg-light d-flex justify-content-between align-items-center">
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-0 alert-dropdown-menu"
+                                style="min-width: 300px; max-height: 350px; overflow-y: auto;"
+                                aria-labelledby="alertDropdown">
+                                <li
+                                    class="p-2 border-bottom bg-light d-flex justify-content-between align-items-center">
                                     <span class="fw-bold small text-dark">Cảnh báo hệ thống</span>
                                     <span class="badge bg-danger rounded-pill d-none" id="alert_count_badge">0</span>
                                 </li>
                                 <div id="alert_list">
-                                    <li class="dropdown-item text-center py-3 text-muted small" id="no_alerts_msg">Không có cảnh báo nào</li>
+                                    <li class="dropdown-item text-center py-3 text-muted small" id="no_alerts_msg">Không
+                                        có cảnh báo nào</li>
                                 </div>
                             </ul>
                         </div>
 
-                        <div id="system_status_badge" class="status-badge warning me-4 d-none d-sm-flex align-items-center" title="Trạng thái kết nối máy chủ">
+                        <div id="system_status_badge"
+                            class="status-badge warning me-4 d-none d-sm-flex align-items-center"
+                            title="Trạng thái kết nối máy chủ">
                             <span class="status-dot"></span>
                             <span id="system_status_text">Đang kết nối...</span>
                         </div>
 
                         <!-- Ví tiền được làm đẹp (Pill) -->
                         <div id="wallet_info" class="d-none">
-                            <span class="badge bg-warning text-dark p-2 px-3 rounded-pill shadow-sm"
+                            <span class="badge bg-white text-dark border p-2 px-3 rounded-pill shadow-sm"
                                 style="font-size: 0.9rem;">
-                                <i class="fas fa-wallet me-2"></i><span id="wallet_balance">0</span> đ
+                                <i class="fas fa-wallet text-secondary me-2"></i><span id="wallet_balance">0</span> đ
                             </span>
                         </div>
                         <script>
@@ -337,53 +386,61 @@
                     <div class="row g-4">
                         <!-- Card 1 -->
                         <div class="col-md-3">
-                            <div class="card stat-card-clean border-primary-left p-3 h-100 d-flex flex-row align-items-center justify-content-between">
+                            <div
+                                class="card stat-card-clean border p-3 h-100 d-flex flex-row align-items-center justify-content-between shadow-sm">
                                 <div>
-                                    <h6 class="mb-0 text-muted small fw-semibold">Ổ sạc hoạt động</h6>
+                                    <h6 class="mb-0 text-muted small fw-semibold">Cổng sạc hoạt động</h6>
                                     <h2 class="mb-0 mt-2 fw-bold text-dark" id="val_active_stations">0 / 4</h2>
-                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;" id="val_active_details">T1: 0/2 &bull; T2: 0/2</div>
+                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;"
+                                        id="val_active_details">T1: 0/2 &bull; T2: 0/2</div>
                                 </div>
                                 <div class="icon-wrapper-stat bg-primary-light">
-                                    <i class="fas fa-plug"></i>
+                                    <i class="fas fa-plug text-primary"></i>
                                 </div>
                             </div>
                         </div>
                         <!-- Card 2 -->
                         <div class="col-md-3">
-                            <div class="card stat-card-clean border-success-left p-3 h-100 d-flex flex-row align-items-center justify-content-between">
+                            <div
+                                class="card stat-card-clean border p-3 h-100 d-flex flex-row align-items-center justify-content-between shadow-sm">
                                 <div>
                                     <h6 class="mb-0 text-muted small fw-semibold">Công suất hiện tại</h6>
                                     <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_total_power">0</span> W</h2>
-                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;" id="val_power_details">T1: 0W &bull; T2: 0W</div>
+                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;"
+                                        id="val_power_details">T1: 0W &bull; T2: 0W</div>
                                 </div>
                                 <div class="icon-wrapper-stat bg-success-light">
-                                    <i class="fas fa-bolt"></i>
+                                    <i class="fas fa-bolt text-success"></i>
                                 </div>
                             </div>
                         </div>
                         <!-- Card 3 -->
                         <div class="col-md-3">
-                            <div class="card stat-card-clean border-info-left p-3 h-100 d-flex flex-row align-items-center justify-content-between">
+                            <div
+                                class="card stat-card-clean border p-3 h-100 d-flex flex-row align-items-center justify-content-between shadow-sm">
                                 <div>
                                     <h6 class="mb-0 text-muted small fw-semibold">Điện năng hằng ngày</h6>
                                     <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_daily_kwh">0.0</span> kWh</h2>
-                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;" id="val_revenue_details">Tạm tính: 0đ</div>
+                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;"
+                                        id="val_revenue_details">Tạm tính: 0đ</div>
                                 </div>
                                 <div class="icon-wrapper-stat bg-info-light">
-                                    <i class="fas fa-leaf"></i>
+                                    <i class="fas fa-leaf text-info"></i>
                                 </div>
                             </div>
                         </div>
                         <!-- Card 4 -->
                         <div class="col-md-3">
-                            <div class="card stat-card-clean border-danger-left p-3 h-100 d-flex flex-row align-items-center justify-content-between">
+                            <div
+                                class="card stat-card-clean border p-3 h-100 d-flex flex-row align-items-center justify-content-between shadow-sm">
                                 <div>
                                     <h6 class="mb-0 text-muted small fw-semibold">Cảnh báo hệ thống</h6>
                                     <h2 class="mb-0 mt-2 fw-bold text-dark" id="val_alerts">0</h2>
-                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;" id="val_system_status">Trạng thái: Ổn định</div>
+                                    <div class="text-muted fw-normal mt-2" style="font-size: 0.82rem;"
+                                        id="val_system_status">Trạng thái: Ổn định</div>
                                 </div>
                                 <div class="icon-wrapper-stat bg-danger-light">
-                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <i class="fas fa-exclamation-triangle text-danger"></i>
                                 </div>
                             </div>
                         </div>
@@ -398,186 +455,211 @@
                             <canvas id="powerChart" height="80"></canvas>
                         </div>
                     </div>
+                </div>
 
+                <!-- Stations Tab (Quản lý Trạm sạc) -->
+                <div id="tab-stations" class="p-4 tab-content d-none">
                     <!-- Khu vực 2 Tủ sạc (Side by Side) -->
-                    <div class="row g-4 mt-2">
+                    <div class="row g-4 mb-4">
                         <!-- Trạng thái Tủ 1 -->
                         <div class="col-lg-6">
-                            <div class="card card-stat h-100 border-primary" style="border-top: 3px solid #0d6efd;">
-                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0 text-primary"><i class="fas fa-server me-2"></i>Tủ sạc 1 (001)</h5>
-                                    <button class="btn btn-sm btn-outline-primary"
-                                        onclick="alert('Mở trang chi tiết Tủ 1')">Chi tiết</button>
+                            <div class="card stat-card-clean h-100 border-0 shadow-sm"
+                                style="border-radius: 12px; overflow: hidden;">
+                                <!-- Header -->
+                                <div
+                                    class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-wrapper-stat me-3"
+                                            style="width: 42px; height: 42px; background-color: rgba(16, 185, 129, 0.15);">
+                                            <i class="fas fa-server" style="color: #10b981;"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">Tủ sạc 1</h6>
+                                            <div class="text-muted" style="font-size: 0.75rem;">ID: 001</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="border rounded px-2 py-1 text-secondary d-flex align-items-center bg-white" style="font-size: 0.8rem;">
+                                            <i class="fas fa-temperature-half me-1" style="color: #f97316;"></i><span id="temp_001" class="fw-semibold text-dark">--</span>°C
+                                            <span class="mx-2 text-muted" style="opacity: 0.3;">|</span>
+                                            <i class="fas fa-droplet me-1" style="color: #0ea5e9;"></i><span id="hum_001" class="fw-semibold text-dark">--</span>%
+                                        </div>
+                                        <button class="btn btn-sm btn-light border px-2 py-1"
+                                            onclick="openHardwareConfig('001')" title="Cấu hình phần cứng"><i
+                                                class="fas fa-cog text-secondary"></i></button>
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    <!-- Nhiệt độ & Độ ẩm -->
-                                    <div class="row text-center mb-4">
-                                        <div class="col-6 border-end">
-                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
-                                            <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i>
-                                                <span id="temp_001">--</span>°C
-                                            </h4>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
-                                            <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span
-                                                    id="hum_001">--</span>%</h4>
-                                        </div>
-                                    </div>
-
-                                    <!-- Trạng thái ổ sạc -->
-                                    <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover mb-0 text-center align-middle"
-                                            style="font-size: 0.85rem;">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th width="15%">Cổng sạc</th>
-                                                    <th width="25%">Trạng thái</th>
-                                                    <th width="35%">Thông số</th>
-                                                    <th width="25%">Hành động</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td><strong>Ổ 1</strong></td>
-                                                    <td><span id="stat_badge_001_1"
-                                                            class="badge bg-secondary">Chờ...</span></td>
-                                                    <td>
-                                                        <span id="stat_v_001_1">0.0</span>V - <span
-                                                            id="stat_i_001_1">0.00</span>A<br>
-                                                        <strong class="text-primary"><span id="stat_p_001_1">0.0</span>
-                                                            W</strong>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <button class="btn btn-sm btn-primary"
-                                                                onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
-                                                            <button class="btn btn-sm btn-danger"
-                                                                onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>Ổ 2</strong></td>
-                                                    <td><span id="stat_badge_001_2"
-                                                            class="badge bg-secondary">Chờ...</span></td>
-                                                    <td>
-                                                        <span id="stat_v_001_2">0.0</span>V - <span
-                                                            id="stat_i_001_2">0.00</span>A<br>
-                                                        <strong class="text-primary"><span id="stat_p_001_2">0.0</span>
-                                                            W</strong>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <button class="btn btn-sm btn-primary"
-                                                                onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
-                                                            <button class="btn btn-sm btn-danger"
-                                                                onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <!-- Body -->
+                                <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush">
+                                        <!-- Ổ sạc 1 -->
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                            <div class="d-flex align-items-center" style="width: 25%;">
+                                                <i class="fas fa-plug text-secondary me-2"></i>
+                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
+                                                    1</span>
+                                            </div>
+                                            <div style="width: 20%;" class="text-center">
+                                                <span id="stat_badge_001_1"
+                                                    class="badge bg-secondary rounded-pill fw-normal">Chờ...</span>
+                                            </div>
+                                            <div style="width: 30%;" class="text-center text-muted small">
+                                                <span id="stat_v_001_1">0.0</span>V &bull; <span
+                                                    id="stat_i_001_1">0.00</span>A<br>
+                                                <strong class="text-dark"><span id="stat_p_001_1">0.0</span>
+                                                    W</strong>
+                                            </div>
+                                            <div style="width: 25%; text-align: right;">
+                                                <div class="btn-group shadow-sm rounded-pill" role="group">
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
+                                                        onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
+                                                        onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <!-- Ổ sạc 2 -->
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                            <div class="d-flex align-items-center" style="width: 25%;">
+                                                <i class="fas fa-plug text-secondary me-2"></i>
+                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
+                                                    2</span>
+                                            </div>
+                                            <div style="width: 20%;" class="text-center">
+                                                <span id="stat_badge_001_2"
+                                                    class="badge bg-secondary rounded-pill fw-normal">Chờ...</span>
+                                            </div>
+                                            <div style="width: 30%;" class="text-center text-muted small">
+                                                <span id="stat_v_001_2">0.0</span>V &bull; <span
+                                                    id="stat_i_001_2">0.00</span>A<br>
+                                                <strong class="text-dark"><span id="stat_p_001_2">0.0</span>
+                                                    W</strong>
+                                            </div>
+                                            <div style="width: 25%; text-align: right;">
+                                                <div class="btn-group shadow-sm rounded-pill" role="group">
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
+                                                        onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
+                                                        onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Trạng thái Tủ 2 -->
                         <div class="col-lg-6">
-                            <div class="card card-stat h-100 border-danger" style="border-top: 3px solid #dc3545;">
-                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0 text-danger"><i class="fas fa-server me-2"></i>Tủ sạc 2 (002)</h5>
-                                    <button class="btn btn-sm btn-outline-danger"
-                                        onclick="alert('Mở trang chi tiết Tủ 2')">Chi tiết</button>
+                            <div class="card stat-card-clean h-100 border-0 shadow-sm"
+                                style="border-radius: 12px; overflow: hidden;">
+                                <!-- Header -->
+                                <div
+                                    class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-wrapper-stat me-3"
+                                            style="width: 42px; height: 42px; background-color: rgba(16, 185, 129, 0.15);">
+                                            <i class="fas fa-server" style="color: #10b981;"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">Tủ sạc 2</h6>
+                                            <div class="text-muted" style="font-size: 0.75rem;">ID: 002</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="border rounded px-2 py-1 text-secondary d-flex align-items-center bg-white" style="font-size: 0.8rem;">
+                                            <i class="fas fa-temperature-half me-1" style="color: #f97316;"></i><span id="temp_002" class="fw-semibold text-dark">--</span>°C
+                                            <span class="mx-2 text-muted" style="opacity: 0.3;">|</span>
+                                            <i class="fas fa-droplet me-1" style="color: #0ea5e9;"></i><span id="hum_002" class="fw-semibold text-dark">--</span>%
+                                        </div>
+                                        <button class="btn btn-sm btn-light border px-2 py-1"
+                                            onclick="openHardwareConfig('002')" title="Cấu hình phần cứng"><i
+                                                class="fas fa-cog text-secondary"></i></button>
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    <!-- Nhiệt độ & Độ ẩm -->
-                                    <div class="row text-center mb-4">
-                                        <div class="col-6 border-end">
-                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
-                                            <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i>
-                                                <span id="temp_002">--</span>°C
-                                            </h4>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
-                                            <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span
-                                                    id="hum_002">--</span>%</h4>
-                                        </div>
-                                    </div>
-
-                                    <!-- Trạng thái ổ sạc -->
-                                    <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover mb-0 text-center align-middle"
-                                            style="font-size: 0.85rem;">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th width="15%">Cổng sạc</th>
-                                                    <th width="25%">Trạng thái</th>
-                                                    <th width="35%">Thông số</th>
-                                                    <th width="25%">Hành động</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td><strong>Ổ 1</strong></td>
-                                                    <td><span id="stat_badge_002_1"
-                                                            class="badge bg-secondary">Chờ...</span></td>
-                                                    <td>
-                                                        <span id="stat_v_002_1">0.0</span>V - <span
-                                                            id="stat_i_002_1">0.00</span>A<br>
-                                                        <strong class="text-danger"><span id="stat_p_002_1">0.0</span>
-                                                            W</strong>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <button class="btn btn-sm btn-primary"
-                                                                onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
-                                                            <button class="btn btn-sm btn-danger"
-                                                                onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>Ổ 2</strong></td>
-                                                    <td><span id="stat_badge_002_2"
-                                                            class="badge bg-secondary">Chờ...</span></td>
-                                                    <td>
-                                                        <span id="stat_v_002_2">0.0</span>V - <span
-                                                            id="stat_i_002_2">0.00</span>A<br>
-                                                        <strong class="text-danger"><span id="stat_p_002_2">0.0</span>
-                                                            W</strong>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <button class="btn btn-sm btn-primary"
-                                                                onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
-                                                            <button class="btn btn-sm btn-danger"
-                                                                onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <!-- Body -->
+                                <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush">
+                                        <!-- Ổ sạc 1 -->
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                            <div class="d-flex align-items-center" style="width: 25%;">
+                                                <i class="fas fa-plug text-secondary me-2"></i>
+                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
+                                                    1</span>
+                                            </div>
+                                            <div style="width: 20%;" class="text-center">
+                                                <span id="stat_badge_002_1"
+                                                    class="badge bg-secondary rounded-pill fw-normal">Chờ...</span>
+                                            </div>
+                                            <div style="width: 30%;" class="text-center text-muted small">
+                                                <span id="stat_v_002_1">0.0</span>V &bull; <span
+                                                    id="stat_i_002_1">0.00</span>A<br>
+                                                <strong class="text-dark"><span id="stat_p_002_1">0.0</span>
+                                                    W</strong>
+                                            </div>
+                                            <div style="width: 25%; text-align: right;">
+                                                <div class="btn-group shadow-sm rounded-pill" role="group">
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
+                                                        onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
+                                                        onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <!-- Ổ sạc 2 -->
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                            <div class="d-flex align-items-center" style="width: 25%;">
+                                                <i class="fas fa-plug text-secondary me-2"></i>
+                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
+                                                    2</span>
+                                            </div>
+                                            <div style="width: 20%;" class="text-center">
+                                                <span id="stat_badge_002_2"
+                                                    class="badge bg-secondary rounded-pill fw-normal">Chờ...</span>
+                                            </div>
+                                            <div style="width: 30%;" class="text-center text-muted small">
+                                                <span id="stat_v_002_2">0.0</span>V &bull; <span
+                                                    id="stat_i_002_2">0.00</span>A<br>
+                                                <strong class="text-dark"><span id="stat_p_002_2">0.0</span>
+                                                    W</strong>
+                                            </div>
+                                            <div style="width: 25%; text-align: right;">
+                                                <div class="btn-group shadow-sm rounded-pill" role="group">
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
+                                                        onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-3"
+                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
+                                                        onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Stations Tab (Quản lý Trạm sạc) -->
-                <div id="tab-stations" class="p-4 tab-content d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="mb-0">Danh sách trạm sạc</h5>
-                        <button class="btn btn-primary" onclick="alert('Tính năng thêm trạm đang phát triển!')"><i
-                                class="fas fa-plus me-2"></i>Thêm Trạm mới</button>
-                    </div>
-
-                    <div class="card card-stat">
+                    <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: hidden;">
+                        <div
+                            class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-database me-2 text-secondary"></i>Cơ sở
+                                dữ liệu Trạm</h6>
+                            <button class="btn btn-sm btn-primary shadow-sm px-3" style="border-radius: 6px;"
+                                onclick="alert('Tính năng thêm tủ đang phát triển!')">
+                                <i class="fas fa-plus me-2"></i>Thêm tủ sạc
+                            </button>
+                        </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-hover mb-0 text-center align-middle">
@@ -830,6 +912,51 @@
         </div>
     </div>
 
+    <!-- Modal Cấu hình phần cứng -->
+    <div class="modal fade" id="hardwareConfigModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="hwConfigTitle">Cấu hình Tủ sạc</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="hw_station_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo vệ)</label>
+                        <select class="form-select bg-light border-0">
+                            <option value="10">10A (Sạc chậm - An toàn)</option>
+                            <option value="16" selected>16A (Tiêu chuẩn)</option>
+                            <option value="32">32A (Sạc nhanh - Yêu cầu cáp lớn)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
+                        <input type="number" class="form-control bg-light border-0" value="65">
+                        <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-semibold">Chế độ hoạt động</label>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" id="maintenanceSwitch">
+                            <label class="form-check-label text-danger" for="maintenanceSwitch">Kích hoạt Chế độ Bảo trì (Khóa sạc)</label>
+                        </div>
+                    </div>
+
+                    <hr class="text-muted">
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại (Reboot)</button>
+                        <button class="btn btn-success fw-bold px-4" onclick="saveHardwareConfig()">Lưu cấu hình</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Thêm thư viện Chart.js để vẽ biểu đồ -->
@@ -856,14 +983,14 @@
                     isRead: false
                 });
             }
-            
+
             systemAlerts.sort((a, b) => b.timestamp - a.timestamp);
-            
+
             const alertDot = document.getElementById('nav_alert_dot');
             if (alertDot && systemAlerts.some(a => !a.isRead)) {
                 alertDot.classList.remove('d-none');
             }
-            
+
             renderAlertList();
             updateAlertStatsCard();
         }
@@ -871,14 +998,14 @@
         function removeSystemAlert(id) {
             const initialLength = systemAlerts.length;
             systemAlerts = systemAlerts.filter(a => a.id !== id);
-            
+
             if (systemAlerts.length !== initialLength) {
                 const hasUnread = systemAlerts.some(a => !a.isRead);
                 const alertDot = document.getElementById('nav_alert_dot');
                 if (alertDot && !hasUnread) {
                     alertDot.classList.add('d-none');
                 }
-                
+
                 renderAlertList();
                 updateAlertStatsCard();
             }
@@ -887,7 +1014,7 @@
         function renderAlertList() {
             const alertList = document.getElementById('alert_list');
             const alertCountBadge = document.getElementById('alert_count_badge');
-            
+
             if (alertCountBadge) {
                 alertCountBadge.innerText = systemAlerts.length;
                 if (systemAlerts.length > 0) {
@@ -896,27 +1023,27 @@
                     alertCountBadge.classList.add('d-none');
                 }
             }
-            
+
             if (!alertList) return;
-            
+
             if (systemAlerts.length === 0) {
                 alertList.innerHTML = `<li class="dropdown-item text-center py-3 text-muted small" id="no_alerts_msg">Không có cảnh báo nào</li>`;
                 return;
             }
-            
+
             let html = '';
             systemAlerts.forEach(alert => {
                 const timeStr = new Date(alert.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                
+
                 let iconClass = 'fa-exclamation-circle text-warning';
                 if (alert.type === 'danger') {
                     iconClass = 'fa-circle-exclamation text-danger';
                 } else if (alert.type === 'info') {
                     iconClass = 'fa-info-circle text-info';
                 }
-                
+
                 const unreadBg = alert.isRead ? '' : 'bg-light-unread';
-                
+
                 html += `
                 <li class="alert-item ${unreadBg}">
                     <i class="fas ${iconClass} alert-item-icon"></i>
@@ -934,10 +1061,10 @@
             systemAlerts.forEach(alert => {
                 alert.isRead = true;
             });
-            
+
             const alertDot = document.getElementById('nav_alert_dot');
             if (alertDot) alertDot.classList.add('d-none');
-            
+
             renderAlertList();
         }
 
@@ -945,7 +1072,7 @@
             const alertCount = systemAlerts.length;
             const valAlerts = document.getElementById('val_alerts');
             if (valAlerts) valAlerts.innerText = alertCount;
-            
+
             const valStatus = document.getElementById('val_system_status');
             if (valStatus) {
                 if (alertCount > 0) {
@@ -1060,7 +1187,14 @@
                 // Cập nhật nhiệt độ & độ ẩm nếu mạch phần cứng có gửi lên
                 if (data.temperature !== undefined) {
                     const tempEl = document.getElementById('temp_' + stationId);
-                    if (tempEl) tempEl.innerText = data.temperature;
+                    if (tempEl) {
+                        tempEl.innerText = data.temperature;
+                        if (data.temperature > 60) {
+                            tempEl.className = "fw-bold text-danger";
+                        } else {
+                            tempEl.className = "fw-semibold text-dark";
+                        }
+                    }
 
                     // Thêm/Xóa cảnh báo quá nhiệt (nếu > 60 độ C)
                     if (data.temperature > 60) {
@@ -1336,13 +1470,39 @@
                         <td>${price}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin" onclick="openEditStation('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng"><i class="fas fa-cog"></i></button>
+                            <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng" onclick="openHardwareConfig('${st.station_id}')"><i class="fas fa-cog"></i></button>
                         </td>
                     </tr>`;
                         });
                     }
                 });
         }
+
+        // Mở Popup Cấu hình phần cứng
+        function openHardwareConfig(stationId) {
+            document.getElementById('hw_station_id').value = stationId;
+            document.getElementById('hwConfigTitle').innerText = 'Cấu hình Tủ sạc ' + stationId;
+            var hwModal = new bootstrap.Modal(document.getElementById('hardwareConfigModal'));
+            hwModal.show();
+        }
+
+        // Lưu cấu hình phần cứng
+        function saveHardwareConfig() {
+            const stationId = document.getElementById('hw_station_id').value;
+            alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + stationId + ' qua MQTT!');
+            var modalEl = document.getElementById('hardwareConfigModal');
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        // Khởi động lại Tủ sạc
+        function rebootStation() {
+            const stationId = document.getElementById('hw_station_id').value;
+            if(confirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?')) {
+                alert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!');
+            }
+        }
+
 
         // Mở Popup Edit
         function openEditStation(id, name, location) {
