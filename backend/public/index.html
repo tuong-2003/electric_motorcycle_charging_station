@@ -60,20 +60,47 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
             transition: all 0.25s ease;
         }
+
         .stat-card-clean:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
         }
-        
-        .border-primary-left { border-left: 4px solid #0d6efd !important; }
-        .border-success-left { border-left: 4px solid #198754 !important; }
-        .border-info-left { border-left: 4px solid #0dcaf0 !important; }
-        .border-danger-left { border-left: 4px solid #dc3545 !important; }
-        
-        .icon-primary { color: #0d6efd; opacity: 0.85 !important; }
-        .icon-success { color: #198754; opacity: 0.85 !important; }
-        .icon-info { color: #0dcaf0; opacity: 0.85 !important; }
-        .icon-danger { color: #dc3545; opacity: 0.85 !important; }
+
+        .border-primary-left {
+            border-left: 4px solid #0d6efd !important;
+        }
+
+        .border-success-left {
+            border-left: 4px solid #198754 !important;
+        }
+
+        .border-info-left {
+            border-left: 4px solid #0dcaf0 !important;
+        }
+
+        .border-danger-left {
+            border-left: 4px solid #dc3545 !important;
+        }
+
+        .icon-primary {
+            color: #0d6efd;
+            opacity: 0.85 !important;
+        }
+
+        .icon-success {
+            color: #198754;
+            opacity: 0.85 !important;
+        }
+
+        .icon-info {
+            color: #0dcaf0;
+            opacity: 0.85 !important;
+        }
+
+        .icon-danger {
+            color: #dc3545;
+            opacity: 0.85 !important;
+        }
 
         .icon-lg {
             font-size: 2.2rem;
@@ -186,9 +213,12 @@
                                         <h6 class="mb-0 text-muted small fw-semibold">Ổ sạc hoạt động</h6>
                                         <h2 class="mb-0 mt-2 fw-bold text-dark" id="val_active_stations">0 / 4</h2>
                                     </div>
-                                    <i class="fas fa-plug icon-lg icon-primary"></i>
+                                    <div class="icon-wrapper-stat bg-primary-light">
+                                        <i class="fas fa-plug"></i>
+                                    </div>
                                 </div>
-                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_active_details">
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;"
+                                    id="val_active_details">
                                     T1: 0/2 &bull; T2: 0/2</div>
                             </div>
                         </div>
@@ -198,11 +228,15 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <h6 class="mb-0 text-muted small fw-semibold">Công suất hiện tại</h6>
-                                        <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_total_power">0</span> W</h2>
+                                        <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_total_power">0</span> W
+                                        </h2>
                                     </div>
-                                    <i class="fas fa-bolt icon-lg icon-success"></i>
+                                    <div class="icon-wrapper-stat bg-success-light">
+                                        <i class="fas fa-bolt"></i>
+                                    </div>
                                 </div>
-                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_power_details">
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;"
+                                    id="val_power_details">
                                     T1: 0W &bull; T2: 0W</div>
                             </div>
                         </div>
@@ -212,11 +246,15 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <h6 class="mb-0 text-muted small fw-semibold">Điện năng hằng ngày</h6>
-                                        <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_daily_kwh">0.0</span> kWh</h2>
+                                        <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_daily_kwh">0.0</span> kWh
+                                        </h2>
                                     </div>
-                                    <i class="fas fa-leaf icon-lg icon-info"></i>
+                                    <div class="icon-wrapper-stat bg-info-light">
+                                        <i class="fas fa-leaf"></i>
+                                    </div>
                                 </div>
-                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_revenue_details">
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;"
+                                    id="val_revenue_details">
                                     Tạm tính: 0đ</div>
                             </div>
                         </div>
@@ -228,9 +266,12 @@
                                         <h6 class="mb-0 text-muted small fw-semibold">Cảnh báo hệ thống</h6>
                                         <h2 class="mb-0 mt-2 fw-bold text-dark" id="val_alerts">0</h2>
                                     </div>
-                                    <i class="fas fa-exclamation-triangle icon-lg icon-danger"></i>
+                                    <div class="icon-wrapper-stat bg-danger-light">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
                                 </div>
-                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_system_status">
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;"
+                                    id="val_system_status">
                                     Trạng thái: Ổn định</div>
                             </div>
                         </div>
@@ -262,7 +303,8 @@
                                         <div class="col-6 border-end">
                                             <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
                                             <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i>
-                                                <span id="temp_001">--</span>°C</h4>
+                                                <span id="temp_001">--</span>°C
+                                            </h4>
                                         </div>
                                         <div class="col-6">
                                             <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
@@ -344,7 +386,8 @@
                                         <div class="col-6 border-end">
                                             <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
                                             <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i>
-                                                <span id="temp_002">--</span>°C</h4>
+                                                <span id="temp_002">--</span>°C
+                                            </h4>
                                         </div>
                                         <div class="col-6">
                                             <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
