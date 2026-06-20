@@ -204,6 +204,22 @@
         .bg-light-unread {
             background-color: rgba(13, 110, 253, 0.03);
         }
+
+        /* Đồng bộ chiều cao Header & Sidebar */
+        .sidebar-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            margin: 0;
+        }
+        
+        .top-navbar {
+            height: 70px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+            box-shadow: none !important;
+        }
     </style>
 </head>
 
@@ -213,7 +229,7 @@
         <div class="row">
             <!-- Sidebar Navigation -->
             <div class="col-md-2 p-0 sidebar d-none d-md-flex flex-column">
-                <h4 class="text-center py-4 border-bottom border-secondary w-100">⚡ EV Charger</h4>
+                <h4 class="sidebar-header w-100 fw-bold">⚡ EV Charger</h4>
                 <nav class="nav flex-column mt-3 w-100">
                     <a href="#" class="active" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie me-2"></i>
                         Tổng quan</a>
@@ -265,7 +281,7 @@
             <!-- Main Content -->
             <div class="col-md-10 p-0">
                 <!-- Top Navbar -->
-                <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-3 sticky-top">
+                <nav class="navbar navbar-expand-lg navbar-light bg-white px-4 sticky-top top-navbar">
                     <!-- Tiêu đề trang động & Menu Mobile -->
                     <div class="d-flex align-items-center">
                         <button class="btn btn-outline-secondary d-md-none me-3 border-0" type="button"
