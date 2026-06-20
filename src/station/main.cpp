@@ -6,6 +6,9 @@
 #include <qrcode.h>
 #include <PZEM004Tv30.h>
 #include "ModbusSlaveTask.h"
+#include <WiFi.h>
+#include <WebServer.h>
+#include <Update.h>
 
 // --- Cấu hình Màn hình TFT ST7735 ---
 #define TFT_CS    32
@@ -30,7 +33,7 @@ PZEM004Tv30 pzem(Serial2, PZEM_RX_PIN, PZEM_TX_PIN);
 // --- Cấu hình PZEM-004T số 2 ---
 #define PZEM2_RX_PIN 3
 #define PZEM2_TX_PIN 1
-PZEM004Tv30 pzem2(Serial, PZEM2_RX_PIN, PZEM2_TX_PIN); // Sử dụng UART0 (Serial) cho PZEM2
+PZEM004Tv30 pzem2(Serial, PZEM2_RX_PIN, PZEM2_TX_PIN);
 
 // --- Cấu hình Relay (Active LOW với Opto PC817) ---
 #define RELAY1_PIN 21
@@ -50,6 +53,16 @@ float current_a[2] = {0.0, 0.0};
 float current_w[2] = {0.0, 0.0};
 float current_temp = 0.0;
 float current_hum = 0.0;
+
+// --- Nút nhấn (BOOT button) và Trạng thái WiFi AP ---
+#define BUTTON_PIN 0
+bool is_ap_active = true;
+uint32_t btn_press_time = 0;
+bool btn_active = false;
+bool btn_long_pressed = false;
+
+// --- Cấu hình WebServer cho OTA ---
+WebServer server(80);
 
 // Hàm vẽ QR Code lên màn hình TFT
 void drawQRCode(const char *text, int offset_x, int offset_y) {
@@ -128,13 +141,15 @@ void updateDisplay() {
 }
 
 void setup() {
-  // Xóa Serial.begin(115200) vì UART0 đã nhường cho PZEM2
   
   // Khởi tạo Relay (Mặc định tắt an toàn để không rò điện khi ESP32 vừa boot)
   pinMode(RELAY1_PIN, OUTPUT);
   pinMode(RELAY2_PIN, OUTPUT);
   digitalWrite(RELAY1_PIN, HIGH);
   digitalWrite(RELAY2_PIN, HIGH);
+
+  // Khởi tạo nút nhấn (Nút BOOT mặc định trên ESP32)
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   // Khởi tạo SPI và Màn hình TFT với các chân Custom
   spi->begin(TFT_SCLK, -1, TFT_MOSI, TFT_CS); // SCLK, MISO, MOSI, CS (-1 vì không dùng MISO)
@@ -147,6 +162,39 @@ void setup() {
   tft.setCursor(30, 60);
   tft.print("Booting System...");
 
+  // --- Cấu hình WiFi AP & Web OTA ---
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP("EV_Station_OTA", "12345678"); // Tên WiFi: EV_Station_OTA, Pass: 12345678
+
+  // Giao diện Web đơn giản để Upload file .bin
+  server.on("/", HTTP_GET, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/html", "<h2 style='font-family:sans-serif;'>EV Station Firmware Update</h2><form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><br><br><input type='submit' value='Upload & Update'></form>");
+  });
+
+  // Xử lý file khi Upload
+  server.on("/update", HTTP_POST, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/plain", (Update.hasError()) ? "Update Failed! Please try again." : "Update Success! ESP32 is rebooting...");
+    delay(1000);
+    ESP.restart();
+  }, []() {
+    HTTPUpload& upload = server.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) Update.printError(Serial);
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) Update.printError(Serial);
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (Update.end(true)) {
+        Serial.printf("Update Success: %u bytes\n", upload.totalSize);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
+  
+  server.begin();
+
   dht.begin();
   modbus.begin(); // Bật Modbus Slave
   initDisplay(); // Vẽ các viền cố định và xóa chữ Booting
@@ -154,8 +202,34 @@ void setup() {
 }
 
 void loop() {
+  if (is_ap_active) {
+    server.handleClient(); // Lắng nghe và xử lý các yêu cầu Web OTA
+  }
+
+  // --- Xử lý nút nhấn giữ 5s để bật/tắt WiFi AP ---
+  if (digitalRead(BUTTON_PIN) == LOW) {
+    if (!btn_active) {
+      btn_active = true;
+      btn_press_time = millis();
+      btn_long_pressed = false;
+    } else if (!btn_long_pressed && (millis() - btn_press_time >= 5000)) {
+      btn_long_pressed = true; // Đánh dấu đã xử lý để không bị lặp lại liên tục
+      is_ap_active = !is_ap_active;
+      if (is_ap_active) {
+        WiFi.mode(WIFI_AP);
+        WiFi.softAP("EV_Station_OTA", "12345678");
+      } else {
+        WiFi.softAPdisconnect(true);
+        WiFi.mode(WIFI_OFF);
+      }
+    }
+  } else {
+    btn_active = false;
+  }
+
   modbus.loop();
 
+  
   // --- NHẬN LỆNH ĐIỀU KHIỂN TỪ MODBUS ---
   int cmd1 = modbus.getCommandOutlet1();
   if (cmd1 == 1) {

@@ -5,10 +5,10 @@
 #include "ModbusMasterTask.h"
 
 // --- Cấu hình WiFi ---
-// const char *WIFI_SSID = "Rubyhouselau1@2025";
-// const char *WIFI_PASS = "ruby@09876";
-const char *WIFI_SSID = "AP2FB8";
-const char *WIFI_PASS = "333333333";
+const char *WIFI_SSID = "Rubyhouselau1@2025";
+const char *WIFI_PASS = "ruby@09876";
+// const char *WIFI_SSID = "AP2FB8";
+// const char *WIFI_PASS = "333333333";
 
 // --- Cấu hình MQTT Cloud ---
 const char *MQTT_BROKER = "broker.hivemq.com";
@@ -72,6 +72,8 @@ void loop() {
     if (!mqtt.connected()) reconnect_mqtt();
     else mqtt.loop();
     
+    modbus.loop(); // QUAN TRỌNG: Gọi liên tục để duy trì state machine của Modbus Master
+    
     // Quét Modbus các tủ sạc mỗi 5 giây và đẩy lên Cloud
     static uint32_t lastPoll = 0;
     if (millis() - lastPoll > 5000) {
@@ -101,6 +103,8 @@ void loop() {
                 String p2; serializeJson(doc2, p2);
                 char topic2[50]; snprintf(topic2, sizeof(topic2), "ev_station/%s/outlet/2/status", stationStr);
                 mqtt.publish(topic2, p2.c_str());
+            } else {
+                Serial.printf("Doc THAT BAI TRAM %d! Vui long kiem tra ket noi.\n", STATION_IDS[i]);
             }
         }
     }

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,883 +10,1026 @@
     <!-- Sử dụng FontAwesome cho Icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f4f6f9; }
-        .sidebar { 
-            background-color: #2c3e50; 
-            color: white; 
-            position: sticky; 
-            top: 0; 
-            height: 100vh; 
-            overflow-y: auto; 
+        body {
+            background-color: #f4f6f9;
         }
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-thumb { background-color: #34495e; border-radius: 4px; }
-        .sidebar a { color: #ecf0f1; text-decoration: none; padding: 12px 20px; display: block; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background-color: #34495e; border-left: 4px solid #3498db; }
-        .card-stat { border-radius: 10px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .icon-lg { font-size: 2.5rem; opacity: 0.3; }
+
+        .sidebar {
+            background-color: #2c3e50;
+            color: white;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: #34495e;
+            border-radius: 4px;
+        }
+
+        .sidebar a {
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 12px 20px;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background-color: #34495e;
+            border-left: 4px solid #3498db;
+        }
+
+        .card-stat {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-card-clean {
+            background-color: #ffffff;
+            color: #333333;
+            border: 1px solid rgba(0, 0, 0, 0.08) !important;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: all 0.25s ease;
+        }
+        .stat-card-clean:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.06);
+        }
+        
+        .border-primary-left { border-left: 4px solid #0d6efd !important; }
+        .border-success-left { border-left: 4px solid #198754 !important; }
+        .border-info-left { border-left: 4px solid #0dcaf0 !important; }
+        .border-danger-left { border-left: 4px solid #dc3545 !important; }
+        
+        .icon-primary { color: #0d6efd; opacity: 0.85 !important; }
+        .icon-success { color: #198754; opacity: 0.85 !important; }
+        .icon-info { color: #0dcaf0; opacity: 0.85 !important; }
+        .icon-danger { color: #dc3545; opacity: 0.85 !important; }
+
+        .icon-lg {
+            font-size: 2.2rem;
+            opacity: 0.3;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar Navigation -->
-        <div class="col-md-2 p-0 sidebar d-none d-md-flex flex-column">
-            <h4 class="text-center py-4 border-bottom border-secondary w-100">⚡ EV Charger</h4>
-            <nav class="nav flex-column mt-3 w-100">
-                <a href="#" class="active" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie me-2"></i> Tổng quan</a>
-                <a href="#" onclick="switchTab('stations')"><i class="fas fa-charging-station me-2"></i> Trạm sạc</a>
-                <a href="#" onclick="switchTab('users')"><i class="fas fa-id-card me-2"></i> Thẻ RFID / Users</a>
-                <a href="#" onclick="switchTab('history')"><i class="fas fa-history me-2"></i> Lịch sử sạc</a>
-                <a href="#" onclick="switchTab('settings')"><i class="fas fa-cog me-2"></i> Cài đặt</a>
-            </nav>
-            
-            <!-- Quản trị viên (Chuẩn UX kiểu ChatGPT) -->
-            <div class="mt-auto p-3 border-top border-secondary w-100">
-                
-                <!-- Trạng thái chưa đăng nhập -->
-                <div id="sidebar_unauth">
-                    <button class="btn btn-outline-light w-100 d-flex align-items-center justify-content-center py-2" data-bs-toggle="modal" data-bs-target="#loginModal">
-                        <i class="fas fa-sign-in-alt me-2"></i> <strong>Đăng nhập</strong>
-                    </button>
-                </div>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-md-2 p-0 sidebar d-none d-md-flex flex-column">
+                <h4 class="text-center py-4 border-bottom border-secondary w-100">⚡ EV Charger</h4>
+                <nav class="nav flex-column mt-3 w-100">
+                    <a href="#" class="active" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie me-2"></i>
+                        Tổng quan</a>
+                    <a href="#" onclick="switchTab('stations')"><i class="fas fa-charging-station me-2"></i> Trạm
+                        sạc</a>
+                    <a href="#" onclick="switchTab('users')"><i class="fas fa-id-card me-2"></i> Thẻ RFID / Users</a>
+                    <a href="#" onclick="switchTab('history')"><i class="fas fa-history me-2"></i> Lịch sử sạc</a>
+                    <a href="#" onclick="switchTab('settings')"><i class="fas fa-cog me-2"></i> Cài đặt</a>
+                </nav>
 
-                <!-- Trạng thái đã đăng nhập (Dropup bật lên trên) -->
-                <div id="sidebar_auth" class="dropup d-none">
-                    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle w-100 p-1 rounded" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2" style="width: 32px; height: 32px; background-color: #10a37f;" id="user_avatar">
-                            A
-                        </div>
-                        <strong id="sidebar_admin_name" class="text-truncate" style="max-width: 120px;">Admin</strong>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-dark text-small shadow w-100 mb-2">
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-user-edit me-2"></i> Hồ sơ của tôi</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-cog me-2"></i> Cài đặt</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger py-2" href="#" onclick="doLogout()"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+                <!-- Quản trị viên (Chuẩn UX kiểu ChatGPT) -->
+                <div class="mt-auto p-3 border-top border-secondary w-100">
 
-        <!-- Main Content -->
-        <div class="col-md-10 p-0">
-            <!-- Top Navbar -->
-            <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-3 sticky-top">
-                <!-- Tiêu đề trang động & Menu Mobile -->
-                <div class="d-flex align-items-center">
-                    <button class="btn btn-outline-secondary d-md-none me-3 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <h4 class="mb-0 fw-bold text-dark" id="top_page_title">Tổng quan hệ thống</h4>
-                </div>
-
-                <div class="ms-auto d-flex align-items-center">
-                    <!-- Quả chuông thông báo -->
-                    <div class="position-relative me-4" style="cursor: pointer;" title="Cảnh báo">
-                        <i class="fas fa-bell fs-5 text-secondary"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="nav_alert_dot"></span>
+                    <!-- Trạng thái chưa đăng nhập -->
+                    <div id="sidebar_unauth">
+                        <button
+                            class="btn btn-outline-light w-100 d-flex align-items-center justify-content-center py-2"
+                            data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="fas fa-sign-in-alt me-2"></i> <strong>Đăng nhập</strong>
+                        </button>
                     </div>
 
-                    <span class="me-4 d-none d-sm-flex align-items-center text-secondary fw-medium" title="Trạng thái kết nối Server">
-                        <i id="system_status_icon" class="fas fa-circle text-warning me-2" style="font-size: 10px;"></i> <span id="system_status_text">Đang kết nối...</span>
-                    </span>
+                    <!-- Trạng thái đã đăng nhập (Dropup bật lên trên) -->
+                    <div id="sidebar_auth" class="dropup d-none">
+                        <a href="#"
+                            class="d-flex align-items-center text-white text-decoration-none dropdown-toggle w-100 p-1 rounded"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2"
+                                style="width: 32px; height: 32px; background-color: #10a37f;" id="user_avatar">
+                                A
+                            </div>
+                            <strong id="sidebar_admin_name" class="text-truncate"
+                                style="max-width: 120px;">Admin</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark text-small shadow w-100 mb-2">
+                            <li><a class="dropdown-item py-2" href="#"><i class="fas fa-user-edit me-2"></i> Hồ sơ của
+                                    tôi</a></li>
+                            <li><a class="dropdown-item py-2" href="#"><i class="fas fa-cog me-2"></i> Cài đặt</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger py-2" href="#" onclick="doLogout()"><i
+                                        class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
 
-                    <!-- Ví tiền được làm đẹp (Pill) -->
-                    <div id="wallet_info" class="d-none">
-                        <span class="badge bg-warning text-dark p-2 px-3 rounded-pill shadow-sm" style="font-size: 0.9rem;">
-                            <i class="fas fa-wallet me-2"></i><span id="wallet_balance">0</span> đ
+            <!-- Main Content -->
+            <div class="col-md-10 p-0">
+                <!-- Top Navbar -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-3 sticky-top">
+                    <!-- Tiêu đề trang động & Menu Mobile -->
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-outline-secondary d-md-none me-3 border-0" type="button"
+                            data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <h4 class="mb-0 fw-bold text-dark" id="top_page_title">Tổng quan hệ thống</h4>
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center">
+                        <!-- Quả chuông thông báo -->
+                        <div class="position-relative me-4" style="cursor: pointer;" title="Cảnh báo">
+                            <i class="fas fa-bell fs-5 text-secondary"></i>
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none"
+                                id="nav_alert_dot"></span>
+                        </div>
+
+                        <span class="me-4 d-none d-sm-flex align-items-center text-secondary fw-medium"
+                            title="Trạng thái kết nối Server">
+                            <i id="system_status_icon" class="fas fa-circle text-warning me-2"
+                                style="font-size: 10px;"></i> <span id="system_status_text">Đang kết nối...</span>
                         </span>
-                    </div>
-                </div>
-            </nav>
 
-            <!-- Dashboard Tab (Tổng quan) -->
-            <div id="tab-dashboard" class="p-4 tab-content">
-                <div class="row g-4">
-                    <!-- Card 1 -->
-                    <div class="col-md-3">
-                        <div class="card card-stat bg-primary text-white p-3 h-100 d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-0">Ổ sạc hoạt động</h6>
-                                    <h2 class="mb-0 mt-2" id="val_active_stations">0 / 4</h2>
-                                </div>
-                                <i class="fas fa-plug icon-lg"></i>
-                            </div>
-                            <div class="mt-auto pt-2 fw-light" style="font-size: 0.85rem;" id="val_active_details">T1: 0/2 &bull; T2: 0/2</div>
+                        <!-- Ví tiền được làm đẹp (Pill) -->
+                        <div id="wallet_info" class="d-none">
+                            <span class="badge bg-warning text-dark p-2 px-3 rounded-pill shadow-sm"
+                                style="font-size: 0.9rem;">
+                                <i class="fas fa-wallet me-2"></i><span id="wallet_balance">0</span> đ
+                            </span>
                         </div>
                     </div>
-                    <!-- Card 2 -->
-                    <div class="col-md-3">
-                        <div class="card card-stat bg-success text-white p-3 h-100 d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-0">Công suất hiện tại</h6>
-                                    <h2 class="mb-0 mt-2"><span id="val_total_power">0</span> W</h2>
-                                </div>
-                                <i class="fas fa-bolt icon-lg"></i>
-                            </div>
-                            <div class="mt-auto pt-2 fw-light" style="font-size: 0.85rem;" id="val_power_details">T1: 0W &bull; T2: 0W</div>
-                        </div>
-                    </div>
-                    <!-- Card 3 -->
-                    <div class="col-md-3">
-                        <div class="card card-stat bg-info text-white p-3 h-100 d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-0">Điện năng hằng ngày</h6>
-                                    <h2 class="mb-0 mt-2"><span id="val_daily_kwh">0.0</span> kWh</h2>
-                                </div>
-                                <i class="fas fa-leaf icon-lg"></i>
-                            </div>
-                            <div class="mt-auto pt-2 fw-light" style="font-size: 0.85rem;" id="val_revenue_details">Tạm tính: 0đ</div>
-                        </div>
-                    </div>
-                    <!-- Card 4 -->
-                    <div class="col-md-3">
-                        <div class="card card-stat bg-danger text-white p-3 h-100 d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-0">Cảnh báo hệ thống</h6>
-                                    <h2 class="mb-0 mt-2" id="val_alerts">0</h2>
-                                </div>
-                                <i class="fas fa-exclamation-triangle icon-lg"></i>
-                            </div>
-                            <div class="mt-auto pt-2 fw-light" style="font-size: 0.85rem;" id="val_system_status">Trạng thái: Ổn định</div>
-                        </div>
-                    </div>
-                </div>
+                </nav>
 
-                <!-- Biểu đồ công suất -->
-                <div class="card card-stat mt-4">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Biểu đồ Công suất (W)</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="powerChart" height="80"></canvas>
-                    </div>
-                </div>
-
-                <!-- Khu vực 2 Tủ sạc (Side by Side) -->
-                <div class="row g-4 mt-2">
-                    <!-- Trạng thái Tủ 1 -->
-                    <div class="col-lg-6">
-                        <div class="card card-stat h-100 border-primary" style="border-top: 3px solid #0d6efd;">
-                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 text-primary"><i class="fas fa-server me-2"></i>Tủ sạc 1 (001)</h5>
-                                <button class="btn btn-sm btn-outline-primary" onclick="alert('Mở trang chi tiết Tủ 1')">Chi tiết</button>
-                            </div>
-                            <div class="card-body">
-                                <!-- Nhiệt độ & Độ ẩm -->
-                                <div class="row text-center mb-4">
-                                    <div class="col-6 border-end">
-                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
-                                        <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i> <span id="temp_001">--</span>°C</h4>
+                <!-- Dashboard Tab (Tổng quan) -->
+                <div id="tab-dashboard" class="p-4 tab-content">
+                    <div class="row g-4">
+                        <!-- Card 1 -->
+                        <div class="col-md-3">
+                            <div class="card stat-card-clean border-primary-left p-3 h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-muted small fw-semibold">Ổ sạc hoạt động</h6>
+                                        <h2 class="mb-0 mt-2 fw-bold text-dark" id="val_active_stations">0 / 4</h2>
                                     </div>
-                                    <div class="col-6">
-                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
-                                        <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span id="hum_001">--</span>%</h4>
+                                    <i class="fas fa-plug icon-lg icon-primary"></i>
+                                </div>
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_active_details">
+                                    T1: 0/2 &bull; T2: 0/2</div>
+                            </div>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="col-md-3">
+                            <div class="card stat-card-clean border-success-left p-3 h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-muted small fw-semibold">Công suất hiện tại</h6>
+                                        <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_total_power">0</span> W</h2>
                                     </div>
+                                    <i class="fas fa-bolt icon-lg icon-success"></i>
                                 </div>
-                                
-                                <!-- Trạng thái ổ sạc -->
-                                <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th width="15%">Cổng sạc</th>
-                                                <th width="25%">Trạng thái</th>
-                                                <th width="35%">Thông số</th>
-                                                <th width="25%">Hành động</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td><strong>Ổ 1</strong></td>
-                                                <td><span id="stat_badge_001_1" class="badge bg-secondary">Chờ...</span></td>
-                                                <td>
-                                                    <span id="stat_v_001_1">0.0</span>V - <span id="stat_i_001_1">0.00</span>A<br>
-                                                    <strong class="text-primary"><span id="stat_p_001_1">0.0</span> W</strong>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
-                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Ổ 2</strong></td>
-                                                <td><span id="stat_badge_001_2" class="badge bg-secondary">Chờ...</span></td>
-                                                <td>
-                                                    <span id="stat_v_001_2">0.0</span>V - <span id="stat_i_001_2">0.00</span>A<br>
-                                                    <strong class="text-primary"><span id="stat_p_001_2">0.0</span> W</strong>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
-                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_power_details">
+                                    T1: 0W &bull; T2: 0W</div>
+                            </div>
+                        </div>
+                        <!-- Card 3 -->
+                        <div class="col-md-3">
+                            <div class="card stat-card-clean border-info-left p-3 h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-muted small fw-semibold">Điện năng hằng ngày</h6>
+                                        <h2 class="mb-0 mt-2 fw-bold text-dark"><span id="val_daily_kwh">0.0</span> kWh</h2>
+                                    </div>
+                                    <i class="fas fa-leaf icon-lg icon-info"></i>
                                 </div>
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_revenue_details">
+                                    Tạm tính: 0đ</div>
+                            </div>
+                        </div>
+                        <!-- Card 4 -->
+                        <div class="col-md-3">
+                            <div class="card stat-card-clean border-danger-left p-3 h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-muted small fw-semibold">Cảnh báo hệ thống</h6>
+                                        <h2 class="mb-0 mt-2 fw-bold text-dark" id="val_alerts">0</h2>
+                                    </div>
+                                    <i class="fas fa-exclamation-triangle icon-lg icon-danger"></i>
+                                </div>
+                                <div class="mt-auto pt-2 text-muted fw-normal" style="font-size: 0.82rem;" id="val_system_status">
+                                    Trạng thái: Ổn định</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Trạng thái Tủ 2 -->
-                    <div class="col-lg-6">
-                        <div class="card card-stat h-100 border-danger" style="border-top: 3px solid #dc3545;">
-                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 text-danger"><i class="fas fa-server me-2"></i>Tủ sạc 2 (002)</h5>
-                                <button class="btn btn-sm btn-outline-danger" onclick="alert('Mở trang chi tiết Tủ 2')">Chi tiết</button>
-                            </div>
-                            <div class="card-body">
-                                <!-- Nhiệt độ & Độ ẩm -->
-                                <div class="row text-center mb-4">
-                                    <div class="col-6 border-end">
-                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
-                                        <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i> <span id="temp_002">--</span>°C</h4>
+                    <!-- Biểu đồ công suất -->
+                    <div class="card card-stat mt-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Biểu đồ Công suất (W)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="powerChart" height="80"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Khu vực 2 Tủ sạc (Side by Side) -->
+                    <div class="row g-4 mt-2">
+                        <!-- Trạng thái Tủ 1 -->
+                        <div class="col-lg-6">
+                            <div class="card card-stat h-100 border-primary" style="border-top: 3px solid #0d6efd;">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 text-primary"><i class="fas fa-server me-2"></i>Tủ sạc 1 (001)</h5>
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        onclick="alert('Mở trang chi tiết Tủ 1')">Chi tiết</button>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Nhiệt độ & Độ ẩm -->
+                                    <div class="row text-center mb-4">
+                                        <div class="col-6 border-end">
+                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
+                                            <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i>
+                                                <span id="temp_001">--</span>°C</h4>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
+                                            <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span
+                                                    id="hum_001">--</span>%</h4>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
-                                        <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span id="hum_002">--</span>%</h4>
+
+                                    <!-- Trạng thái ổ sạc -->
+                                    <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0 text-center align-middle"
+                                            style="font-size: 0.85rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="15%">Cổng sạc</th>
+                                                    <th width="25%">Trạng thái</th>
+                                                    <th width="35%">Thông số</th>
+                                                    <th width="25%">Hành động</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Ổ 1</strong></td>
+                                                    <td><span id="stat_badge_001_1"
+                                                            class="badge bg-secondary">Chờ...</span></td>
+                                                    <td>
+                                                        <span id="stat_v_001_1">0.0</span>V - <span
+                                                            id="stat_i_001_1">0.00</span>A<br>
+                                                        <strong class="text-primary"><span id="stat_p_001_1">0.0</span>
+                                                            W</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-sm btn-primary"
+                                                                onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
+                                                            <button class="btn btn-sm btn-danger"
+                                                                onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Ổ 2</strong></td>
+                                                    <td><span id="stat_badge_001_2"
+                                                            class="badge bg-secondary">Chờ...</span></td>
+                                                    <td>
+                                                        <span id="stat_v_001_2">0.0</span>V - <span
+                                                            id="stat_i_001_2">0.00</span>A<br>
+                                                        <strong class="text-primary"><span id="stat_p_001_2">0.0</span>
+                                                            W</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-sm btn-primary"
+                                                                onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
+                                                            <button class="btn btn-sm btn-danger"
+                                                                onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                                
-                                <!-- Trạng thái ổ sạc -->
-                                <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.85rem;">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th width="15%">Cổng sạc</th>
-                                                <th width="25%">Trạng thái</th>
-                                                <th width="35%">Thông số</th>
-                                                <th width="25%">Hành động</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td><strong>Ổ 1</strong></td>
-                                                <td><span id="stat_badge_002_1" class="badge bg-secondary">Chờ...</span></td>
-                                                <td>
-                                                    <span id="stat_v_002_1">0.0</span>V - <span id="stat_i_002_1">0.00</span>A<br>
-                                                    <strong class="text-danger"><span id="stat_p_002_1">0.0</span> W</strong>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
-                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Ổ 2</strong></td>
-                                                <td><span id="stat_badge_002_2" class="badge bg-secondary">Chờ...</span></td>
-                                                <td>
-                                                    <span id="stat_v_002_2">0.0</span>V - <span id="stat_i_002_2">0.00</span>A<br>
-                                                    <strong class="text-danger"><span id="stat_p_002_2">0.0</span> W</strong>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <button class="btn btn-sm btn-primary" onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
-                                                        <button class="btn btn-sm btn-danger" onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                            </div>
+                        </div>
+
+                        <!-- Trạng thái Tủ 2 -->
+                        <div class="col-lg-6">
+                            <div class="card card-stat h-100 border-danger" style="border-top: 3px solid #dc3545;">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 text-danger"><i class="fas fa-server me-2"></i>Tủ sạc 2 (002)</h5>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                        onclick="alert('Mở trang chi tiết Tủ 2')">Chi tiết</button>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Nhiệt độ & Độ ẩm -->
+                                    <div class="row text-center mb-4">
+                                        <div class="col-6 border-end">
+                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Nhiệt độ</div>
+                                            <h4 class="mb-0 text-danger"><i class="fas fa-temperature-half me-1"></i>
+                                                <span id="temp_002">--</span>°C</h4>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted mb-1" style="font-size: 0.85rem;">Độ ẩm</div>
+                                            <h4 class="mb-0 text-info"><i class="fas fa-droplet me-1"></i> <span
+                                                    id="hum_002">--</span>%</h4>
+                                        </div>
+                                    </div>
+
+                                    <!-- Trạng thái ổ sạc -->
+                                    <h6 class="border-bottom pb-2 text-secondary">Trạng thái ổ sạc</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0 text-center align-middle"
+                                            style="font-size: 0.85rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="15%">Cổng sạc</th>
+                                                    <th width="25%">Trạng thái</th>
+                                                    <th width="35%">Thông số</th>
+                                                    <th width="25%">Hành động</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Ổ 1</strong></td>
+                                                    <td><span id="stat_badge_002_1"
+                                                            class="badge bg-secondary">Chờ...</span></td>
+                                                    <td>
+                                                        <span id="stat_v_002_1">0.0</span>V - <span
+                                                            id="stat_i_002_1">0.00</span>A<br>
+                                                        <strong class="text-danger"><span id="stat_p_002_1">0.0</span>
+                                                            W</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-sm btn-primary"
+                                                                onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
+                                                            <button class="btn btn-sm btn-danger"
+                                                                onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Ổ 2</strong></td>
+                                                    <td><span id="stat_badge_002_2"
+                                                            class="badge bg-secondary">Chờ...</span></td>
+                                                    <td>
+                                                        <span id="stat_v_002_2">0.0</span>V - <span
+                                                            id="stat_i_002_2">0.00</span>A<br>
+                                                        <strong class="text-danger"><span id="stat_p_002_2">0.0</span>
+                                                            W</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-sm btn-primary"
+                                                                onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
+                                                            <button class="btn btn-sm btn-danger"
+                                                                onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Stations Tab (Quản lý Trạm sạc) -->
-            <div id="tab-stations" class="p-4 tab-content d-none">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0">Danh sách trạm sạc</h5>
-                    <button class="btn btn-primary" onclick="alert('Tính năng thêm trạm đang phát triển!')"><i class="fas fa-plus me-2"></i>Thêm Trạm mới</button>
+                <!-- Stations Tab (Quản lý Trạm sạc) -->
+                <div id="tab-stations" class="p-4 tab-content d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="mb-0">Danh sách trạm sạc</h5>
+                        <button class="btn btn-primary" onclick="alert('Tính năng thêm trạm đang phát triển!')"><i
+                                class="fas fa-plus me-2"></i>Thêm Trạm mới</button>
+                    </div>
+
+                    <div class="card card-stat">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Mã Trạm (ID)</th>
+                                            <th>Tên / Vị trí</th>
+                                            <th>Trạng thái mạng</th>
+                                            <th>Nhiệt độ / Độ ẩm</th>
+                                            <th>Tổng điện năng</th>
+                                            <th>Đơn giá (VNĐ/kWh)</th>
+                                            <th>Cài đặt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stations_table_body">
+                                        <tr>
+                                            <td colspan="7">Đang tải dữ liệu...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="card card-stat">
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 text-center align-middle">
+
+                <!-- History Tab (Lịch sử sạc) -->
+                <div id="tab-history" class="p-4 tab-content d-none">
+                    <div class="card card-stat">
+                        <div class="card-body p-0">
+                            <table class="table table-hover mb-0 text-center">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Mã Trạm (ID)</th>
-                                        <th>Tên / Vị trí</th>
-                                        <th>Trạng thái mạng</th>
-                                        <th>Nhiệt độ / Độ ẩm</th>
-                                        <th>Tổng điện năng</th>
-                                        <th>Đơn giá (VNĐ/kWh)</th>
-                                        <th>Cài đặt</th>
+                                        <th>Mã HĐ</th>
+                                        <th>Trạm</th>
+                                        <th>Bắt đầu</th>
+                                        <th>Kết thúc</th>
+                                        <th>Điện năng (kWh)</th>
+                                        <th>Thành tiền (VNĐ)</th>
+                                        <th>Trạng thái</th>
                                     </tr>
                                 </thead>
-                                <tbody id="stations_table_body">
-                                    <tr><td colspan="7">Đang tải dữ liệu...</td></tr>
+                                <tbody id="history_table_body">
+                                    <tr>
+                                        <td colspan="7">Đang tải dữ liệu...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- History Tab (Lịch sử sạc) -->
-            <div id="tab-history" class="p-4 tab-content d-none">
-                <div class="card card-stat">
-                    <div class="card-body p-0">
-                        <table class="table table-hover mb-0 text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Mã HĐ</th>
-                                    <th>Trạm</th>
-                                    <th>Bắt đầu</th>
-                                    <th>Kết thúc</th>
-                                    <th>Điện năng (kWh)</th>
-                                    <th>Thành tiền (VNĐ)</th>
-                                    <th>Trạng thái</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history_table_body">
-                                <tr><td colspan="7">Đang tải dữ liệu...</td></tr>
-                            </tbody>
-                        </table>
+                <!-- Users Tab (Quản lý User) -->
+                <div id="tab-users" class="p-4 tab-content d-none">
+
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card card-stat p-3">
+                                <h5 class="mb-3">Tạo tài khoản mới</h5>
+                                <input type="text" id="new_user_name" class="form-control mb-2"
+                                    placeholder="Tên đăng nhập">
+                                <input type="password" id="new_user_pass" class="form-control mb-2"
+                                    placeholder="Mật khẩu">
+                                <select id="new_user_role" class="form-select mb-3">
+                                    <option value="user">User (Khách hàng)</option>
+                                    <option value="admin">Admin (Quản trị viên)</option>
+                                </select>
+                                <button class="btn btn-primary w-100" onclick="registerUser()">Tạo tài khoản</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Users Tab (Quản lý User) -->
-            <div id="tab-users" class="p-4 tab-content d-none">
-                
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="card card-stat p-3">
-                            <h5 class="mb-3">Tạo tài khoản mới</h5>
-                            <input type="text" id="new_user_name" class="form-control mb-2" placeholder="Tên đăng nhập">
-                            <input type="password" id="new_user_pass" class="form-control mb-2" placeholder="Mật khẩu">
-                            <select id="new_user_role" class="form-select mb-3">
-                                <option value="user">User (Khách hàng)</option>
-                                <option value="admin">Admin (Quản trị viên)</option>
-                            </select>
-                            <button class="btn btn-primary w-100" onclick="registerUser()">Tạo tài khoản</button>
+                    <div class="card card-stat">
+                        <div class="card-body p-0">
+                            <table class="table table-hover mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Phân quyền</th>
+                                        <th>Số dư ví</th>
+                                        <th>Hành động (Nạp tiền)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users_table_body">
+                                    <tr>
+                                        <td colspan="5">Đang tải dữ liệu...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="card card-stat">
-                    <div class="card-body p-0">
-                        <table class="table table-hover mb-0 text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Username</th>
-                                    <th>Phân quyền</th>
-                                    <th>Số dư ví</th>
-                                    <th>Hành động (Nạp tiền)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users_table_body">
-                                <tr><td colspan="5">Đang tải dữ liệu...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Settings Tab (Cài đặt) -->
-            <div id="tab-settings" class="p-4 tab-content d-none">
-                <div class="row g-4">
-                    <!-- Đổi mật khẩu -->
-                    <div class="col-md-6">
-                        <div class="card card-stat h-100 p-4">
-                            <h6 class="mb-3 text-primary"><i class="fas fa-lock me-2"></i>Đổi mật khẩu Quản trị</h6>
-                            <div class="mb-3">
-                                <label class="form-label text-muted small">Mật khẩu hiện tại</label>
-                                <input type="password" id="setting_old_pass" class="form-control" placeholder="Nhập mật khẩu cũ">
+                <!-- Settings Tab (Cài đặt) -->
+                <div id="tab-settings" class="p-4 tab-content d-none">
+                    <div class="row g-4">
+                        <!-- Đổi mật khẩu -->
+                        <div class="col-md-6">
+                            <div class="card card-stat h-100 p-4">
+                                <h6 class="mb-3 text-primary"><i class="fas fa-lock me-2"></i>Đổi mật khẩu Quản trị</h6>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">Mật khẩu hiện tại</label>
+                                    <input type="password" id="setting_old_pass" class="form-control"
+                                        placeholder="Nhập mật khẩu cũ">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label text-muted small">Mật khẩu mới</label>
+                                    <input type="password" id="setting_new_pass" class="form-control"
+                                        placeholder="Nhập mật khẩu mới">
+                                </div>
+                                <button class="btn btn-primary mt-auto"
+                                    onclick="alert('Tính năng đổi mật khẩu đang phát triển!')">Cập nhật mật
+                                    khẩu</button>
                             </div>
-                            <div class="mb-4">
-                                <label class="form-label text-muted small">Mật khẩu mới</label>
-                                <input type="password" id="setting_new_pass" class="form-control" placeholder="Nhập mật khẩu mới">
-                            </div>
-                            <button class="btn btn-primary mt-auto" onclick="alert('Tính năng đổi mật khẩu đang phát triển!')">Cập nhật mật khẩu</button>
                         </div>
-                    </div>
 
-                    <!-- Cấu hình hệ thống -->
-                    <div class="col-md-6">
-                        <div class="card card-stat h-100 p-4">
-                            <h6 class="mb-3 text-success"><i class="fas fa-sliders-h me-2"></i>Cấu hình vận hành</h6>
-                            <div class="mb-3">
-                                <label class="form-label text-muted small">Thời gian ngắt sạc khi rớt mạng (giây)</label>
-                                <input type="number" class="form-control" value="30">
-                                <div class="form-text" style="font-size: 0.75rem;">Hệ thống tự chốt hóa đơn nếu trụ rớt mạng quá thời gian này.</div>
+                        <!-- Cấu hình hệ thống -->
+                        <div class="col-md-6">
+                            <div class="card card-stat h-100 p-4">
+                                <h6 class="mb-3 text-success"><i class="fas fa-sliders-h me-2"></i>Cấu hình vận hành
+                                </h6>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">Thời gian ngắt sạc khi rớt mạng
+                                        (giây)</label>
+                                    <input type="number" class="form-control" value="30">
+                                    <div class="form-text" style="font-size: 0.75rem;">Hệ thống tự chốt hóa đơn nếu trụ
+                                        rớt mạng quá thời gian này.</div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label text-muted small">Cảnh báo Telegram</label>
+                                    <div class="form-check form-switch mt-1">
+                                        <input class="form-check-input" type="checkbox" id="telegramAlert" checked>
+                                        <label class="form-check-label" for="telegramAlert">Gửi tin nhắn khi có Trạm
+                                            Offline</label>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success mt-auto"
+                                    onclick="alert('Tính năng lưu cấu hình đang phát triển!')">Lưu cấu hình</button>
                             </div>
-                            <div class="mb-4">
-                                <label class="form-label text-muted small">Cảnh báo Telegram</label>
-                                <div class="form-check form-switch mt-1">
-                                    <input class="form-check-input" type="checkbox" id="telegramAlert" checked>
-                                    <label class="form-check-label" for="telegramAlert">Gửi tin nhắn khi có Trạm Offline</label>
+                        </div>
+
+                        <!-- Cấu hình Giá điện -->
+                        <div class="col-md-6">
+                            <div class="card card-stat h-100 p-4">
+                                <h6 class="mb-3" style="color: #d39e00;"><i class="fas fa-bolt me-2"></i>Cấu hình Giá
+                                    điện</h6>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">Đơn giá mới (VNĐ/kWh)</label>
+                                    <input type="number" id="setting_unit_price" class="form-control"
+                                        placeholder="VD: 3500">
+                                </div>
+                                <div class="mb-4">
+                                    <span class="text-muted small">Giá điện hiện tại: </span>
+                                    <strong class="text-dark fs-5">3.500 đ</strong>
+                                </div>
+                                <button class="btn btn-warning mt-auto text-dark"
+                                    onclick="alert('Tính năng cập nhật giá điện đang phát triển!')">Cập nhật giá
+                                    điện</button>
+                            </div>
+                        </div>
+
+                        <!-- Cấu hình Ngưỡng nhiệt độ -->
+                        <div class="col-md-6">
+                            <div class="card card-stat h-100 p-4">
+                                <h6 class="mb-3 text-danger"><i class="fas fa-temperature-high me-2"></i>Ngưỡng nhiệt độ
+                                    cảnh báo</h6>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">Ngưỡng nhiệt độ (°C)</label>
+                                    <input type="number" id="setting_temp_threshold" class="form-control" value="60">
+                                    <div class="form-text" style="font-size: 0.75rem;">Hệ thống sẽ gửi cảnh báo nếu
+                                        nhiệt độ môi trường vượt ngưỡng này.</div>
+                                </div>
+                                <div class="mb-4">
+                                    <span class="text-muted small">Ngưỡng hiện tại: </span>
+                                    <strong class="text-danger fs-5">60°C</strong>
+                                </div>
+                                <button class="btn btn-danger mt-auto"
+                                    onclick="alert('Tính năng cập nhật ngưỡng nhiệt độ đang phát triển!')">Lưu ngưỡng
+                                    nhiệt độ</button>
+                            </div>
+                        </div>
+
+                        <!-- Danger Zone -->
+                        <div class="col-md-12">
+                            <div class="card card-stat border-danger mt-2">
+                                <div class="card-body p-4">
+                                    <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Khu vực nguy
+                                        hiểm (Danger Zone)</h6>
+                                    <p class="text-muted small mb-3">Xóa bớt dữ liệu để giải phóng dung lượng Database.
+                                        Hành động này không thể hoàn tác!</p>
+                                    <button class="btn btn-outline-danger btn-sm me-2"
+                                        onclick="if(confirm('Xóa hóa đơn cũ hơn 30 ngày?')) alert('Chưa khả dụng')">Dọn
+                                        dẹp Hóa đơn cũ</button>
+                                    <button class="btn btn-outline-danger btn-sm"
+                                        onclick="if(confirm('Xóa dữ liệu điện áp cũ hơn 7 ngày?')) alert('Chưa khả dụng')">Dọn
+                                        dẹp Lịch sử Telemetry</button>
                                 </div>
                             </div>
-                            <button class="btn btn-success mt-auto" onclick="alert('Tính năng lưu cấu hình đang phát triển!')">Lưu cấu hình</button>
-                        </div>
-                    </div>
-
-                    <!-- Cấu hình Giá điện -->
-                    <div class="col-md-6">
-                        <div class="card card-stat h-100 p-4">
-                            <h6 class="mb-3" style="color: #d39e00;"><i class="fas fa-bolt me-2"></i>Cấu hình Giá điện</h6>
-                            <div class="mb-3">
-                                <label class="form-label text-muted small">Đơn giá mới (VNĐ/kWh)</label>
-                                <input type="number" id="setting_unit_price" class="form-control" placeholder="VD: 3500">
-                            </div>
-                            <div class="mb-4">
-                                <span class="text-muted small">Giá điện hiện tại: </span>
-                                <strong class="text-dark fs-5">3.500 đ</strong>
-                            </div>
-                            <button class="btn btn-warning mt-auto text-dark" onclick="alert('Tính năng cập nhật giá điện đang phát triển!')">Cập nhật giá điện</button>
-                        </div>
-                    </div>
-
-                    <!-- Cấu hình Ngưỡng nhiệt độ -->
-                    <div class="col-md-6">
-                        <div class="card card-stat h-100 p-4">
-                            <h6 class="mb-3 text-danger"><i class="fas fa-temperature-high me-2"></i>Ngưỡng nhiệt độ cảnh báo</h6>
-                            <div class="mb-3">
-                                <label class="form-label text-muted small">Ngưỡng nhiệt độ (°C)</label>
-                                <input type="number" id="setting_temp_threshold" class="form-control" value="60">
-                                <div class="form-text" style="font-size: 0.75rem;">Hệ thống sẽ gửi cảnh báo nếu nhiệt độ môi trường vượt ngưỡng này.</div>
-                            </div>
-                            <div class="mb-4">
-                                <span class="text-muted small">Ngưỡng hiện tại: </span>
-                                <strong class="text-danger fs-5">60°C</strong>
-                            </div>
-                            <button class="btn btn-danger mt-auto" onclick="alert('Tính năng cập nhật ngưỡng nhiệt độ đang phát triển!')">Lưu ngưỡng nhiệt độ</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Danger Zone -->
-                    <div class="col-md-12">
-                        <div class="card card-stat border-danger mt-2">
-                            <div class="card-body p-4">
-                                <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Khu vực nguy hiểm (Danger Zone)</h6>
-                                <p class="text-muted small mb-3">Xóa bớt dữ liệu để giải phóng dung lượng Database. Hành động này không thể hoàn tác!</p>
-                                <button class="btn btn-outline-danger btn-sm me-2" onclick="if(confirm('Xóa hóa đơn cũ hơn 30 ngày?')) alert('Chưa khả dụng')">Dọn dẹp Hóa đơn cũ</button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Xóa dữ liệu điện áp cũ hơn 7 ngày?')) alert('Chưa khả dụng')">Dọn dẹp Lịch sử Telemetry</button>
-                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal Đăng nhập (Nổi lên giữa màn hình) -->
-<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold" id="loginModalLabel">Đăng nhập</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <input type="text" id="login_user" class="form-control form-control-lg mb-3 bg-light" placeholder="Tài khoản" value="Admin">
-        <!-- Hỗ trợ nhấn Enter để Submit -->
-        <input type="password" id="login_pass" class="form-control form-control-lg mb-4 bg-light" placeholder="Mật khẩu" value="@minad" onkeypress="if(event.key === 'Enter') doLogin()">
-        <button class="btn btn-primary btn-lg w-100 fw-bold" style="background-color: #10a37f; border: none;" type="button" onclick="doLogin()">Tiếp tục</button>
-      </div>
-    </div>
-  </div>
-</div><!-- Modal Sửa Trạm Sạc -->
-<div class="modal fade" id="editStationModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold">Chỉnh sửa Tủ sạc</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="edit_station_id">
-        <div class="mb-3">
-            <label class="form-label text-muted small">Tên tủ sạc hiển thị</label>
-            <input type="text" id="edit_station_name" class="form-control bg-light" placeholder="Ví dụ: Tủ sạc 1 - Khu A">
+    <!-- Modal Đăng nhập (Nổi lên giữa màn hình) -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="loginModalLabel">Đăng nhập</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="login_user" class="form-control form-control-lg mb-3 bg-light"
+                        placeholder="Tài khoản" value="Admin">
+                    <!-- Hỗ trợ nhấn Enter để Submit -->
+                    <input type="password" id="login_pass" class="form-control form-control-lg mb-4 bg-light"
+                        placeholder="Mật khẩu" value="@minad" onkeypress="if(event.key === 'Enter') doLogin()">
+                    <button class="btn btn-primary btn-lg w-100 fw-bold"
+                        style="background-color: #10a37f; border: none;" type="button" onclick="doLogin()">Tiếp
+                        tục</button>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label text-muted small">Vị trí / Địa chỉ</label>
-            <input type="text" id="edit_station_location" class="form-control bg-light" placeholder="Ví dụ: Bãi đỗ xe hầm B1">
+    </div><!-- Modal Sửa Trạm Sạc -->
+    <div class="modal fade" id="editStationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Chỉnh sửa Tủ sạc</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_station_id">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Tên tủ sạc hiển thị</label>
+                        <input type="text" id="edit_station_name" class="form-control bg-light"
+                            placeholder="Ví dụ: Tủ sạc 1 - Khu A">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Vị trí / Địa chỉ</label>
+                        <input type="text" id="edit_station_location" class="form-control bg-light"
+                            placeholder="Ví dụ: Bãi đỗ xe hầm B1">
+                    </div>
+                    <button class="btn btn-primary w-100 fw-bold mt-2" type="button" onclick="saveStation()">Lưu thay
+                        đổi</button>
+                </div>
+            </div>
         </div>
-        <button class="btn btn-primary w-100 fw-bold mt-2" type="button" onclick="saveStation()">Lưu thay đổi</button>
-      </div>
     </div>
-  </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Thêm thư viện Chart.js để vẽ biểu đồ -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Thêm thư viện MQTT.js -->
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script>
-    // --- KHỞI TẠO BIỂU ĐỒ ---
-    const ctx = document.getElementById('powerChart').getContext('2d');
-    const powerChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [], // Trục X: Thời gian
-            datasets: [
-                {
-                    label: 'Tổng công suất Tủ 1 (W)',
-                    data: [], 
-                    borderColor: '#3498db',
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                    tension: 0.3, fill: true
-                },
-                {
-                    label: 'Tổng công suất Tủ 2 (W)',
-                    data: [], 
-                    borderColor: '#e74c3c',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    tension: 0.3, fill: true
+    <!-- Thêm thư viện Chart.js để vẽ biểu đồ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Thêm thư viện MQTT.js -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script>
+        // --- KHỞI TẠO BIỂU ĐỒ ---
+        const ctx = document.getElementById('powerChart').getContext('2d');
+        const powerChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Trục X: Thời gian
+                datasets: [
+                    {
+                        label: 'Tổng công suất Tủ 1 (W)',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.3, fill: true
+                    },
+                    {
+                        label: 'Tổng công suất Tủ 2 (W)',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.3, fill: true
+                    }
+                ]
+            },
+            options: { responsive: true, animation: false, scales: { y: { min: 0 } } }
+        });
+
+        // --- LẤY DỮ LIỆU LỊCH SỬ KHI MỞ TRANG ---
+        fetch('/api/telemetry/history')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    data.data.forEach(row => {
+                        powerChart.data.labels.push(row.time);
+                        powerChart.data.datasets[0].data.push(row.power_1);
+                        powerChart.data.datasets[1].data.push(row.power_2);
+                    });
+                    powerChart.update();
                 }
-            ]
-        },
-        options: { responsive: true, animation: false, scales: { y: { min: 0 } } }
-    });
+            });
 
-    // --- LẤY DỮ LIỆU LỊCH SỬ KHI MỞ TRANG ---
-    fetch('/api/telemetry/history')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                data.data.forEach(row => {
-                    powerChart.data.labels.push(row.time);
-                    powerChart.data.datasets[0].data.push(row.power_1);
-                    powerChart.data.datasets[1].data.push(row.power_2);
+        // Kết nối đến HiveMQ bằng Secure WebSockets (Cổng 8884) dùng cho môi trường HTTPS
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+        // Dùng wildcard (+) cho CẢ ID TỦ VÀ ID Ổ CẮM
+        const TOPIC_STATUS_WILDCARD = 'ev_station/+/outlet/+/status';
+
+        client.on('connect', function () {
+            console.log('Đã kết nối tới MQTT Broker (WebSockets)');
+
+            // Cập nhật UI: Đã kết nối thành công
+            document.getElementById('system_status_icon').className = 'fas fa-circle text-success me-2';
+            document.getElementById('system_status_text').innerText = 'Hệ thống Online';
+
+            client.subscribe(TOPIC_STATUS_WILDCARD, function (err) {
+                if (!err) console.log('Đã theo dõi topic: ' + TOPIC_STATUS_WILDCARD);
+            });
+        });
+
+        // Sự kiện khi mất kết nối tới MQTT Broker
+        client.on('offline', function () {
+            document.getElementById('system_status_icon').className = 'fas fa-circle text-danger me-2';
+            document.getElementById('system_status_text').innerText = 'Mất kết nối Server';
+        });
+
+        // Sự kiện khi đang thử kết nối lại
+        client.on('reconnect', function () {
+            document.getElementById('system_status_icon').className = 'fas fa-circle text-warning me-2';
+            document.getElementById('system_status_text').innerText = 'Đang kết nối lại...';
+        });
+
+        let currentPower = {}; // Lưu trữ công suất hiện tại của toàn bộ hệ thống
+        let lastSeenTime = {}; // Lưu thời gian nhận dữ liệu cuối cùng của từng ổ cắm
+        let lastChartTime = '';
+
+        // Xử lý khi có dữ liệu từ ESP32 đẩy lên
+        client.on('message', function (topic, message) {
+            const parts = topic.split('/');
+            if (parts.length === 5 && parts[0] === 'ev_station' && parts[4] === 'status') {
+                const data = JSON.parse(message.toString());
+                const stationId = parts[1]; // VD: '001', '002'
+                const outletId = parts[3];  // VD: '1', '2'
+                const uniqueId = `${stationId}_${outletId}`;
+
+                lastSeenTime[uniqueId] = Date.now(); // Cập nhật nhịp tim
+
+                // Cập nhật giao diện cho đúng ổ cắm
+                const badgeElem = document.getElementById('stat_badge_' + uniqueId);
+                if (badgeElem) {
+                    badgeElem.className = data.status === 'CHARGING' ? "badge bg-success" : "badge bg-info text-dark";
+                    badgeElem.innerText = data.status;
+                    document.getElementById('stat_v_' + uniqueId).innerText = data.voltage.toFixed(1);
+                    document.getElementById('stat_i_' + uniqueId).innerText = data.current.toFixed(2);
+                    document.getElementById('stat_p_' + uniqueId).innerText = data.power.toFixed(1);
+                }
+
+                // Cập nhật nhiệt độ & độ ẩm nếu mạch phần cứng có gửi lên
+                if (data.temperature !== undefined) {
+                    const tempEl = document.getElementById('temp_' + stationId);
+                    if (tempEl) tempEl.innerText = data.temperature;
+                }
+                if (data.humidity !== undefined) {
+                    const humEl = document.getElementById('hum_' + stationId);
+                    if (humEl) humEl.innerText = data.humidity;
+                }
+
+                // Cập nhật Card tổng quan (Cộng gộp công suất)
+                currentPower[uniqueId] = data.power;
+                let totalPower = 0;
+                for (let key in currentPower) totalPower += currentPower[key];
+                document.getElementById('val_total_power').innerText = totalPower.toFixed(0);
+
+                // Cập nhật số ổ đang sạc chi tiết từng Tủ
+                let active1 = 0, active2 = 0;
+                document.querySelectorAll('[id^="stat_badge_001_"]').forEach(el => {
+                    if (el.innerText === 'CHARGING') active1++;
                 });
+                document.querySelectorAll('[id^="stat_badge_002_"]').forEach(el => {
+                    if (el.innerText === 'CHARGING') active2++;
+                });
+                document.getElementById('val_active_stations').innerText = `${active1 + active2} / 4`;
+                document.getElementById('val_active_details').innerHTML = `T1: ${active1}/2 &bull; T2: ${active2}/2`;
+
+                // ĐẨY DỮ LIỆU MỚI VÀO BIỂU ĐỒ (REAL-TIME)
+                const now = new Date();
+                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
+
+                let p1 = 0, p2 = 0;
+                for (let key in currentPower) {
+                    if (key.startsWith('001_')) p1 += currentPower[key];
+                    if (key.startsWith('002_')) p2 += currentPower[key];
+                }
+
+                // Cập nhật Sub-text chi tiết công suất Tủ 1 và Tủ 2
+                document.getElementById('val_power_details').innerHTML = `T1: ${p1.toFixed(0)}W &bull; T2: ${p2.toFixed(0)}W`;
+
+                if (timeStr !== lastChartTime) {
+                    powerChart.data.labels.push(timeStr);
+                    powerChart.data.datasets[0].data.push(p1);
+                    powerChart.data.datasets[1].data.push(p2);
+
+                    if (powerChart.data.labels.length > 20) {
+                        powerChart.data.labels.shift();
+                        powerChart.data.datasets[0].data.shift();
+                        powerChart.data.datasets[1].data.shift();
+                    }
+                    lastChartTime = timeStr;
+                } else {
+                    const lastIdx = powerChart.data.labels.length - 1;
+                    powerChart.data.datasets[0].data[lastIdx] = p1;
+                    powerChart.data.datasets[1].data[lastIdx] = p2;
+                }
                 powerChart.update();
             }
         });
 
-    // Kết nối đến HiveMQ bằng Secure WebSockets (Cổng 8884) dùng cho môi trường HTTPS
-    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
-    
-    // Dùng wildcard (+) cho CẢ ID TỦ VÀ ID Ổ CẮM
-    const TOPIC_STATUS_WILDCARD = 'ev_station/+/outlet/+/status';
+        // --- [MỚI] AUTO REFRESH (POLLING) CHO WEB ADMIN ---
+        // Đảm bảo Nhiệt độ / Độ ẩm luôn được cập nhật thời gian thực (Giống hệt App)
+        function syncStationsData() {
+            if (!authToken) return;
+            fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // 1. Cập nhật ngay lên màn hình TỔNG QUAN (Phòng khi MQTT bị trễ)
+                        data.data.forEach(st => {
+                            const tempEl = document.getElementById('temp_' + st.station_id);
+                            if (tempEl && st.temperature != null) tempEl.innerText = st.temperature;
 
-    client.on('connect', function () {
-        console.log('Đã kết nối tới MQTT Broker (WebSockets)');
-        
-        // Cập nhật UI: Đã kết nối thành công
-        document.getElementById('system_status_icon').className = 'fas fa-circle text-success me-2';
-        document.getElementById('system_status_text').innerText = 'Hệ thống Online';
+                            const humEl = document.getElementById('hum_' + st.station_id);
+                            if (humEl && st.humidity != null) humEl.innerText = st.humidity;
+                        });
 
-        client.subscribe(TOPIC_STATUS_WILDCARD, function (err) {
-            if (!err) console.log('Đã theo dõi topic: ' + TOPIC_STATUS_WILDCARD);
-        });
-    });
-    
-    // Sự kiện khi mất kết nối tới MQTT Broker
-    client.on('offline', function () {
-        document.getElementById('system_status_icon').className = 'fas fa-circle text-danger me-2';
-        document.getElementById('system_status_text').innerText = 'Mất kết nối Server';
-    });
-
-    // Sự kiện khi đang thử kết nối lại
-    client.on('reconnect', function () {
-        document.getElementById('system_status_icon').className = 'fas fa-circle text-warning me-2';
-        document.getElementById('system_status_text').innerText = 'Đang kết nối lại...';
-    });
-
-    let currentPower = {}; // Lưu trữ công suất hiện tại của toàn bộ hệ thống
-    let lastSeenTime = {}; // Lưu thời gian nhận dữ liệu cuối cùng của từng ổ cắm
-    let lastChartTime = '';
-
-    // Xử lý khi có dữ liệu từ ESP32 đẩy lên
-    client.on('message', function (topic, message) {
-        const parts = topic.split('/');
-        if (parts.length === 5 && parts[0] === 'ev_station' && parts[4] === 'status') {
-            const data = JSON.parse(message.toString());
-            const stationId = parts[1]; // VD: '001', '002'
-            const outletId = parts[3];  // VD: '1', '2'
-            const uniqueId = `${stationId}_${outletId}`;
-            
-            lastSeenTime[uniqueId] = Date.now(); // Cập nhật nhịp tim
-
-            // Cập nhật giao diện cho đúng ổ cắm
-            const badgeElem = document.getElementById('stat_badge_' + uniqueId);
-            if (badgeElem) {
-                badgeElem.className = data.status === 'CHARGING' ? "badge bg-success" : "badge bg-info text-dark";
-                badgeElem.innerText = data.status;
-                document.getElementById('stat_v_' + uniqueId).innerText = data.voltage.toFixed(1);
-                document.getElementById('stat_i_' + uniqueId).innerText = data.current.toFixed(2);
-                document.getElementById('stat_p_' + uniqueId).innerText = data.power.toFixed(1);
-            }
-            
-            // Cập nhật nhiệt độ & độ ẩm nếu mạch phần cứng có gửi lên
-            if (data.temperature !== undefined) {
-                const tempEl = document.getElementById('temp_' + stationId);
-                if (tempEl) tempEl.innerText = data.temperature;
-            }
-            if (data.humidity !== undefined) {
-                const humEl = document.getElementById('hum_' + stationId);
-                if (humEl) humEl.innerText = data.humidity;
-            }
-            
-            // Cập nhật Card tổng quan (Cộng gộp công suất)
-            currentPower[uniqueId] = data.power;
-            let totalPower = 0;
-            for(let key in currentPower) totalPower += currentPower[key];
-            document.getElementById('val_total_power').innerText = totalPower.toFixed(0);
-
-            // Cập nhật số ổ đang sạc chi tiết từng Tủ
-            let active1 = 0, active2 = 0;
-            document.querySelectorAll('[id^="stat_badge_001_"]').forEach(el => {
-                if (el.innerText === 'CHARGING') active1++;
-            });
-            document.querySelectorAll('[id^="stat_badge_002_"]').forEach(el => {
-                if (el.innerText === 'CHARGING') active2++;
-            });
-            document.getElementById('val_active_stations').innerText = `${active1 + active2} / 4`;
-            document.getElementById('val_active_details').innerHTML = `T1: ${active1}/2 &bull; T2: ${active2}/2`;
-
-            // ĐẨY DỮ LIỆU MỚI VÀO BIỂU ĐỒ (REAL-TIME)
-            const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
-            
-            let p1 = 0, p2 = 0;
-            for(let key in currentPower) {
-                if (key.startsWith('001_')) p1 += currentPower[key];
-                if (key.startsWith('002_')) p2 += currentPower[key];
-            }
-            
-            // Cập nhật Sub-text chi tiết công suất Tủ 1 và Tủ 2
-            document.getElementById('val_power_details').innerHTML = `T1: ${p1.toFixed(0)}W &bull; T2: ${p2.toFixed(0)}W`;
-            
-            if (timeStr !== lastChartTime) {
-                powerChart.data.labels.push(timeStr);
-                powerChart.data.datasets[0].data.push(p1);
-                powerChart.data.datasets[1].data.push(p2);
-                
-                if (powerChart.data.labels.length > 20) {
-                    powerChart.data.labels.shift();
-                    powerChart.data.datasets[0].data.shift();
-                    powerChart.data.datasets[1].data.shift();
-                }
-                lastChartTime = timeStr;
-            } else {
-                const lastIdx = powerChart.data.labels.length - 1;
-                powerChart.data.datasets[0].data[lastIdx] = p1;
-                powerChart.data.datasets[1].data[lastIdx] = p2;
-            }
-            powerChart.update();
-        }
-    });
-
-    // --- [MỚI] AUTO REFRESH (POLLING) CHO WEB ADMIN ---
-    // Đảm bảo Nhiệt độ / Độ ẩm luôn được cập nhật thời gian thực (Giống hệt App)
-    function syncStationsData() {
-        if (!authToken) return;
-        fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // 1. Cập nhật ngay lên màn hình TỔNG QUAN (Phòng khi MQTT bị trễ)
-                data.data.forEach(st => {
-                    const tempEl = document.getElementById('temp_' + st.station_id);
-                    if (tempEl && st.temperature != null) tempEl.innerText = st.temperature;
-                    
-                    const humEl = document.getElementById('hum_' + st.station_id);
-                    if (humEl && st.humidity != null) humEl.innerText = st.humidity;
-                });
-
-                // 2. Cập nhật trên DANH SÁCH TRẠM (Chỉ thay đổi text, không làm chớp nháy bảng)
-                if (!document.getElementById('tab-stations').classList.contains('d-none')) {
-                    data.data.forEach(st => {
-                        const cell = document.getElementById('table_th_' + st.station_id);
-                        if (cell) {
-                            let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
-                            let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
-                            cell.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span>`;
+                        // 2. Cập nhật trên DANH SÁCH TRẠM (Chỉ thay đổi text, không làm chớp nháy bảng)
+                        if (!document.getElementById('tab-stations').classList.contains('d-none')) {
+                            data.data.forEach(st => {
+                                const cell = document.getElementById('table_th_' + st.station_id);
+                                if (cell) {
+                                    let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
+                                    let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
+                                    cell.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span>`;
+                                }
+                            });
                         }
-                    });
-                }
-            }
-        }).catch(e => {});
-    }
-
-    // Quét cập nhật tự động mỗi 5 giây
-    setInterval(syncStationsData, 5000);
-
-    // --- XÁC THỰC BẢO MẬT (JWT) ---
-    let authToken = localStorage.getItem('ev_token') || ''; // Lấy Token từ LocalStorage nếu có
-
-    // Khoi phục login khi F5
-    if (authToken) {
-        fetchUserProfile();
-    }
-
-    // Hàm gọi API lấy số dư ví tiền hiện tại
-    function fetchUserProfile(loginMessage = null) {
-        if (!authToken) return;
-        fetch('/api/user/me', {
-            headers: { 'Authorization': 'Bearer ' + authToken }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('wallet_info').classList.remove('d-none');
-                document.getElementById('wallet_balance').innerText = parseInt(data.data.balance).toLocaleString('vi-VN');
-                
-                // Giao diện ChatGPT: Cập nhật Tên, Avatar (Chữ cái đầu tiên)
-                document.getElementById('sidebar_admin_name').innerText = data.data.username;
-                document.getElementById('user_avatar').innerText = data.data.username.charAt(0).toUpperCase();
-
-                document.getElementById('sidebar_unauth').classList.add('d-none');
-                document.getElementById('sidebar_auth').classList.remove('d-none');
-
-                // Ẩn Modal Đăng nhập đi tự động sau khi login thành công
-                const loginModalEl = document.getElementById('loginModal');
-                const modalInstance = bootstrap.Modal.getInstance(loginModalEl);
-                if (modalInstance) modalInstance.hide();
-
-                // [MỚI] Tải ngay Nhiệt độ/Độ ẩm để hiển thị tức thì khi vừa đăng nhập xong
-                syncStationsData();
-
-                // Nếu có tin nhắn chào mừng lúc đăng nhập thì hiện ra sau khi đã vẽ xong ví tiền
-                if (loginMessage)
-                {
-                    // Trì hoãn 100ms để trình duyệt có thời gian "vẽ" ví tiền ra màn hình rồi mới bật popup
-                    setTimeout(() => alert(loginMessage), 100);
-                }
-            } else {
-                // Nếu Token hết hạn hoặc không hợp lệ (Backend báo lỗi), âm thầm đăng xuất
-                doLogout(false);
-            }
-        })
-        .catch(err => console.error("Lỗi lấy thông tin ví:", err));
-    }
-
-    function doLogin() {
-        const u = document.getElementById('login_user').value;
-        const p = document.getElementById('login_pass').value;
-
-        fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                authToken = data.token; 
-                localStorage.setItem('ev_token', authToken); // Lưu Token vào bộ nhớ lâu dài của trình duyệt
-                // Lấy số dư hiển thị lên ngay lập tức, xong mới bung thông báo                
-                fetchUserProfile(data.message);
-            } else {
-                alert("Lỗi đăng nhập: " + data.message);
-            }
-        })
-        .catch(error => alert("Không kết nối được tới API Đăng nhập!"));
-    }
-
-    // Hàm Đăng xuất
-    function doLogout(showAlert) {
-        authToken = '';
-        localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
-        document.getElementById('wallet_info').classList.add('d-none');
-        document.getElementById('sidebar_unauth').classList.remove('d-none');
-        document.getElementById('sidebar_auth').classList.add('d-none');
-        
-        if (!document.getElementById('tab-users').classList.contains('d-none')) loadUsers();
-        if (showAlert !== false) alert("Đã đăng xuất thành công!");
-    }
-
-    // --- CHUYỂN TAB & LẤY LỊCH SỬ ---
-    function switchTab(tabId) {
-        // Giấu tất cả các tab
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('d-none'));
-        // Hiển thị tab được chọn
-        if (document.getElementById('tab-' + tabId)) {
-            document.getElementById('tab-' + tabId).classList.remove('d-none');
+                    }
+                }).catch(e => { });
         }
-        
-        // Cập nhật trạng thái Active (viền xanh) trên thanh Menu (Sidebar)
-        document.querySelectorAll('.sidebar .nav a').forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(`switchTab('${tabId}')`)) {
-                link.classList.add('active');
+
+        // Quét cập nhật tự động mỗi 5 giây
+        setInterval(syncStationsData, 5000);
+
+        // --- XÁC THỰC BẢO MẬT (JWT) ---
+        let authToken = localStorage.getItem('ev_token') || ''; // Lấy Token từ LocalStorage nếu có
+
+        // Khoi phục login khi F5
+        if (authToken) {
+            fetchUserProfile();
+        }
+
+        // Hàm gọi API lấy số dư ví tiền hiện tại
+        function fetchUserProfile(loginMessage = null) {
+            if (!authToken) return;
+            fetch('/api/user/me', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('wallet_info').classList.remove('d-none');
+                        document.getElementById('wallet_balance').innerText = parseInt(data.data.balance).toLocaleString('vi-VN');
+
+                        // Giao diện ChatGPT: Cập nhật Tên, Avatar (Chữ cái đầu tiên)
+                        document.getElementById('sidebar_admin_name').innerText = data.data.username;
+                        document.getElementById('user_avatar').innerText = data.data.username.charAt(0).toUpperCase();
+
+                        document.getElementById('sidebar_unauth').classList.add('d-none');
+                        document.getElementById('sidebar_auth').classList.remove('d-none');
+
+                        // Ẩn Modal Đăng nhập đi tự động sau khi login thành công
+                        const loginModalEl = document.getElementById('loginModal');
+                        const modalInstance = bootstrap.Modal.getInstance(loginModalEl);
+                        if (modalInstance) modalInstance.hide();
+
+                        // [MỚI] Tải ngay Nhiệt độ/Độ ẩm để hiển thị tức thì khi vừa đăng nhập xong
+                        syncStationsData();
+
+                        // Nếu có tin nhắn chào mừng lúc đăng nhập thì hiện ra sau khi đã vẽ xong ví tiền
+                        if (loginMessage) {
+                            // Trì hoãn 100ms để trình duyệt có thời gian "vẽ" ví tiền ra màn hình rồi mới bật popup
+                            setTimeout(() => alert(loginMessage), 100);
+                        }
+                    } else {
+                        // Nếu Token hết hạn hoặc không hợp lệ (Backend báo lỗi), âm thầm đăng xuất
+                        doLogout(false);
+                    }
+                })
+                .catch(err => console.error("Lỗi lấy thông tin ví:", err));
+        }
+
+        function doLogin() {
+            const u = document.getElementById('login_user').value;
+            const p = document.getElementById('login_pass').value;
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        authToken = data.token;
+                        localStorage.setItem('ev_token', authToken); // Lưu Token vào bộ nhớ lâu dài của trình duyệt
+                        // Lấy số dư hiển thị lên ngay lập tức, xong mới bung thông báo                
+                        fetchUserProfile(data.message);
+                    } else {
+                        alert("Lỗi đăng nhập: " + data.message);
+                    }
+                })
+                .catch(error => alert("Không kết nối được tới API Đăng nhập!"));
+        }
+
+        // Hàm Đăng xuất
+        function doLogout(showAlert) {
+            authToken = '';
+            localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
+            document.getElementById('wallet_info').classList.add('d-none');
+            document.getElementById('sidebar_unauth').classList.remove('d-none');
+            document.getElementById('sidebar_auth').classList.add('d-none');
+
+            if (!document.getElementById('tab-users').classList.contains('d-none')) loadUsers();
+            if (showAlert !== false) alert("Đã đăng xuất thành công!");
+        }
+
+        // --- CHUYỂN TAB & LẤY LỊCH SỬ ---
+        function switchTab(tabId) {
+            // Giấu tất cả các tab
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('d-none'));
+            // Hiển thị tab được chọn
+            if (document.getElementById('tab-' + tabId)) {
+                document.getElementById('tab-' + tabId).classList.remove('d-none');
             }
-        });
-        
-        // Thay đổi Tiêu đề trên Top Navbar tự động
-        const titleMap = {
-            'dashboard': 'Tổng quan hệ thống',
-            'stations': 'Quản lý trạm sạc',
-            'users': 'Người dùng & Ví tiền',
-            'history': 'Lịch sử Hóa đơn',
-            'settings': 'Cài đặt hệ thống'
-        };
-        document.getElementById('top_page_title').innerText = titleMap[tabId] || 'EV Charger';
 
-        // Nếu bấm vào tab Lịch sử thì gọi API lấy dữ liệu
-        if (tabId === 'history') loadHistory();
-        if (tabId === 'users') loadUsers();
-        if (tabId === 'stations') loadStations();
-    }
+            // Cập nhật trạng thái Active (viền xanh) trên thanh Menu (Sidebar)
+            document.querySelectorAll('.sidebar .nav a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(`switchTab('${tabId}')`)) {
+                    link.classList.add('active');
+                }
+            });
 
-    function loadHistory() {
-        fetch('/api/sessions/history')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const tbody = document.getElementById('history_table_body');
-                    tbody.innerHTML = '';
-                    data.data.forEach(row => {
-                        let costFormat = parseInt(row.total_cost).toLocaleString('vi-VN') + ' đ';
-                        let kwhFormat = parseFloat(row.total_kwh).toFixed(3);
-                        let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
-                        tbody.innerHTML += `<tr>
+            // Thay đổi Tiêu đề trên Top Navbar tự động
+            const titleMap = {
+                'dashboard': 'Tổng quan hệ thống',
+                'stations': 'Quản lý trạm sạc',
+                'users': 'Người dùng & Ví tiền',
+                'history': 'Lịch sử Hóa đơn',
+                'settings': 'Cài đặt hệ thống'
+            };
+            document.getElementById('top_page_title').innerText = titleMap[tabId] || 'EV Charger';
+
+            // Nếu bấm vào tab Lịch sử thì gọi API lấy dữ liệu
+            if (tabId === 'history') loadHistory();
+            if (tabId === 'users') loadUsers();
+            if (tabId === 'stations') loadStations();
+        }
+
+        function loadHistory() {
+            fetch('/api/sessions/history')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const tbody = document.getElementById('history_table_body');
+                        tbody.innerHTML = '';
+                        data.data.forEach(row => {
+                            let costFormat = parseInt(row.total_cost).toLocaleString('vi-VN') + ' đ';
+                            let kwhFormat = parseFloat(row.total_kwh).toFixed(3);
+                            let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
+                            tbody.innerHTML += `<tr>
                             <td>#${row.id}</td><td>${row.station_id}</td>
                             <td>${row.start}</td><td>${row.end || '-'}</td>
                             <td>${kwhFormat}</td>
                             <td>${costFormat}</td>
                             <td>${badge}</td>
                         </tr>`;
-                    });
-                }
-            });
-    }
-
-    // --- QUẢN LÝ TRẠM SẠC ---
-    function loadStations() {
-        if (!authToken) {
-            document.getElementById('stations_table_body').innerHTML = `<tr><td colspan="6" class="text-danger">Vui lòng đăng nhập!</td></tr>`;
-            return;
+                        });
+                    }
+                });
         }
-        fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
-        .then(res => res.json())
-        .then(data => {
-            const tbody = document.getElementById('stations_table_body');
-            tbody.innerHTML = '';
-            if (data.success) {
-                data.data.forEach(st => {
-                    let badge = st.status === 'online' ? '<span class="badge bg-success">Online</span>' : (st.status === 'maintenance' ? '<span class="badge bg-warning text-dark">Bảo trì</span>' : '<span class="badge bg-danger">Offline</span>');
-                    let kwh = parseFloat(st.total_kwh).toFixed(2);
-                    let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
-                    let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
-                    let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
-                    tbody.innerHTML += `<tr>
+
+        // --- QUẢN LÝ TRẠM SẠC ---
+        function loadStations() {
+            if (!authToken) {
+                document.getElementById('stations_table_body').innerHTML = `<tr><td colspan="6" class="text-danger">Vui lòng đăng nhập!</td></tr>`;
+                return;
+            }
+            fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('stations_table_body');
+                    tbody.innerHTML = '';
+                    if (data.success) {
+                        data.data.forEach(st => {
+                            let badge = st.status === 'online' ? '<span class="badge bg-success">Online</span>' : (st.status === 'maintenance' ? '<span class="badge bg-warning text-dark">Bảo trì</span>' : '<span class="badge bg-danger">Offline</span>');
+                            let kwh = parseFloat(st.total_kwh).toFixed(2);
+                            let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
+                            let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
+                            let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
+                            tbody.innerHTML += `<tr>
                         <td><strong>${st.station_id}</strong></td>
                         <td>${st.name}<br><small class="text-muted">${st.location}</small></td>
                         <td>${badge}</td>
@@ -897,74 +1041,74 @@
                             <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng"><i class="fas fa-cog"></i></button>
                         </td>
                     </tr>`;
+                        });
+                    }
                 });
-            }
-        });
-    }
-
-    // Mở Popup Edit
-    function openEditStation(id, name, location) {
-        document.getElementById('edit_station_id').value = id;
-        document.getElementById('edit_station_name').value = name;
-        document.getElementById('edit_station_location').value = location;
-        
-        var editModal = new bootstrap.Modal(document.getElementById('editStationModal'));
-        editModal.show();
-    }
-
-    // Lưu dữ liệu Edit lên Server
-    function saveStation() {
-        const id = document.getElementById('edit_station_id').value;
-        const newName = document.getElementById('edit_station_name').value;
-        const newLocation = document.getElementById('edit_station_location').value;
-
-        if (!newName || !newLocation) {
-            alert("Vui lòng nhập đủ tên và địa chỉ!");
-            return;
         }
 
-        fetch('/api/stations/' + id, {
-            method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': 'Bearer ' + authToken 
-            },
-            body: JSON.stringify({ name: newName, location: newLocation })
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            if (data.success) {
-                // Tắt Modal
-                var modalEl = document.getElementById('editStationModal');
-                var modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if (modalInstance) modalInstance.hide();
-                // Load lại danh sách
-                loadStations();
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Lỗi kết nối máy chủ");
-        });
-    }
+        // Mở Popup Edit
+        function openEditStation(id, name, location) {
+            document.getElementById('edit_station_id').value = id;
+            document.getElementById('edit_station_name').value = name;
+            document.getElementById('edit_station_location').value = location;
 
-    // --- QUẢN LÝ USER & VÍ TIỀN ---
-    function loadUsers() {
-        if (!authToken) {
-            document.getElementById('users_table_body').innerHTML = `<tr><td colspan="5" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
-            return;
+            var editModal = new bootstrap.Modal(document.getElementById('editStationModal'));
+            editModal.show();
         }
-        fetch('/api/users', { headers: { 'Authorization': 'Bearer ' + authToken } })
-        .then(res => res.json())
-        .then(data => {
-            const tbody = document.getElementById('users_table_body');
-            tbody.innerHTML = '';
-            if (data.success) {
-                data.data.forEach(user => {
-                    let balanceFormat = parseInt(user.balance).toLocaleString('vi-VN') + ' đ';
-                    let roleBadge = user.role === 'admin' ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>';
-                    tbody.innerHTML += `<tr>
+
+        // Lưu dữ liệu Edit lên Server
+        function saveStation() {
+            const id = document.getElementById('edit_station_id').value;
+            const newName = document.getElementById('edit_station_name').value;
+            const newLocation = document.getElementById('edit_station_location').value;
+
+            if (!newName || !newLocation) {
+                alert("Vui lòng nhập đủ tên và địa chỉ!");
+                return;
+            }
+
+            fetch('/api/stations/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ name: newName, location: newLocation })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) {
+                        // Tắt Modal
+                        var modalEl = document.getElementById('editStationModal');
+                        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                        // Load lại danh sách
+                        loadStations();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Lỗi kết nối máy chủ");
+                });
+        }
+
+        // --- QUẢN LÝ USER & VÍ TIỀN ---
+        function loadUsers() {
+            if (!authToken) {
+                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="5" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
+                return;
+            }
+            fetch('/api/users', { headers: { 'Authorization': 'Bearer ' + authToken } })
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('users_table_body');
+                    tbody.innerHTML = '';
+                    if (data.success) {
+                        data.data.forEach(user => {
+                            let balanceFormat = parseInt(user.balance).toLocaleString('vi-VN') + ' đ';
+                            let roleBadge = user.role === 'admin' ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>';
+                            tbody.innerHTML += `<tr>
                         <td>#${user.id}</td><td>${user.username}</td><td>${roleBadge}</td><td><b>${balanceFormat}</b></td>
                         <td>
                             <button class="btn btn-sm btn-success" onclick="addBalance(${user.id}, 50000)">+ 50k</button>
@@ -972,138 +1116,139 @@
                             <button class="btn btn-sm btn-danger ms-1" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>`;
+                        });
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${data.message}</td></tr>`;
+                    }
                 });
-            } else {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${data.message}</td></tr>`;
-            }
-        });
-    }
-
-    function registerUser() {
-        const u = document.getElementById('new_user_name').value;
-        const p = document.getElementById('new_user_pass').value;
-        const r = document.getElementById('new_user_role').value;
-        fetch('/api/users/register', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-            body: JSON.stringify({ username: u, password: p, role: r })
-        }).then(res => res.json()).then(data => {
-            alert(data.message);
-            if (data.success) { document.getElementById('new_user_name').value = ''; document.getElementById('new_user_pass').value = ''; loadUsers(); }
-        });
-    }
-
-    function addBalance(userId, amount) {
-        if (!confirm(`Xác nhận nạp ${amount.toLocaleString('vi-VN')} đ cho User ID ${userId}?`)) return;
-        fetch('/api/users/add_balance', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-            body: JSON.stringify({ userId: userId, amount: amount })
-        }).then(res => res.json()).then(data => {
-            alert(data.message);
-            if (data.success) { loadUsers(); fetchUserProfile(); }
-        });
-    }
-
-    // Hàm gọi API Xóa User
-    function deleteUser(userId, username) {
-        if (!confirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`)) return;
-
-        fetch(`/api/users/${userId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + authToken }
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            if (data.success) {
-                loadUsers(); // Tải lại danh sách sau khi xóa thành công
-            }
-        })
-        .catch(err => alert("Lỗi kết nối đến máy chủ khi yêu cầu xóa!"));
-    }
-
-    // Hàm gửi lệnh từ Web xuống Backend Node.js API
-    function sendCmd(command, stationId, outletId) {
-        if (!authToken) {
-            alert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!");
-            return;
         }
 
-        let endpoint = '';
-        if (command === 'START_CHARGE') endpoint = '/api/charge/start';
-        else if (command === 'STOP_CHARGE') endpoint = '/api/charge/stop';
+        function registerUser() {
+            const u = document.getElementById('new_user_name').value;
+            const p = document.getElementById('new_user_pass').value;
+            const r = document.getElementById('new_user_role').value;
+            fetch('/api/users/register', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                body: JSON.stringify({ username: u, password: p, role: r })
+            }).then(res => res.json()).then(data => {
+                alert(data.message);
+                if (data.success) { document.getElementById('new_user_name').value = ''; document.getElementById('new_user_pass').value = ''; loadUsers(); }
+            });
+        }
 
-        fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + authToken // [QUAN TRỌNG] Đính kèm Token
-            },
-            body: JSON.stringify({ stationId: stationId, outletId: outletId }) // Gửi ID ổ cắm lên Backend
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log("Backend trả lời:", data);
-            alert("Hệ thống: " + data.message);
-            
-            // Cập nhật lại ví tiền và bảng lịch sử sau khi vừa chốt đơn sạc
-            fetchUserProfile();
-            if (!document.getElementById('tab-history').classList.contains('d-none')) {
-                loadHistory();
+        function addBalance(userId, amount) {
+            if (!confirm(`Xác nhận nạp ${amount.toLocaleString('vi-VN')} đ cho User ID ${userId}?`)) return;
+            fetch('/api/users/add_balance', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                body: JSON.stringify({ userId: userId, amount: amount })
+            }).then(res => res.json()).then(data => {
+                alert(data.message);
+                if (data.success) { loadUsers(); fetchUserProfile(); }
+            });
+        }
+
+        // Hàm gọi API Xóa User
+        function deleteUser(userId, username) {
+            if (!confirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`)) return;
+
+            fetch(`/api/users/${userId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) {
+                        loadUsers(); // Tải lại danh sách sau khi xóa thành công
+                    }
+                })
+                .catch(err => alert("Lỗi kết nối đến máy chủ khi yêu cầu xóa!"));
+        }
+
+        // Hàm gửi lệnh từ Web xuống Backend Node.js API
+        function sendCmd(command, stationId, outletId) {
+            if (!authToken) {
+                alert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!");
+                return;
             }
-        })
-        .catch(error => {
-            console.error("Lỗi khi gọi API Backend:", error);
-            alert("Không thể kết nối đến Backend Server!");
-        });
-    }
 
-    // --- [MỚI] WATCHDOG FRONTEND: KIỂM TRA MẤT KẾT NỐI ---
-    setInterval(() => {
-        const now = Date.now();
-        let changed = false;
-        for (let uniqueId in lastSeenTime) {
-            if (now - lastSeenTime[uniqueId] > 15000) { // Quá 15 giây không có dữ liệu (Mất mạng)
-                const badgeElem = document.getElementById('stat_badge_' + uniqueId);
-                if (badgeElem && badgeElem.innerText !== 'Mất kết nối') {
-                    badgeElem.className = "badge bg-danger";
-                    badgeElem.innerText = 'Mất kết nối';
-                    document.getElementById('stat_v_' + uniqueId).innerText = '0.0';
-                    document.getElementById('stat_i_' + uniqueId).innerText = '0.00';
-                    document.getElementById('stat_p_' + uniqueId).innerText = '0.0';
-                    currentPower[uniqueId] = 0; // Đưa công suất về 0
-                    changed = true;
+            let endpoint = '';
+            if (command === 'START_CHARGE') endpoint = '/api/charge/start';
+            else if (command === 'STOP_CHARGE') endpoint = '/api/charge/stop';
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken // [QUAN TRỌNG] Đính kèm Token
+                },
+                body: JSON.stringify({ stationId: stationId, outletId: outletId }) // Gửi ID ổ cắm lên Backend
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Backend trả lời:", data);
+                    alert("Hệ thống: " + data.message);
+
+                    // Cập nhật lại ví tiền và bảng lịch sử sau khi vừa chốt đơn sạc
+                    fetchUserProfile();
+                    if (!document.getElementById('tab-history').classList.contains('d-none')) {
+                        loadHistory();
+                    }
+                })
+                .catch(error => {
+                    console.error("Lỗi khi gọi API Backend:", error);
+                    alert("Không thể kết nối đến Backend Server!");
+                });
+        }
+
+        // --- [MỚI] WATCHDOG FRONTEND: KIỂM TRA MẤT KẾT NỐI ---
+        setInterval(() => {
+            const now = Date.now();
+            let changed = false;
+            for (let uniqueId in lastSeenTime) {
+                if (now - lastSeenTime[uniqueId] > 15000) { // Quá 15 giây không có dữ liệu (Mất mạng)
+                    const badgeElem = document.getElementById('stat_badge_' + uniqueId);
+                    if (badgeElem && badgeElem.innerText !== 'Mất kết nối') {
+                        badgeElem.className = "badge bg-danger";
+                        badgeElem.innerText = 'Mất kết nối';
+                        document.getElementById('stat_v_' + uniqueId).innerText = '0.0';
+                        document.getElementById('stat_i_' + uniqueId).innerText = '0.00';
+                        document.getElementById('stat_p_' + uniqueId).innerText = '0.0';
+                        currentPower[uniqueId] = 0; // Đưa công suất về 0
+                        changed = true;
+                    }
                 }
             }
-        }
-        if (changed) {
-            // Hiển thị chấm đỏ cảnh báo trên Navbar
-            document.getElementById('nav_alert_dot').classList.remove('d-none');
+            if (changed) {
+                // Hiển thị chấm đỏ cảnh báo trên Navbar
+                document.getElementById('nav_alert_dot').classList.remove('d-none');
 
-            let totalPower = 0;
-            for(let key in currentPower) totalPower += currentPower[key];
-            document.getElementById('val_total_power').innerText = totalPower.toFixed(0);
+                let totalPower = 0;
+                for (let key in currentPower) totalPower += currentPower[key];
+                document.getElementById('val_total_power').innerText = totalPower.toFixed(0);
 
-            let active1 = 0, active2 = 0;
-            document.querySelectorAll('[id^="stat_badge_001_"]').forEach(el => {
-                if (el.innerText === 'CHARGING') active1++;
-            });
-            document.querySelectorAll('[id^="stat_badge_002_"]').forEach(el => {
-                if (el.innerText === 'CHARGING') active2++;
-            });
-            document.getElementById('val_active_stations').innerText = `${active1 + active2} / 4`;
-            document.getElementById('val_active_details').innerHTML = `T1: ${active1}/2 &bull; T2: ${active2}/2`;
-            
-            // Cập nhật lại Sub-text công suất khi có trụ mất kết nối
-            let p1 = 0, p2 = 0;
-            for(let key in currentPower) {
-                if (key.startsWith('001_')) p1 += currentPower[key];
-                if (key.startsWith('002_')) p2 += currentPower[key];
+                let active1 = 0, active2 = 0;
+                document.querySelectorAll('[id^="stat_badge_001_"]').forEach(el => {
+                    if (el.innerText === 'CHARGING') active1++;
+                });
+                document.querySelectorAll('[id^="stat_badge_002_"]').forEach(el => {
+                    if (el.innerText === 'CHARGING') active2++;
+                });
+                document.getElementById('val_active_stations').innerText = `${active1 + active2} / 4`;
+                document.getElementById('val_active_details').innerHTML = `T1: ${active1}/2 &bull; T2: ${active2}/2`;
+
+                // Cập nhật lại Sub-text công suất khi có trụ mất kết nối
+                let p1 = 0, p2 = 0;
+                for (let key in currentPower) {
+                    if (key.startsWith('001_')) p1 += currentPower[key];
+                    if (key.startsWith('002_')) p2 += currentPower[key];
+                }
+                if (document.getElementById('val_power_details')) {
+                    document.getElementById('val_power_details').innerHTML = `T1: ${p1.toFixed(0)}W &bull; T2: ${p2.toFixed(0)}W`;
+                }
             }
-            if (document.getElementById('val_power_details')) {
-                document.getElementById('val_power_details').innerHTML = `T1: ${p1.toFixed(0)}W &bull; T2: ${p2.toFixed(0)}W`;
-            }
-        }
-    }, 5000); // Quét kiểm tra mỗi 5 giây
-</script>
+        }, 5000); // Quét kiểm tra mỗi 5 giây
+    </script>
 </body>
+
 </html>

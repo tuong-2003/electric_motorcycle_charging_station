@@ -11,23 +11,38 @@ void ModbusMasterTask::loop() {
 }
 
 bool ModbusMasterTask::readStation(uint8_t slaveId, StationData &data) {
-    if (mb.slave()) return false; // Đang bận
+    if (isWaiting) {
+        Serial.println("Modbus dang ban xu ly giao dich cu!");
+        return false; // Tránh đụng độ
+    }
     
     isWaiting = true;
     isSuccess = false;
+    lastError = 0;
     
     // Đọc 10 thanh ghi đầu tiên (Từ địa chỉ 0)
-    mb.readHreg(slaveId, 0, buffer, 10, [this](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
+    mb.readHreg(slaveId, 0, buffer, 10, [this, slaveId](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
         this->isWaiting = false;
-        if (event == Modbus::EX_SUCCESS) this->isSuccess = true;
+        this->lastError = event;
+        if (event == Modbus::EX_SUCCESS) {
+            this->isSuccess = true;
+        } else {
+            Serial.printf("Loi Modbus TRAM %d: Ma loi = 0x%02X\n", slaveId, event);
+        }
         return true;
     });
 
-    // Đợi Modbus đọc xong (Tối đa 500ms chống treo)
+    // Đợi Modbus đọc xong (Tối đa 1000ms chống treo)
     uint32_t startWait = millis();
-    while (isWaiting && (millis() - startWait < 500)) {
+    while (isWaiting && (millis() - startWait < 1000)) {
         mb.task();
         delay(1);
+    }
+
+    if (isWaiting) {
+        isWaiting = false; // Reset cờ nếu quá thời gian chờ
+        Serial.printf("Loi: Modbus TRAM %d TIMEOUT (Chua nhan duoc phan hoi)\n", slaveId);
+        return false;
     }
 
     if (isSuccess) {
@@ -50,23 +65,40 @@ bool ModbusMasterTask::readStation(uint8_t slaveId, StationData &data) {
 }
 
 bool ModbusMasterTask::sendCommand(uint8_t slaveId, uint8_t outletId, bool start) {
-    if (mb.slave()) return false;
+    if (isWaiting) {
+        Serial.println("Modbus dang ban, khong the gui lenh!");
+        return false;
+    }
+
     isWaiting = true;
     isSuccess = false;
+    lastError = 0;
 
     uint16_t reg = (outletId == 1) ? 10 : 11; // Thanh ghi lệnh tương ứng
     uint16_t val = start ? 1 : 0;
 
-    mb.writeHreg(slaveId, reg, val, [this](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
+    mb.writeHreg(slaveId, reg, val, [this, slaveId, outletId, start](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
         this->isWaiting = false;
-        if (event == Modbus::EX_SUCCESS) this->isSuccess = true;
+        this->lastError = event;
+        if (event == Modbus::EX_SUCCESS) {
+            this->isSuccess = true;
+            Serial.printf("Gui lenh %s cho TRAM %d - O %d THANH CONG\n", start ? "BAT" : "TAT", slaveId, outletId);
+        } else {
+            Serial.printf("Gui lenh cho TRAM %d THAT BAI: Ma loi = 0x%02X\n", slaveId, event);
+        }
         return true;
     });
 
     uint32_t startWait = millis();
-    while (isWaiting && (millis() - startWait < 500)) {
+    while (isWaiting && (millis() - startWait < 1000)) {
         mb.task();
         delay(1);
     }
+
+    if (isWaiting) {
+        isWaiting = false;
+        Serial.printf("Loi: Gui lenh TRAM %d TIMEOUT\n", slaveId);
+    }
+    
     return isSuccess;
 }
