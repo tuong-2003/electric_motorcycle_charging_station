@@ -96,6 +96,49 @@
         .bg-success-light { background-color: rgba(25, 135, 84, 0.08) !important; color: #198754 !important; }
         .bg-info-light { background-color: rgba(13, 202, 240, 0.08) !important; color: #0dcaf0 !important; }
         .bg-danger-light { background-color: rgba(220, 53, 69, 0.08) !important; color: #dc3545 !important; }
+
+        /* Connection Status Badge (Pill Style) */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+        }
+        .status-badge.online {
+            background-color: rgba(25, 135, 84, 0.08);
+            color: #198754;
+            border-color: rgba(25, 135, 84, 0.15);
+        }
+        .status-badge.online .status-dot {
+            background-color: #198754;
+        }
+        .status-badge.warning {
+            background-color: rgba(255, 193, 7, 0.08);
+            color: #f59e0b;
+            border-color: rgba(255, 193, 7, 0.15);
+        }
+        .status-badge.warning .status-dot {
+            background-color: #f59e0b;
+        }
+        .status-badge.danger {
+            background-color: rgba(220, 53, 69, 0.08);
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.15);
+        }
+        .status-badge.danger .status-dot {
+            background-color: #dc3545;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            display: inline-block;
+        }
     </style>
 </head>
 
@@ -176,11 +219,10 @@
                                 id="nav_alert_dot"></span>
                         </div>
 
-                        <span class="me-4 d-none d-sm-flex align-items-center text-secondary fw-medium"
-                            title="Trạng thái kết nối Server">
-                            <i id="system_status_icon" class="fas fa-circle text-warning me-2"
-                                style="font-size: 10px;"></i> <span id="system_status_text">Đang kết nối...</span>
-                        </span>
+                        <div id="system_status_badge" class="status-badge warning me-4 d-none d-sm-flex align-items-center" title="Trạng thái kết nối máy chủ">
+                            <span class="status-dot"></span>
+                            <span id="system_status_text">Đang kết nối...</span>
+                        </div>
 
                         <!-- Ví tiền được làm đẹp (Pill) -->
                         <div id="wallet_info" class="d-none">
@@ -747,8 +789,9 @@
             console.log('Đã kết nối tới MQTT Broker (WebSockets)');
 
             // Cập nhật UI: Đã kết nối thành công
-            document.getElementById('system_status_icon').className = 'fas fa-circle text-success me-2';
-            document.getElementById('system_status_text').innerText = 'Hệ thống Online';
+            const statusBadge = document.getElementById('system_status_badge');
+            if (statusBadge) statusBadge.className = 'status-badge online me-4 d-none d-sm-flex align-items-center';
+            document.getElementById('system_status_text').innerText = 'Trực tuyến';
 
             client.subscribe(TOPIC_STATUS_WILDCARD, function (err) {
                 if (!err) console.log('Đã theo dõi topic: ' + TOPIC_STATUS_WILDCARD);
@@ -757,14 +800,16 @@
 
         // Sự kiện khi mất kết nối tới MQTT Broker
         client.on('offline', function () {
-            document.getElementById('system_status_icon').className = 'fas fa-circle text-danger me-2';
-            document.getElementById('system_status_text').innerText = 'Mất kết nối Server';
+            const statusBadge = document.getElementById('system_status_badge');
+            if (statusBadge) statusBadge.className = 'status-badge danger me-4 d-none d-sm-flex align-items-center';
+            document.getElementById('system_status_text').innerText = 'Ngoại tuyến';
         });
 
         // Sự kiện khi đang thử kết nối lại
         client.on('reconnect', function () {
-            document.getElementById('system_status_icon').className = 'fas fa-circle text-warning me-2';
-            document.getElementById('system_status_text').innerText = 'Đang kết nối lại...';
+            const statusBadge = document.getElementById('system_status_badge');
+            if (statusBadge) statusBadge.className = 'status-badge warning me-4 d-none d-sm-flex align-items-center';
+            document.getElementById('system_status_text').innerText = 'Đang kết nối...';
         });
 
         let currentPower = {}; // Lưu trữ công suất hiện tại của toàn bộ hệ thống
