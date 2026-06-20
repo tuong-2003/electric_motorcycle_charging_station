@@ -364,7 +364,8 @@
                             <span id="system_status_text">Đang kết nối...</span>
                         </div>
 
-                        <!-- Ví tiền được làm đẹp (Pill) -->
+                        <!-- Ví tiền được làm đẹp (Pill) - Đã ẩn theo yêu cầu (Admin không cần ví) -->
+                        <!-- 
                         <div id="wallet_info" class="d-none">
                             <span class="badge bg-white text-dark border p-2 px-3 rounded-pill shadow-sm"
                                 style="font-size: 0.9rem;">
@@ -378,6 +379,7 @@
                                 document.getElementById('wallet_balance').innerText = localStorage.getItem('ev_balance') || '--';
                             }
                         </script>
+                        -->
                     </div>
                 </nav>
 
@@ -1318,10 +1320,11 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('wallet_info').classList.remove('d-none');
-                        const balanceStr = parseInt(data.data.balance).toLocaleString('vi-VN');
-                        document.getElementById('wallet_balance').innerText = balanceStr;
-                        localStorage.setItem('ev_balance', balanceStr); // Lưu số dư đệm để dùng khi reload
+                        // Đã ẩn Ví tiền trên giao diện Admin
+                        // document.getElementById('wallet_info').classList.remove('d-none');
+                        // const balanceStr = parseInt(data.data.balance).toLocaleString('vi-VN');
+                        // document.getElementById('wallet_balance').innerText = balanceStr;
+                        // localStorage.setItem('ev_balance', balanceStr); // Lưu số dư đệm để dùng khi reload
 
                         // Giao diện ChatGPT: Cập nhật Tên, Avatar (Chữ cái đầu tiên)
                         document.getElementById('sidebar_admin_name').innerText = data.data.username;
