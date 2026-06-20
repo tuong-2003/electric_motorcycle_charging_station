@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EV Charging Admin | Hệ Thống Trạm Sạc</title>
+    <title>Hệ Thống Trạm Sạc HVT | Quản trị</title>
     <!-- Sử dụng Bootstrap 5 từ CDN cho giao diện -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Sử dụng FontAwesome cho Icon -->
@@ -229,7 +229,7 @@
         <div class="row">
             <!-- Sidebar Navigation -->
             <div class="col-md-2 p-0 sidebar d-none d-md-flex flex-column">
-                <h4 class="sidebar-header w-100 fw-bold">⚡ EV Charger</h4>
+                <h4 class="sidebar-header w-100 fw-bold">⚡ Trạm Sạc HVT</h4>
                 <nav class="nav flex-column mt-3 w-100">
                     <a href="#" class="active" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie me-2"></i>
                         Tổng quan</a>
@@ -1277,7 +1277,7 @@
                 'history': 'Lịch sử Hóa đơn',
                 'settings': 'Cài đặt hệ thống'
             };
-            document.getElementById('top_page_title').innerText = titleMap[tabId] || 'EV Charger';
+            document.getElementById('top_page_title').innerText = titleMap[tabId] || 'Trạm Sạc HVT';
 
             // Nếu bấm vào tab Lịch sử thì gọi API lấy dữ liệu
             if (tabId === 'history') loadHistory();
