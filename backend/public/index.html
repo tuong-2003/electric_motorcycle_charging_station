@@ -1024,9 +1024,23 @@
 
                 // Cập nhật giao diện cho đúng ổ cắm
                 const badgeElem = document.getElementById('stat_badge_' + uniqueId);
+                console.log("MQTT RX topic:", topic, "stationId:", stationId, "limits:", stationLimits[stationId]);
                 if (badgeElem) {
+                    const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16, status: 'online' };
                     let displayStatus = data.status;
-                    if (data.status === 'CHARGING') {
+                    if (limits.status === 'maintenance') {
+                        badgeElem.className = "badge bg-danger-light text-danger border border-danger-subtle rounded-pill fw-normal";
+                        displayStatus = "Bảo trì";
+                        // Vô hiệu hóa nút Bật/Tắt
+                        const row = document.getElementById('outlets_row_' + stationId);
+                        if (row) {
+                            row.querySelectorAll('button').forEach(btn => {
+                                if (btn.innerText === 'Bật' || btn.innerText === 'Tắt') {
+                                    btn.disabled = true;
+                                }
+                            });
+                        }
+                    } else if (data.status === 'CHARGING') {
                         badgeElem.className = "badge bg-success rounded-pill fw-normal";
                         displayStatus = "Đang sạc";
                     } else if (data.status === 'AVAILABLE' || data.status === 'STANDBY' || data.status === 'IDLE') {
@@ -1474,7 +1488,8 @@
                             // Cập nhật cache giới hạn của trạm sạc ở client
                             stationLimits[st.station_id] = {
                                 max_current: st.max_current || 16,
-                                temp_limit: st.temp_limit || 65
+                                temp_limit: st.temp_limit || 65,
+                                status: st.status || 'online'
                             };
 
                             // Trạng thái tủ sạc (cabinet level)
@@ -1536,6 +1551,15 @@
                                         displayStatus = "Sẵn sàng";
                                     }
 
+                                    // Nếu trạm sạc đang ở chế độ bảo trì
+                                    const isMaint = (st.status === 'maintenance');
+                                    if (isMaint) {
+                                        badgeClass = "bg-danger-light text-danger border border-danger-subtle";
+                                        displayStatus = "Bảo trì";
+                                    }
+
+                                    const disabledAttr = isMaint ? 'disabled' : '';
+
                                     return `
                                     <div class="col-md-6">
                                         <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
@@ -1554,8 +1578,8 @@
                                             </div>
                                             <div style="width: 30%; text-align: right;">
                                                 <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 20px 0 0 20px; font-size: 0.75rem;" onclick="event.stopPropagation(); sendCmd('START_CHARGE', '${st.station_id}', ${outlet.id})">Bật</button>
-                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 0 20px 20px 0; font-size: 0.75rem;" onclick="event.stopPropagation(); sendCmd('STOP_CHARGE', '${st.station_id}', ${outlet.id})">Tắt</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 20px 0 0 20px; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('START_CHARGE', '${st.station_id}', ${outlet.id})">Bật</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 0 20px 20px 0; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('STOP_CHARGE', '${st.station_id}', ${outlet.id})">Tắt</button>
                                                 </div>
                                             </div>
                                         </div>

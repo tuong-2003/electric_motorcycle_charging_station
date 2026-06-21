@@ -297,6 +297,13 @@ void loop() {
   int station_status_val = modbus.getStationStatus();
   bool is_maintenance = (station_status_val == 1);
 
+  // Phát hiện sự thay đổi trạng thái bảo trì để cập nhật màn hình lập tức
+  static bool prev_maintenance = false;
+  if (is_maintenance != prev_maintenance) {
+    prev_maintenance = is_maintenance;
+    updateDisplay();
+  }
+
   // --- BẢO VỆ CHỦ ĐỘNG KHI ĐANG BẢO TRÌ ---
   if (is_maintenance) {
     bool state_changed = false;
