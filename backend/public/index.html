@@ -551,7 +551,7 @@
 
                 <!-- Stations Tab (Quản lý Trạm sạc) -->
                 <div id="tab-stations" class="p-4 tab-content d-none">
-                    <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: visible;">
                         <div
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h6>
@@ -1139,8 +1139,12 @@
                         const chk = document.getElementById('switch_' + uniqueId);
                         if (chk) {
                             chk.disabled = isMaint;
-                            // Chỉ cập nhật trạng thái nút gạt nếu KHÔNG đang chờ xác nhận lệnh
-                            if (!underConfirm[uniqueId]) {
+                            // Chặn MQTT ghi đè nút gạt trong 2 trường hợp:
+                            // 1) Đang chờ xác nhận (underConfirm)
+                            // 2) Vừa gửi lệnh xong, chờ phần cứng đáp ứng (5 giây)
+                            const isLocked = underConfirm[uniqueId] || 
+                                (lastCommandTime[uniqueId] && (Date.now() - lastCommandTime[uniqueId] < 5000));
+                            if (!isLocked) {
                                 chk.checked = (data.status === 'CHARGING');
                             }
                         }
@@ -1828,13 +1832,18 @@
 
             const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẤT';
             showConfirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`, (confirmed) => {
-                // Giải phóng trạng thái xác nhận
-                underConfirm[uniqueId] = false;
+                // Nếu hủy thì giải phóng ngay, nếu xác nhận thì giữ khóa thêm 5 giây
+                if (!confirmed) {
+                    underConfirm[uniqueId] = false;
+                }
 
                 if (!confirmed) {
                     if (chk) chk.checked = (command !== 'START_CHARGE');
                     return;
                 }
+
+                // Giữ checkbox ở trạng thái mong muốn ngay khi xác nhận
+                if (chk) chk.checked = (command === 'START_CHARGE');
 
                 let endpoint = '';
                 if (command === 'START_CHARGE') endpoint = '/api/charge/start';
@@ -1862,8 +1871,11 @@
 
                         if (!data.success) {
                             if (chk) chk.checked = (command !== 'START_CHARGE');
+                            underConfirm[uniqueId] = false; // Lệnh thất bại, mở khóa ngay
                         } else {
                             if (chk) chk.checked = (command === 'START_CHARGE');
+                            // Giữ khóa thêm 5 giây để chờ phần cứng cập nhật trạng thái qua MQTT
+                            setTimeout(() => { underConfirm[uniqueId] = false; }, 5000);
                         }
 
                         fetchUserProfile();
@@ -1874,6 +1886,7 @@
                     .catch(error => {
                         console.error("Lỗi khi gọi API Backend:", error);
                         showAlert("Không thể kết nối đến Backend Server!", "danger");
+                        underConfirm[uniqueId] = false;
                         if (chk) {
                             chk.disabled = false;
                             chk.checked = (command !== 'START_CHARGE');
