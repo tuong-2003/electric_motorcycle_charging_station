@@ -326,10 +326,29 @@
         #station_start_date:active,
         #station_end_date:hover,
         #station_end_date:focus,
-        #station_end_date:active {
+        #station_end_date:active,
+        #stationFilterDropdownBtn:hover,
+        #stationFilterDropdownBtn:focus,
+        #stationFilterDropdownBtn:active {
+            background-color: #f1f5f9 !important;
             border-color: #cbd5e1 !important;
+            color: #1e293b !important;
             box-shadow: 0 0 0 0.25rem rgba(203, 213, 225, 0.3) !important;
             outline: none !important;
+        }
+        /* Tùy chỉnh màu hover của item trong dropdown sang màu xám */
+        .dropdown-menu .dropdown-item:hover,
+        .dropdown-menu .dropdown-item:focus {
+            background-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        .dropdown-menu .dropdown-item.active,
+        .dropdown-menu .dropdown-item:active {
+            background-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        .dropdown-menu .dropdown-item.text-success:hover {
+            color: #10b981 !important;
         }
         /* Đồng bộ màu xanh lá thương hiệu (#10b981) cho toàn bộ web */
         .btn-success {
@@ -451,23 +470,6 @@
                             <span class="status-dot"></span>
                             <span id="system_status_text">Đang kết nối...</span>
                         </div>
-
-                        <!-- Ví tiền được làm đẹp (Pill) - Đã ẩn theo yêu cầu (Admin không cần ví) -->
-                        <!-- 
-                        <div id="wallet_info" class="d-none">
-                            <span class="badge bg-white text-dark border p-2 px-3 rounded-pill shadow-sm"
-                                style="font-size: 0.9rem;">
-                                <i class="fas fa-wallet text-secondary me-2"></i><span id="wallet_balance">0</span> đ
-                            </span>
-                        </div>
-                        <script>
-                            // Chạy đồng bộ ngay lập tức trước khi render để hiện ví và tránh nhảy layout
-                            if (localStorage.getItem('ev_token')) {
-                                document.getElementById('wallet_info').classList.remove('d-none');
-                                document.getElementById('wallet_balance').innerText = localStorage.getItem('ev_balance') || '--';
-                            }
-                        </script>
-                        -->
                     </div>
                 </nav>
 
@@ -554,14 +556,18 @@
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h6>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <select id="station_energy_filter" class="form-select form-select-sm"
-                                    style="width: auto;" onchange="onStationFilterChange()">
-                                    <option value="all">Từ trước đến nay</option>
-                                    <option value="today">Hôm nay</option>
-                                    <option value="week">Tuần này</option>
-                                    <option value="month">Tháng này</option>
-                                    <option value="custom">Tùy chọn ngày</option>
-                                </select>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm dropdown-toggle px-3" type="button" id="stationFilterDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
+                                        Từ trước đến nay
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="stationFilterDropdownBtn" style="border-radius: 8px;">
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('all', 'Từ trước đến nay')">Từ trước đến nay</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('today', 'Hôm nay')">Hôm nay</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('week', 'Tuần này')">Tuần này</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('month', 'Tháng này')">Tháng này</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('custom', 'Tùy chọn ngày')">Tùy chọn ngày</a></li>
+                                    </ul>
+                                </div>
                                 <div id="station_custom_date_wrapper" class="d-none align-items-center gap-2">
                                     <input type="date" id="station_start_date" class="form-control form-control-sm"
                                         style="width: auto;">
@@ -574,7 +580,7 @@
                                         background-color: #10b981;
                                         border-color: #10b981;
                                         border-radius: 6px;
-                                    " onclick="alert('Tính năng thêm tủ đang phát triển!')">
+                                    " onclick="showAlert('Tính năng thêm tủ đang phát triển!', 'warning')">
                                     <i class="fas fa-plus me-2"></i>Thêm tủ sạc
                                 </button>
                             </div>
@@ -640,6 +646,8 @@
                                 <h5 class="mb-3">Tạo tài khoản mới</h5>
                                 <input type="text" id="new_user_name" class="form-control mb-2"
                                     placeholder="Tên đăng nhập">
+                                <input type="email" id="new_user_email" class="form-control mb-2"
+                                    placeholder="Email">
                                 <input type="password" id="new_user_pass" class="form-control mb-2"
                                     placeholder="Mật khẩu">
                                 <select id="new_user_role" class="form-select mb-3">
@@ -691,7 +699,7 @@
                                         placeholder="Nhập mật khẩu mới">
                                 </div>
                                 <button class="btn btn-primary mt-auto"
-                                    onclick="alert('Tính năng đổi mật khẩu đang phát triển!')">Cập nhật mật
+                                    onclick="showAlert('Tính năng đổi mật khẩu đang phát triển!', 'warning')">Cập nhật mật
                                     khẩu</button>
                             </div>
                         </div>
@@ -717,7 +725,7 @@
                                     </div>
                                 </div>
                                 <button class="btn btn-success mt-auto"
-                                    onclick="alert('Tính năng lưu cấu hình đang phát triển!')">Lưu cấu hình</button>
+                                    onclick="showAlert('Tính năng lưu cấu hình đang phát triển!', 'warning')">Lưu cấu hình</button>
                             </div>
                         </div>
 
@@ -736,7 +744,7 @@
                                     <strong class="text-dark fs-5">3.500 đ</strong>
                                 </div>
                                 <button class="btn btn-warning mt-auto text-dark"
-                                    onclick="alert('Tính năng cập nhật giá điện đang phát triển!')">Cập nhật giá
+                                    onclick="showAlert('Tính năng cập nhật giá điện đang phát triển!', 'warning')">Cập nhật giá
                                     điện</button>
                             </div>
                         </div>
@@ -757,7 +765,7 @@
                                     <strong class="text-danger fs-5">60°C</strong>
                                 </div>
                                 <button class="btn btn-danger mt-auto"
-                                    onclick="alert('Tính năng cập nhật ngưỡng nhiệt độ đang phát triển!')">Lưu ngưỡng
+                                    onclick="showAlert('Tính năng cập nhật ngưỡng nhiệt độ đang phát triển!', 'warning')">Lưu ngưỡng
                                     nhiệt độ</button>
                             </div>
                         </div>
@@ -771,10 +779,10 @@
                                     <p class="text-muted small mb-3">Xóa bớt dữ liệu để giải phóng dung lượng Database.
                                         Hành động này không thể hoàn tác!</p>
                                     <button class="btn btn-outline-danger btn-sm me-2"
-                                        onclick="if(confirm('Xóa hóa đơn cũ hơn 30 ngày?')) alert('Chưa khả dụng')">Dọn
+                                        onclick="showConfirm('Bạn có chắc chắn muốn xóa hóa đơn cũ hơn 30 ngày? Hành động này không thể hoàn tác!', (confirmed) => { if (confirmed) showAlert('Tính năng dọn dẹp chưa khả dụng!', 'warning'); })">Dọn
                                         dẹp Hóa đơn cũ</button>
                                     <button class="btn btn-outline-danger btn-sm"
-                                        onclick="if(confirm('Xóa dữ liệu điện áp cũ hơn 7 ngày?')) alert('Chưa khả dụng')">Dọn
+                                        onclick="showConfirm('Bạn có chắc chắn muốn xóa dữ liệu điện áp cũ hơn 7 ngày? Hành động này không thể hoàn tác!', (confirmed) => { if (confirmed) showAlert('Tính năng dọn dẹp chưa khả dụng!', 'warning'); })">Dọn
                                         dẹp Lịch sử Telemetry</button>
                                 </div>
                             </div>
@@ -815,7 +823,7 @@
                     <h5 class="modal-title fw-bold" id="settings_station_label">Cài đặt Tủ sạc</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body pb-3">
                     <input type="hidden" id="settings_station_id">
 
                     <div class="mb-3">
@@ -849,7 +857,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-0">
                         <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i
                                 class="fas fa-power-off me-1"></i>Khởi động lại</button>
                         <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
@@ -869,6 +877,8 @@
     <script>
         // --- HỆ THỐNG CẢNH BÁO (ALERTS ENGINE) ---
         let systemAlerts = [];
+        let lastCommandTime = {}; // Khóa đồng bộ trạng thái MQTT để chống giật/nháy nút gạt
+        let underConfirm = {}; // Lưu trữ trạng thái đang đợi xác nhận của các cổng sạc
         const stationLimits = {}; // Lưu trữ cấu hình giới hạn các trạm ở client-side
 
         function addSystemAlert(id, message, type) {
@@ -1129,7 +1139,10 @@
                         const chk = document.getElementById('switch_' + uniqueId);
                         if (chk) {
                             chk.disabled = isMaint;
-                            chk.checked = (data.status === 'CHARGING');
+                            // Chỉ cập nhật trạng thái nút gạt nếu KHÔNG đang chờ xác nhận lệnh
+                            if (!underConfirm[uniqueId]) {
+                                chk.checked = (data.status === 'CHARGING');
+                            }
                         }
                     }
                 }
@@ -1218,9 +1231,7 @@
         });
 
         function getStationQueryStr() {
-            let filterVal = 'all';
-            const filterEl = document.getElementById('station_energy_filter');
-            if (filterEl) filterVal = filterEl.value;
+            let filterVal = currentStationFilter || 'all';
 
             let queryStr = '';
             if (filterVal !== 'all') {
@@ -1336,7 +1347,7 @@
                         // Nếu có tin nhắn chào mừng lúc đăng nhập thì hiện ra sau khi đã vẽ xong ví tiền
                         if (loginMessage) {
                             // Trì hoãn 100ms để trình duyệt có thời gian "vẽ" ví tiền ra màn hình rồi mới bật popup
-                            setTimeout(() => alert(loginMessage), 100);
+                            setTimeout(() => showAlert(loginMessage, 'success'), 100);
                         }
                     } else {
                         // Nếu Token hết hạn hoặc không hợp lệ (Backend báo lỗi), âm thầm đăng xuất
@@ -1363,14 +1374,14 @@
                         // Lấy số dư hiển thị lên ngay lập tức, xong mới bung thông báo                
                         fetchUserProfile(data.message);
                     } else {
-                        alert("Lỗi đăng nhập: " + data.message);
+                        showAlert("Lỗi đăng nhập: " + data.message, 'danger');
                     }
                 })
-                .catch(error => alert("Không kết nối được tới API Đăng nhập!"));
+                .catch(error => showAlert("Không kết nối được tới API Đăng nhập!", 'danger'));
         }
 
         // Hàm Đăng xuất
-        function doLogout(showAlert) {
+        function doLogout(shouldShowAlert) {
             authToken = '';
             localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
             localStorage.removeItem('ev_balance'); // Xóa số dư đệm
@@ -1380,7 +1391,7 @@
             document.getElementById('sidebar_auth').classList.add('d-none');
 
             if (!document.getElementById('tab-users').classList.contains('d-none')) loadUsers();
-            if (showAlert !== false) alert("Đã đăng xuất thành công!");
+            if (shouldShowAlert !== false) showAlert("Đã đăng xuất thành công!", 'success');
         }
 
         // --- CHUYỂN TAB & LẤY LỊCH SỬ ---
@@ -1490,7 +1501,7 @@
             const status = isMaintenance ? 'maintenance' : 'online';
 
             if (!newName) {
-                alert("Vui lòng nhập tên tủ sạc!");
+                showAlert("Vui lòng nhập tên tủ sạc!", "warning");
                 return;
             }
 
@@ -1510,27 +1521,29 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Đã lưu cấu hình và gửi lệnh cập nhật xuống Tủ sạc ' + id + '!\n\n' + data.message);
                         var modalEl = document.getElementById('stationSettingsModal');
                         var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                         if (modalInstance) modalInstance.hide();
                         loadStations();
+                        showAlert('Đã lưu cấu hình và gửi lệnh cập nhật xuống Tủ sạc ' + id + '!', 'success');
                     } else {
-                        alert(data.message);
+                        showAlert(data.message, 'danger');
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    alert("Lỗi kết nối máy chủ");
+                    showAlert("Lỗi kết nối máy chủ", "danger");
                 });
         }
 
         // Khởi động lại Tủ sạc
         function rebootStation() {
             const stationId = document.getElementById('settings_station_id').value;
-            if (confirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?')) {
-                alert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!');
-            }
+            showConfirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?', (confirmed) => {
+                if (confirmed) {
+                    showAlert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!', 'success');
+                }
+            });
         }
 
         function toggleOutletsRow(stationId, btn) {
@@ -1722,80 +1735,151 @@
         }
 
         function deleteUser(userId, username) {
-            if (!confirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`)) return;
+            showConfirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`, (confirmed) => {
+                if (!confirmed) return;
 
-            fetch(`/api/users/${userId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + authToken }
-            })
-                .then(res => res.json())
-                .then(data => {
-                    alert(data.message);
-                    if (data.success) {
-                        loadUsers(); // Tải lại danh sách sau khi xóa thành công
-                    }
+                fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + authToken }
                 })
-                .catch(err => alert("Lỗi kết nối đến máy chủ khi yêu cầu xóa!"));
+                    .then(res => res.json())
+                    .then(data => {
+                        showAlert(data.message, data.success ? "success" : "danger");
+                        if (data.success) {
+                            loadUsers(); // Tải lại danh sách sau khi xóa thành công
+                        }
+                    })
+                    .catch(err => showAlert("Lỗi kết nối đến máy chủ khi yêu cầu xóa!", "danger"));
+            });
         }
 
-        // Hàm gửi lệnh từ Web xuống Backend Node.js API
-        function sendCmd(command, stationId, outletId) {
-            const chk = document.getElementById(`switch_${stationId}_${outletId}`);
-            
-            if (!authToken) {
-                alert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!");
-                if (chk) chk.checked = (command !== 'START_CHARGE');
+        // Tạo tài khoản mới từ Admin panel
+        function registerUser() {
+            const u = document.getElementById('new_user_name').value;
+            const e = document.getElementById('new_user_email') ? document.getElementById('new_user_email').value : '';
+            const p = document.getElementById('new_user_pass').value;
+            const r = document.getElementById('new_user_role').value;
+
+            if (!u || !p) {
+                showAlert("Vui lòng điền đầy đủ tài khoản và mật khẩu!", "warning");
                 return;
             }
 
-            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẤT';
-            if (!confirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`)) {
-                if (chk) chk.checked = (command !== 'START_CHARGE');
-                return;
-            }
+            const email = e || `${u.toLowerCase()}@example.com`;
 
-            let endpoint = '';
-            if (command === 'START_CHARGE') endpoint = '/api/charge/start';
-            else if (command === 'STOP_CHARGE') endpoint = '/api/charge/stop';
-
-            if (chk) chk.disabled = true; // Khóa tạm thời tránh spam
-
-            fetch(endpoint, {
+            fetch('/api/users/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + authToken
                 },
-                body: JSON.stringify({ stationId: stationId, outletId: outletId })
+                body: JSON.stringify({ username: u, email: email, password: p, role: r })
             })
-                .then(response => response.json())
+                .then(res => res.json())
                 .then(data => {
-                    console.log("Backend trả lời:", data);
-                    alert("Hệ thống: " + data.message);
-
-                    if (chk) chk.disabled = false;
-
-                    if (!data.success) {
-                        // Trả lại trạng thái cũ nếu API báo lỗi
-                        if (chk) chk.checked = (command !== 'START_CHARGE');
+                    if (data.success) {
+                        showAlert("Tạo tài khoản thành công!", "success");
+                        document.getElementById('new_user_name').value = '';
+                        if (document.getElementById('new_user_email')) document.getElementById('new_user_email').value = '';
+                        document.getElementById('new_user_pass').value = '';
+                        loadUsers();
                     } else {
-                        // Đồng bộ trực tiếp trạng thái sạc
-                        if (chk) chk.checked = (command === 'START_CHARGE');
-                    }
-
-                    fetchUserProfile();
-                    if (!document.getElementById('tab-history').classList.contains('d-none')) {
-                        loadHistory();
+                        showAlert(data.message, "danger");
                     }
                 })
-                .catch(error => {
-                    console.error("Lỗi khi gọi API Backend:", error);
-                    alert("Không thể kết nối đến Backend Server!");
-                    if (chk) {
-                        chk.disabled = false;
-                        chk.checked = (command !== 'START_CHARGE');
+                .catch(err => showAlert("Lỗi kết nối máy chủ", "danger"));
+        }
+
+        // Cộng tiền vào tài khoản từ Admin panel
+        function addBalance(userId, amount) {
+            fetch('/api/users/add_balance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ userId: userId, amount: amount })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, "success");
+                        loadUsers();
+                    } else {
+                        showAlert(data.message, "danger");
                     }
-                });
+                })
+                .catch(err => showAlert("Lỗi kết nối máy chủ", "danger"));
+        }
+
+        // Hàm gửi lệnh từ Web xuống Backend Node.js API
+        function sendCmd(command, stationId, outletId) {
+            const uniqueId = `${stationId}_${outletId}`;
+            const chk = document.getElementById(`switch_${stationId}_${outletId}`);
+            
+            if (!authToken) {
+                showAlert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!", "warning");
+                if (chk) chk.checked = (command !== 'START_CHARGE');
+                return;
+            }
+
+            // Đặt trạng thái đang xác nhận để chặn MQTT ghi đè giao diện
+            underConfirm[uniqueId] = true;
+
+            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẤT';
+            showConfirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`, (confirmed) => {
+                // Giải phóng trạng thái xác nhận
+                underConfirm[uniqueId] = false;
+
+                if (!confirmed) {
+                    if (chk) chk.checked = (command !== 'START_CHARGE');
+                    return;
+                }
+
+                let endpoint = '';
+                if (command === 'START_CHARGE') endpoint = '/api/charge/start';
+                else if (command === 'STOP_CHARGE') endpoint = '/api/charge/stop';
+
+                if (chk) chk.disabled = true; // Khóa tạm thời tránh spam
+
+                // Khóa đồng bộ real-time để tránh giật/nháy nút gạt
+                lastCommandTime[uniqueId] = Date.now();
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken
+                    },
+                    body: JSON.stringify({ stationId: stationId, outletId: outletId })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Backend trả lời:", data);
+                        showAlert("Hệ thống: " + data.message, data.success ? "success" : "danger");
+
+                        if (chk) chk.disabled = false;
+
+                        if (!data.success) {
+                            if (chk) chk.checked = (command !== 'START_CHARGE');
+                        } else {
+                            if (chk) chk.checked = (command === 'START_CHARGE');
+                        }
+
+                        fetchUserProfile();
+                        if (!document.getElementById('tab-history').classList.contains('d-none')) {
+                            loadHistory();
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Lỗi khi gọi API Backend:", error);
+                        showAlert("Không thể kết nối đến Backend Server!", "danger");
+                        if (chk) {
+                            chk.disabled = false;
+                            chk.checked = (command !== 'START_CHARGE');
+                        }
+                    });
+            });
         }
 
         // --- [MỚI] WATCHDOG FRONTEND: KIỂM TRA MẤT KẾT NỐI ---
@@ -1849,7 +1933,183 @@
                 }
             }
         }, 5000); // Quét kiểm tra mỗi 5 giây
+
+        // --- CUSTOM ALERT & CONFIRM MODALS ---
+        function showAlert(message, type) {
+            const iconContainer = document.getElementById('alertIconContainer');
+            const titleEl = document.getElementById('alertTitle');
+            const msgEl = document.getElementById('alertMessage');
+
+            // Icon & Title theo loại thông báo
+            if (type === 'success') {
+                iconContainer.innerHTML = '<i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>';
+                titleEl.innerText = 'Thành công';
+            } else if (type === 'danger') {
+                iconContainer.innerHTML = '<i class="fas fa-times-circle text-danger" style="font-size: 3rem;"></i>';
+                titleEl.innerText = 'Lỗi';
+            } else if (type === 'warning') {
+                iconContainer.innerHTML = '<i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>';
+                titleEl.innerText = 'Cảnh báo';
+            } else {
+                iconContainer.innerHTML = '<i class="fas fa-info-circle text-info" style="font-size: 3rem;"></i>';
+                titleEl.innerText = 'Thông báo';
+            }
+
+            msgEl.innerText = message;
+
+            const modalEl = document.getElementById('customAlertModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+            document.getElementById('alertOkBtn').onclick = () => {
+                modal.hide();
+            };
+            modal.show();
+        }
+
+        function showConfirm(message, callback) {
+            const msgEl = document.getElementById('confirmMessage');
+            msgEl.innerText = message;
+
+            const modalEl = document.getElementById('customConfirmModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+            let callbackCalled = false;
+
+            document.getElementById('confirmOkBtn').onclick = () => {
+                callbackCalled = true;
+                modal.hide();
+                if (callback) callback(true);
+            };
+            document.getElementById('confirmCancelBtn').onclick = () => {
+                callbackCalled = true;
+                modal.hide();
+                if (callback) callback(false);
+            };
+
+            // Khi bấm ngoài modal hoặc nhấn Escape cũng tính là Hủy
+            modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                if (!callbackCalled && callback) {
+                    callback(false);
+                }
+            }, { once: true });
+
+            modal.show();
+        }
+
+        // --- BỘ LỌC THỜI GIAN (DROPDOWN + POPUP) ---
+        let currentStationFilter = 'all';
+
+        function setStationEnergyFilter(filterValue, label) {
+            currentStationFilter = filterValue;
+            // Cập nhật text nút dropdown
+            const btn = document.getElementById('stationFilterDropdownBtn');
+            if (btn) btn.innerText = label;
+
+            if (filterValue === 'custom') {
+                // Mở popup chọn ngày tùy chỉnh
+                const modalEl = document.getElementById('dateFilterModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } else {
+                loadStations();
+            }
+        }
+
+        function applyPopupDateFilter() {
+            const startDate = document.getElementById('popup_start_date').value;
+            const endDate = document.getElementById('popup_end_date').value;
+
+            if (!startDate || !endDate) {
+                showAlert('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc!', 'warning');
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                showAlert('Ngày bắt đầu không thể sau ngày kết thúc!', 'warning');
+                return;
+            }
+
+            // Gán giá trị vào các input ẩn để getStationQueryStr() sử dụng
+            document.getElementById('station_start_date').value = startDate;
+            document.getElementById('station_end_date').value = endDate;
+
+            currentStationFilter = 'custom';
+
+            // Đóng popup
+            const modalEl = document.getElementById('dateFilterModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.hide();
+
+            loadStations();
+        }
     </script>
+
+    <!-- Custom Confirm Modal -->
+    <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; background-color: #ffffff;">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3 text-warning">
+                        <i class="fas fa-exclamation-circle" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2" id="confirmTitle">Xác nhận</h5>
+                    <p class="text-secondary small mb-4" id="confirmMessage" style="line-height: 1.6;"></p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3 fw-semibold"
+                            id="confirmCancelBtn" style="border-radius: 6px;">Hủy</button>
+                        <button type="button" class="btn btn-sm btn-success px-3 fw-semibold" id="confirmOkBtn"
+                            style="border-radius: 6px;">Xác nhận</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div class="modal fade" id="customAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; background-color: #ffffff;">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3" id="alertIconContainer">
+                        <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2" id="alertTitle">Thông báo</h5>
+                    <p class="text-secondary small mb-4" id="alertMessage" style="line-height: 1.6;"></p>
+                    <button type="button" class="btn btn-sm btn-success px-5 fw-semibold" id="alertOkBtn"
+                        style="border-radius: 6px;">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Date Filter Modal -->
+    <div class="modal fade" id="dateFilterModal" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; background-color: #ffffff;">
+                <div class="modal-header border-bottom py-3">
+                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-calendar-alt me-2 text-secondary"></i>Tùy chọn ngày</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Từ ngày</label>
+                        <input type="date" id="popup_start_date" class="form-control">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold text-muted">Đến ngày</label>
+                        <input type="date" id="popup_end_date" class="form-control">
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3 fw-semibold"
+                            style="border-radius: 6px;" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-sm btn-success px-3 fw-semibold"
+                            style="border-radius: 6px;" onclick="applyPopupDateFilter()">Áp dụng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
