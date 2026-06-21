@@ -21,6 +21,9 @@
 #define REG_OUTLET2_W        9
 #define REG_CMD_OUTLET1      10 // Gateway ghi 1 vào đây để Bật, 0 để Tắt
 #define REG_CMD_OUTLET2      11 
+#define REG_MAX_CURRENT      12 // Cấu hình giới hạn dòng sạc tối đa x100 (Ví dụ: 10A -> 1000)
+#define REG_TEMP_LIMIT       13 // Cấu hình ngưỡng cảnh báo nhiệt độ tủ sạc (°C)
+#define REG_STATION_STATUS   14 // Cấu hình trạng thái hoạt động (0: online, 1: maintenance)
 
 class ModbusSlaveTask {
 public:
@@ -33,6 +36,10 @@ public:
     int getCommandOutlet2();
     void clearCommandOutlet1();
     void clearCommandOutlet2();
+
+    uint16_t getMaxCurrent();     // Đọc ngưỡng giới hạn dòng (x100)
+    uint16_t getTempLimit();      // Đọc ngưỡng giới hạn nhiệt độ
+    uint16_t getStationStatus();  // Đọc trạng thái trạm (0: online, 1: maintenance)
 
 private:
     ModbusRTU mb;

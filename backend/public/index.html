@@ -278,7 +278,7 @@
             border-color: #dc3545;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
         }
-        
+
         .form-switch-danger .form-check-input:checked {
             background-color: #dc3545;
             border-color: #dc3545;
@@ -774,7 +774,7 @@
                         <select id="edit_max_current" class="form-select bg-light border-0">
                             <option value="10">10A (Sạc chậm - An toàn)</option>
                             <option value="16" selected>16A (Tiêu chuẩn)</option>
-                            <option value="32">32A (Sạc nhanh - Yêu cầu cáp lớn)</option>
+                            <option value="32">32A (Sạc nhanh - Yêu cầu thiết bị đáp ứng)</option>
                         </select>
                     </div>
 
@@ -1407,7 +1407,7 @@
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + authToken
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     name: newName,
                     max_current: parseInt(maxCurrent),
                     temp_limit: parseInt(tempLimit),

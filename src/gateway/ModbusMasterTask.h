@@ -28,11 +28,14 @@ public:
     // Hàm ghi lệnh xuống Tủ sạc
     bool sendCommand(uint8_t slaveId, uint8_t outletId, bool start);
 
+    // Hàm ghi cấu hình xuống Tủ sạc (maxCurrent x100, tempLimit, status)
+    bool sendConfig(uint8_t slaveId, uint16_t maxCurrent, uint16_t tempLimit, uint16_t status);
+
     uint8_t getLastError() const { return lastError; }
 
 private:
     ModbusRTU mb;
-    uint16_t buffer[12]; // Chứa 12 thanh ghi đọc về
+    uint16_t buffer[15]; // Chứa 15 thanh ghi đọc về (từ 0 đến 14)
     bool isWaiting = false;
     bool isSuccess = false;
     uint8_t lastError = 0;

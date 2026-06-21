@@ -36,11 +36,11 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
     DeserializationError error = deserializeJson(doc, payload, length);
     if (error) return;
 
-    const char *command = doc["command"];
     int stId, outId;
     
-    // Cắt ID từ topic (VD: ev_station/001/outlet/1/cmd)
+    // 1. Lắng nghe lệnh điều khiển (VD: ev_station/001/outlet/1/cmd)
     if (sscanf(topic, "ev_station/%03d/outlet/%d/cmd", &stId, &outId) == 2) {
+        const char *command = doc["command"];
         if (command && strcmp(command, "START_CHARGE") == 0) {
             Serial.printf("Gateway gui lenh BAT cho TRAM %d - O %d\n", stId, outId);
             modbus.sendCommand(stId, outId, true);
@@ -49,12 +49,27 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
             modbus.sendCommand(stId, outId, false);
         }
     }
+    // 2. Lắng nghe cấu hình (VD: ev_station/001/config)
+    else if (sscanf(topic, "ev_station/%03d/config", &stId) == 1) {
+        float maxCurrent = doc["max_current"] | 16.0;
+        int tempLimit = doc["temp_limit"] | 65;
+        const char *statusStr = doc["status"] | "online";
+        
+        uint16_t maxCurrentVal = (uint16_t)(maxCurrent * 100);
+        uint16_t tempLimitVal = (uint16_t)tempLimit;
+        uint16_t statusVal = (strcmp(statusStr, "maintenance") == 0) ? 1 : 0;
+        
+        Serial.printf("Gateway nhan cau hinh cho TRAM %d: MaxCurrent=%d (x100), TempLimit=%d, Status=%d\n", 
+                      stId, maxCurrentVal, tempLimitVal, statusVal);
+        modbus.sendConfig(stId, maxCurrentVal, tempLimitVal, statusVal);
+    }
 }
 
 void reconnect_mqtt() {
     if (mqtt.connect(MQTT_CLIENT_ID)) {
         Serial.println("MQTT Connected!");
         mqtt.subscribe("ev_station/+/outlet/+/cmd"); // Lắng nghe lệnh cho tất cả các tủ sạc
+        mqtt.subscribe("ev_station/+/config");        // Lắng nghe cấu hình cho tất cả các tủ sạc
     }
 }
 

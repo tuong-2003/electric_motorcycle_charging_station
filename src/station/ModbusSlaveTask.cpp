@@ -5,14 +5,19 @@ void ModbusSlaveTask::begin() {
     mb.begin(&Serial1);
     mb.slave(SLAVE_ID);
 
-    // Khởi tạo các thanh ghi (Holding Registers)
-    for (uint16_t i = 0; i <= REG_CMD_OUTLET2; i++) {
+    // Khởi tạo các thanh ghi (Holding Registers) bao gồm cả thanh ghi cấu hình mới
+    for (uint16_t i = 0; i <= REG_STATION_STATUS; i++) {
         mb.addHreg(i, 0);
     }
     
     // Đặt giá trị mặc định cho thanh ghi Lệnh là 0xFFFF (-1) để phân biệt với 0 và 1
     mb.Hreg(REG_CMD_OUTLET1, 0xFFFF);
     mb.Hreg(REG_CMD_OUTLET2, 0xFFFF);
+
+    // Đặt cấu hình mặc định (phòng hờ khi chưa nhận được đồng bộ từ Gateway)
+    mb.Hreg(REG_MAX_CURRENT, 1600); // 16A x 100
+    mb.Hreg(REG_TEMP_LIMIT, 65);    // 65°C
+    mb.Hreg(REG_STATION_STATUS, 0); // Hoạt động bình thường (0)
 }
 
 void ModbusSlaveTask::loop() {
@@ -51,3 +56,7 @@ int ModbusSlaveTask::getCommandOutlet2() {
 
 void ModbusSlaveTask::clearCommandOutlet1() { mb.Hreg(REG_CMD_OUTLET1, 0xFFFF); }
 void ModbusSlaveTask::clearCommandOutlet2() { mb.Hreg(REG_CMD_OUTLET2, 0xFFFF); }
+
+uint16_t ModbusSlaveTask::getMaxCurrent() { return mb.Hreg(REG_MAX_CURRENT); }
+uint16_t ModbusSlaveTask::getTempLimit() { return mb.Hreg(REG_TEMP_LIMIT); }
+uint16_t ModbusSlaveTask::getStationStatus() { return mb.Hreg(REG_STATION_STATUS); }

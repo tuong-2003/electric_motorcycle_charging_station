@@ -54,6 +54,10 @@ float current_w[2] = {0.0, 0.0};
 float current_temp = 0.0;
 float current_hum = 0.0;
 
+// [MỚI] Biến theo dõi lỗi cục bộ và trạng thái màn hình bảo trì
+int outlet_error[2] = {0, 0}; // 0: OK, 1: Quá dòng, 2: Quá nhiệt
+bool was_maintenance = false;
+
 // --- Nút nhấn (BOOT button) và Trạng thái WiFi AP ---
 #define BUTTON_PIN 0
 bool is_ap_active = true;
@@ -110,8 +114,52 @@ void initDisplay() {
   }
 }
 
+// [MỚI] Hàm vẽ màn hình bảo trì tĩnh
+void drawMaintenanceScreen() {
+  tft.fillScreen(ST77XX_BLACK);
+  tft.fillRect(0, 0, 160, 20, ST77XX_RED);
+  tft.setCursor(5, 6);
+  tft.setTextColor(ST77XX_WHITE, ST77XX_RED);
+  tft.print("MODBUS - SYSTEM LOCK");
+  
+  tft.setTextColor(ST77XX_YELLOW);
+  tft.setTextSize(2);
+  tft.setCursor(35, 45);
+  tft.print("BAO TRI");
+  
+  tft.setTextSize(1);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setCursor(15, 80);
+  tft.print("TRAM TAM NGHEN DE");
+  tft.setCursor(15, 95);
+  tft.print("BAO DUONG THIET BI");
+}
+
 // Hàm cập nhật giao diện màn hình TFT (Chỉ cập nhật phần động, KHÔNG xóa toàn bộ nền)
 void updateDisplay() {
+  bool is_maintenance = (modbus.getStationStatus() == 1);
+  
+  // Quản lý chuyển đổi màn hình bảo trì để chống Flicker
+  if (is_maintenance) {
+    if (!was_maintenance) {
+      was_maintenance = true;
+      drawMaintenanceScreen();
+    }
+    
+    // Cập nhật nhiệt độ/độ ẩm trên thanh trạng thái đỏ của màn hình bảo trì
+    tft.setTextSize(1);
+    tft.setTextColor(ST77XX_WHITE, ST77XX_RED);
+    tft.setCursor(105, 6);
+    tft.printf("%2.0fC %2.0f%%", current_temp, current_hum);
+    return;
+  }
+  
+  // Nếu vừa thoát chế độ bảo trì, vẽ lại nền bình thường
+  if (was_maintenance) {
+    was_maintenance = false;
+    initDisplay();
+  }
+
   tft.setTextSize(1);
   
   // 1. Cập nhật thanh trạng thái (Top Bar)
@@ -127,8 +175,18 @@ void updateDisplay() {
     int x_offset = i * 80; // Cột trái cho ổ 1, Cột phải cho ổ 2
     
     tft.setCursor(x_offset + 5, 83);
-    tft.setTextColor(is_charging[i] ? ST77XX_GREEN : ST77XX_CYAN, ST77XX_BLACK);
-    tft.print(is_charging[i] ? "CHARGING " : "AVAILABLE");
+    
+    // Hiển thị mã lỗi nếu có, ngược lại hiển thị AVAILABLE / CHARGING
+    if (outlet_error[i] == 1) {
+      tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+      tft.print("ERR_OVR_I");
+    } else if (outlet_error[i] == 2) {
+      tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+      tft.print("ERR_OVR_T");
+    } else {
+      tft.setTextColor(is_charging[i] ? ST77XX_GREEN : ST77XX_CYAN, ST77XX_BLACK);
+      tft.print(is_charging[i] ? "CHARGING " : "AVAILABLE");
+    }
 
     tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Nền đen ghi đè lên số cũ
     tft.setCursor(x_offset + 5, 96); 
@@ -229,16 +287,46 @@ void loop() {
 
   modbus.loop();
 
+  // --- ĐỌC CẤU HÌNH ĐỘNG TỪ MODBUS ---
+  float max_current_limit = modbus.getMaxCurrent() / 100.0;
+  if (max_current_limit <= 0.1) max_current_limit = 16.0; // Fallback an toàn
+
+  float temp_limit_val = (float)modbus.getTempLimit();
+  if (temp_limit_val <= 1.0) temp_limit_val = 65.0; // Fallback
+
+  int station_status_val = modbus.getStationStatus();
+  bool is_maintenance = (station_status_val == 1);
+
+  // --- BẢO VỆ CHỦ ĐỘNG KHI ĐANG BẢO TRÌ ---
+  if (is_maintenance) {
+    bool state_changed = false;
+    for (int i = 0; i < 2; i++) {
+      if (is_charging[i]) {
+        is_charging[i] = false;
+        state_changed = true;
+      }
+      outlet_error[i] = 0; // Reset lỗi
+    }
+    digitalWrite(RELAY1_PIN, HIGH);
+    digitalWrite(RELAY2_PIN, HIGH);
+    if (state_changed) {
+      updateDisplay();
+    }
+  }
   
   // --- NHẬN LỆNH ĐIỀU KHIỂN TỪ MODBUS ---
   int cmd1 = modbus.getCommandOutlet1();
   if (cmd1 == 1) {
-    is_charging[0] = true;
-    digitalWrite(RELAY1_PIN, LOW);
+    if (!is_maintenance && current_temp <= temp_limit_val) {
+      is_charging[0] = true;
+      outlet_error[0] = 0; // Xóa lỗi cũ
+      digitalWrite(RELAY1_PIN, LOW);
+    }
     modbus.clearCommandOutlet1();
     updateDisplay();
   } else if (cmd1 == 0) {
     is_charging[0] = false;
+    outlet_error[0] = 0; // Xóa lỗi cũ
     digitalWrite(RELAY1_PIN, HIGH);
     modbus.clearCommandOutlet1();
     updateDisplay();
@@ -246,18 +334,22 @@ void loop() {
 
   int cmd2 = modbus.getCommandOutlet2();
   if (cmd2 == 1) {
-    is_charging[1] = true;
-    digitalWrite(RELAY2_PIN, LOW);
+    if (!is_maintenance && current_temp <= temp_limit_val) {
+      is_charging[1] = true;
+      outlet_error[1] = 0; // Xóa lỗi cũ
+      digitalWrite(RELAY2_PIN, LOW);
+    }
     modbus.clearCommandOutlet2();
     updateDisplay();
   } else if (cmd2 == 0) {
     is_charging[1] = false;
+    outlet_error[1] = 0; // Xóa lỗi cũ
     digitalWrite(RELAY2_PIN, HIGH);
     modbus.clearCommandOutlet2();
     updateDisplay();
   }
 
-  // --- CẬP NHẬT CẢM BIẾN LÊN THANH GHI MODBUS MỖI 2 GIÂY ---
+  // --- CẬP NHẬT CẢM BIẾN LÊN THANH GHI MODBUS MỖI 5 GIÂY ---
   static uint32_t last_publish = 0;
   if (millis() - last_publish > 5000) {
     last_publish = millis();
@@ -287,7 +379,35 @@ void loop() {
         current_a[i-1] = 0.0;
         current_w[i-1] = 0.0;
       }
-      
+    }
+
+    // --- BẢO VỆ CỤC BỘ DỰA TRÊN NGƯỠNG ĐỌC ĐƯỢC ---
+    if (!is_maintenance) {
+      // 1. Kiểm tra nhiệt độ quá ngưỡng toàn trạm
+      if (current_temp > temp_limit_val) {
+        for (int i = 0; i < 2; i++) {
+          is_charging[i] = false;
+          outlet_error[i] = 2; // Lỗi quá nhiệt (2)
+        }
+        digitalWrite(RELAY1_PIN, HIGH);
+        digitalWrite(RELAY2_PIN, HIGH);
+        Serial.printf("LOG: TRAM QUA NHIET! %.1fC > %.1fC\n", current_temp, temp_limit_val);
+      } 
+      // 2. Kiểm tra quá dòng sạc từng cổng sạc
+      else {
+        if (is_charging[0] && current_a[0] > max_current_limit) {
+          is_charging[0] = false;
+          outlet_error[0] = 1; // Lỗi quá dòng (1)
+          digitalWrite(RELAY1_PIN, HIGH);
+          Serial.printf("LOG: CONG 1 QUA DONG! %.2fA > %.2fA\n", current_a[0], max_current_limit);
+        }
+        if (is_charging[1] && current_a[1] > max_current_limit) {
+          is_charging[1] = false;
+          outlet_error[1] = 1; // Lỗi quá dòng (1)
+          digitalWrite(RELAY2_PIN, HIGH);
+          Serial.printf("LOG: CONG 2 QUA DONG! %.2fA > %.2fA\n", current_a[1], max_current_limit);
+        }
+      }
     }
 
     // Đẩy dữ liệu ra thanh ghi để Gateway đọc

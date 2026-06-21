@@ -102,3 +102,45 @@ bool ModbusMasterTask::sendCommand(uint8_t slaveId, uint8_t outletId, bool start
     
     return isSuccess;
 }
+
+bool ModbusMasterTask::sendConfig(uint8_t slaveId, uint16_t maxCurrent, uint16_t tempLimit, uint16_t status) {
+    if (isWaiting) {
+        Serial.println("Modbus dang ban, khong the gui cau hinh!");
+        return false;
+    }
+
+    isWaiting = true;
+    isSuccess = false;
+    lastError = 0;
+
+    // Viết 3 thanh ghi cấu hình liên tiếp bắt đầu từ địa chỉ 12 (REG_MAX_CURRENT)
+    static uint16_t configData[3];
+    configData[0] = maxCurrent;
+    configData[1] = tempLimit;
+    configData[2] = status;
+
+    mb.writeHreg(slaveId, 12, configData, 3, [this, slaveId](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
+        this->isWaiting = false;
+        this->lastError = event;
+        if (event == Modbus::EX_SUCCESS) {
+            this->isSuccess = true;
+            Serial.printf("Gui cau hinh cho TRAM %d THANH CONG\n", slaveId);
+        } else {
+            Serial.printf("Gui cau hinh cho TRAM %d THAT BAI: Ma loi = 0x%02X\n", slaveId, event);
+        }
+        return true;
+    });
+
+    uint32_t startWait = millis();
+    while (isWaiting && (millis() - startWait < 1500)) {
+        mb.task();
+        delay(1);
+    }
+
+    if (isWaiting) {
+        isWaiting = false;
+        Serial.printf("Loi: Gui cau hinh TRAM %d TIMEOUT\n", slaveId);
+    }
+    
+    return isSuccess;
+}

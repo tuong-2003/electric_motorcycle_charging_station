@@ -743,6 +743,14 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
                 status: status || 'online'
             };
 
+            // [MỚI] Phát hành gói tin cấu hình xuống MQTT cho Gateway nhận diện (dùng retained)
+            const configTopic = `ev_station/${stationId}/config`;
+            client.publish(configTopic, JSON.stringify({
+                max_current: parseInt(max_current || 16),
+                temp_limit: parseInt(temp_limit || 65),
+                status: status || 'online'
+            }), { retain: true });
+
             // Nếu đổi trạng thái sang Bảo trì (maintenance), tự động gửi lệnh ngắt sạc cho tất cả ổ cắm thuộc tủ này
             if (status === 'maintenance') {
                 console.log(`🛠️ [Admin] Đặt tủ sạc ${stationId} sang chế độ BẢO TRÌ. Tự động ngắt sạc các cổng.`);
