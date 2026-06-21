@@ -742,12 +742,14 @@
                     <input type="hidden" id="settings_station_id">
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-semibold">Tên tủ sạc hiển thị</label>
-                        <input type="text" id="edit_station_name" class="form-control bg-light border-0" placeholder="Ví dụ: Tủ sạc 1">
+                        <label class="form-label text-muted small fw-semibold">Tên tủ sạc</label>
+                        <input type="text" id="edit_station_name" class="form-control bg-light border-0"
+                            placeholder="Ví dụ: Tủ sạc 1">
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo vệ)</label>
+                        <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo
+                            vệ)</label>
                         <select class="form-select bg-light border-0">
                             <option value="10">10A (Sạc chậm - An toàn)</option>
                             <option value="16" selected>16A (Tiêu chuẩn)</option>
@@ -758,25 +760,30 @@
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
                         <input type="number" class="form-control bg-light border-0" value="65">
-                        <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
+                        <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo
+                            động đỏ.</div>
                     </div>
 
+                    <style>
+                        #maintenanceSwitch:checked {
+                            background-color: #dc3545;
+                            border-color: #dc3545;
+                        }
+                    </style>
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-semibold">Chế độ hoạt động</label>
+                        <label class="form-label text-danger small fw-semibold">Chế độ hoạt động</label>
                         <div class="form-check form-switch mt-1">
                             <input class="form-check-input" type="checkbox" id="maintenanceSwitch">
                             <label class="form-check-label text-danger" for="maintenanceSwitch">Chế độ bảo trì</label>
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại</button>
-                        <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i class="fas fa-check me-1"></i>Lưu cấu hình</button>
+                        <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i
+                                class="fas fa-power-off me-1"></i>Khởi động lại</button>
+                        <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
+                                class="fas fa-check me-1"></i>Lưu cấu hình</button>
                     </div>
-
-                    <hr class="text-muted">
-
-                    <button class="btn btn-primary w-100 fw-bold mt-2" type="button" onclick="saveStation()">Lưu thông tin tủ sạc</button>
                 </div>
             </div>
         </div>
@@ -1337,11 +1344,11 @@
         function openStationSettings(btn) {
             const stationId = btn.getAttribute('data-id');
             const name = btn.getAttribute('data-name');
-            
+
             document.getElementById('settings_station_id').value = stationId;
             document.getElementById('settings_station_label').innerText = 'Cài đặt tủ ' + stationId;
             document.getElementById('edit_station_name').value = name || '';
-            
+
             const modalEl = document.getElementById('stationSettingsModal');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
@@ -1349,25 +1356,8 @@
 
         // Không còn dùng các hàm cũ (openHardwareConfig, openEditStation) vì đã gom vào openStationSettings.
 
-        // Lưu cấu hình phần cứng
+        // Lưu cấu hình phần cứng và cập nhật thông tin
         function saveHardwareConfig() {
-            const stationId = document.getElementById('settings_station_id').value;
-            alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + stationId + ' qua MQTT!');
-            var modalEl = document.getElementById('stationSettingsModal');
-            var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
-        }
-
-        // Khởi động lại Tủ sạc
-        function rebootStation() {
-            const stationId = document.getElementById('settings_station_id').value;
-            if (confirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?')) {
-                alert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!');
-            }
-        }
-
-        // Lưu dữ liệu Edit lên Server
-        function saveStation() {
             const id = document.getElementById('settings_station_id').value;
             const newName = document.getElementById('edit_station_name').value;
 
@@ -1386,18 +1376,28 @@
             })
                 .then(res => res.json())
                 .then(data => {
-                    alert(data.message);
                     if (data.success) {
+                        alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + id + ' qua MQTT!\n\n' + data.message);
                         var modalEl = document.getElementById('stationSettingsModal');
                         var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                         if (modalInstance) modalInstance.hide();
                         loadStations();
+                    } else {
+                        alert(data.message);
                     }
                 })
                 .catch(err => {
                     console.error(err);
                     alert("Lỗi kết nối máy chủ");
                 });
+        }
+
+        // Khởi động lại Tủ sạc
+        function rebootStation() {
+            const stationId = document.getElementById('settings_station_id').value;
+            if (confirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?')) {
+                alert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!');
+            }
         }
 
         function toggleOutletsRow(stationId, btn) {
