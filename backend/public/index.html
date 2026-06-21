@@ -293,12 +293,24 @@
         .form-switch-danger .form-check-input:not(:checked):focus {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
         }
+
         /* Bỏ viền xanh Bootstrap ở bộ lọc thời gian */
         #station_energy_filter:focus,
         #station_start_date:focus,
         #station_end_date:focus {
             border-color: #dee2e6;
             box-shadow: none;
+        }
+
+        /* Bộ lọc thời gian - bỏ màu xanh Bootstrap */
+        #station_energy_filter:hover,
+        #station_energy_filter:focus,
+        #station_start_date:hover,
+        #station_start_date:focus,
+        #station_end_date:hover,
+        #station_end_date:focus {
+            border-color: #dee2e6 !important;
+            box-shadow: none !important;
         }
     </style>
 </head>
@@ -524,14 +536,11 @@
                                         style="width: auto;">
                                     <button class="btn btn-sm btn-secondary" onclick="loadStations()">Lọc</button>
                                 </div>
-                                <button
-                                    class="btn btn-sm shadow-sm px-3 text-white"
-                                    style="
+                                <button class="btn btn-sm shadow-sm px-3 text-white" style="
                                         background-color: #10b981;
                                         border-color: #10b981;
                                         border-radius: 6px;
-                                    "
-                                    onclick="alert('Tính năng thêm tủ đang phát triển!')">
+                                    " onclick="alert('Tính năng thêm tủ đang phát triển!')">
                                     <i class="fas fa-plus me-2"></i>Thêm tủ sạc
                                 </button>
                             </div>
@@ -1508,11 +1517,11 @@
                             // Trạng thái tủ sạc (cabinet level)
                             let cabinetStatus;
                             if (st.status === 'online') {
-                                cabinetStatus = '<span class="badge" style="background-color: rgba(16,185,129,0.15); color: #059669; border: 1px solid rgba(16,185,129,0.4); font-weight: 600;"><i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>Hoạt động</span>';
+                                cabinetStatus = '<span style="color: #059669; font-weight: 600;">Hoạt động</span>';
                             } else if (st.status === 'maintenance') {
-                                cabinetStatus = '<span class="badge" style="background-color: rgba(245,158,11,0.15); color: #d97706; border: 1px solid rgba(245,158,11,0.4); font-weight: 600;"><i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>Bảo trì</span>';
+                                cabinetStatus = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
                             } else {
-                                cabinetStatus = '<span class="badge" style="background-color: rgba(239,68,68,0.15); color: #dc2626; border: 1px solid rgba(239,68,68,0.4); font-weight: 600;"><i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>Offline</span>';
+                                cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Offline</span>';
                             }
                             let kwh = parseFloat(st.total_kwh).toFixed(2);
                             let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
@@ -1525,13 +1534,12 @@
                             </button>
                         </td>
                         <td class="text-center"><strong>${st.station_id}</strong></td>
-                        <td class="text-start">${st.name}</td>
+                        <td class="text-center">${st.name}</td>
                         <td>${cabinetStatus}</td>
                         <td id="table_th_${st.station_id}">
-                            <div class="border rounded px-2 py-1 d-inline-flex align-items-center gap-2 bg-white" style="font-size: 0.8rem;">
-                                <span><i class="fas fa-temperature-half me-1" style="color: #f97316;"></i><span id="temp_${st.station_id}" class="fw-semibold text-dark">${st.temperature != null ? st.temperature : '--'}</span>°C</span>
-                                <span class="text-muted" style="opacity:0.4;">|</span>
-                                <span><i class="fas fa-droplet me-1" style="color: #0ea5e9;"></i><span id="hum_${st.station_id}" class="fw-semibold text-dark">${st.humidity != null ? st.humidity : '--'}</span>%</span>
+                            <div class="text-start d-inline-block" style="font-size: 0.85rem; line-height: 1.6;">
+                                <div class="text-muted"><i class="fas fa-temperature-half me-2" style="color: #f97316; width: 12px; text-align: center;"></i>Nhiệt độ: <span id="temp_${st.station_id}" class="fw-bold text-dark">${st.temperature != null ? st.temperature : '--'}</span>°C</div>
+                                <div class="text-muted"><i class="fas fa-droplet me-2" style="color: #0ea5e9; width: 12px; text-align: center;"></i>Độ ẩm: <span id="hum_${st.station_id}" class="fw-bold text-dark">${st.humidity != null ? st.humidity : '--'}</span>%</div>
                             </div>
                         </td>
                         <td id="table_kwh_${st.station_id}">${kwh} kWh</td>
