@@ -293,6 +293,13 @@
         .form-switch-danger .form-check-input:not(:checked):focus {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
         }
+        /* Bỏ viền xanh Bootstrap ở bộ lọc thời gian */
+        #station_energy_filter:focus,
+        #station_start_date:focus,
+        #station_end_date:focus {
+            border-color: #dee2e6;
+            box-shadow: none;
+        }
     </style>
 </head>
 
@@ -517,7 +524,13 @@
                                         style="width: auto;">
                                     <button class="btn btn-sm btn-secondary" onclick="loadStations()">Lọc</button>
                                 </div>
-                                <button class="btn btn-sm btn-primary shadow-sm px-3" style="border-radius: 6px;"
+                                <button
+                                    class="btn btn-sm shadow-sm px-3 text-white"
+                                    style="
+                                        background-color: #10b981;
+                                        border-color: #10b981;
+                                        border-radius: 6px;
+                                    "
                                     onclick="alert('Tính năng thêm tủ đang phát triển!')">
                                     <i class="fas fa-plus me-2"></i>Thêm tủ sạc
                                 </button>
@@ -1591,7 +1604,6 @@
                             tbody.innerHTML += `<tr id="outlets_row_${st.station_id}" class="${isExpanded ? '' : 'd-none'} outlets-row border-bottom">
                                 <td colspan="8" class="p-3 border-0">
                                     <div class="px-3 py-3 border rounded-3 bg-light">
-                                        <h6 class="mb-3 fw-bold text-secondary" style="font-size: 0.85rem;"><i class="fas fa-bolt text-warning me-2"></i>Điều khiển trực tiếp & Đo lường thời gian thực</h6>
                                         <div class="row g-3">
                                             ${outletsHtml}
                                         </div>
