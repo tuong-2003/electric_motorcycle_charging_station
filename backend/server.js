@@ -390,11 +390,12 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
     processingLocks.add(lockKey);
     const releaseLock = () => processingLocks.delete(lockKey);
 
-    // 1. Kiểm tra số dư người dùng
-    db.query('SELECT balance FROM users WHERE id = ?', [userId], (err, results) => {
+    // 1. Kiểm tra số dư người dùng (Bỏ qua đối với Admin)
+    db.query('SELECT balance, role FROM users WHERE id = ?', [userId], (err, results) => {
         if (err || results.length === 0) { releaseLock(); return res.status(500).json({ success: false, message: 'Lỗi DB' }); }
 
-        if (results[0].balance <= 0) {
+        const user = results[0];
+        if (user.role !== 'admin' && user.balance <= 0) {
             releaseLock();
             return res.status(400).json({ success: false, message: '⛔ Số dư ví không đủ để sạc!' });
         }
@@ -449,9 +450,17 @@ function processStopCharge(stationId, outletId, userId, callback) {
                     return callback(false, 'Phiên sạc đã được chốt trước đó!');
                 }
 
-                db.query('UPDATE users SET balance = balance - ? WHERE id = ?', [totalCost, userId], () => {
-                    client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                    callback(true, `Đã chốt hóa đơn!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh\n- Thành tiền: ${totalCost.toFixed(0)} VNĐ`);
+                db.query('SELECT role FROM users WHERE id = ?', [userId], (err, userRes) => {
+                    const isAdmin = (userRes && userRes.length > 0 && userRes[0].role === 'admin');
+                    if (isAdmin) {
+                        client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                        callback(true, `Đã chốt hóa đơn (Admin - Không trừ tiền)!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh`);
+                    } else {
+                        db.query('UPDATE users SET balance = balance - ? WHERE id = ?', [totalCost, userId], () => {
+                            client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                            callback(true, `Đã chốt hóa đơn!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh\n- Thành tiền: ${totalCost.toFixed(0)} VNĐ`);
+                        });
+                    }
                 });
             });
         });
@@ -718,7 +727,7 @@ function runBackgroundWorker() {
 
     // Lấy tất cả các phiên đang sạc của User
     // [TỐI ƯU] Bổ sung JOIN với bảng stations để tính trước tiền điện dựa trên giá của từng trạm
-    db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance, st.unit_price, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN users u ON s.user_id = u.id JOIN stations st ON st.station_id = SUBSTRING_INDEX(s.station_id, ".", 1) WHERE s.status = "ongoing"', (err, sessions) => {
+    db.query('SELECT s.id, s.station_id, s.start_time, s.user_id, u.balance, u.role, st.unit_price, TIMESTAMPDIFF(SECOND, s.start_time, NOW()) as duration_sec FROM charging_sessions s JOIN users u ON s.user_id = u.id JOIN stations st ON st.station_id = SUBSTRING_INDEX(s.station_id, ".", 1) WHERE s.status = "ongoing"', (err, sessions) => {
         if (err || sessions.length === 0) return;
 
         sessions.forEach(session => {
@@ -735,7 +744,11 @@ function runBackgroundWorker() {
                     }
                 }
 
-                // Nếu trạm VẪN ONLINE, tiến hành kiểm tra số dư ví
+                // Nếu trạm VẪN ONLINE, tiến hành kiểm tra số dư ví (Bỏ qua đối với Admin)
+                if (session.role === 'admin') {
+                    return;
+                }
+
                 const durationHours = session.duration_sec / 3600.0;
                 db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele2) => {
                     let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;

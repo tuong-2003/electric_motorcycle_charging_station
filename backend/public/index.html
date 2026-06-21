@@ -1424,7 +1424,10 @@
         }
 
         function loadHistory() {
-            fetch('/api/sessions/history')
+            if (!authToken) return;
+            fetch('/api/sessions/history', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -1630,6 +1633,11 @@
         function sendCmd(command, stationId, outletId) {
             if (!authToken) {
                 alert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!");
+                return;
+            }
+
+            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẮT';
+            if (!confirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`)) {
                 return;
             }
 
