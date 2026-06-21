@@ -258,6 +258,19 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
             box-shadow: none !important;
         }
+
+        /* Hiệu ứng chevron mở rộng hàng */
+        .transition-rotate {
+            transition: transform 0.2s ease-in-out;
+        }
+        .rotate-90 {
+            transform: rotate(90deg);
+        }
+        
+        /* Hàng chứa Cổng sạc */
+        .outlets-row {
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 
@@ -460,207 +473,6 @@
 
                 <!-- Stations Tab (Quản lý Trạm sạc) -->
                 <div id="tab-stations" class="p-4 tab-content d-none">
-                    <!-- Khu vực 2 Tủ sạc (Side by Side) -->
-                    <div class="row g-4 mb-4">
-                        <!-- Trạng thái Tủ 1 -->
-                        <div class="col-lg-6">
-                            <div class="card stat-card-clean h-100 border-0 shadow-sm"
-                                style="border-radius: 12px; overflow: hidden;">
-                                <!-- Header -->
-                                <div
-                                    class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
-                                    <div class="d-flex align-items-center">
-                                        <div class="icon-wrapper-stat me-3"
-                                            style="width: 42px; height: 42px; background-color: rgba(16, 185, 129, 0.15);">
-                                            <i class="fas fa-server" style="color: #10b981;"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0 fw-bold text-dark">Tủ sạc 1</h6>
-                                            <div class="text-muted" style="font-size: 0.75rem;">ID: 001</div>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="border rounded px-2 text-secondary d-flex align-items-center bg-white"
-                                            style="font-size: 0.8rem; height: 31px;">
-                                            <i class="fas fa-temperature-half me-1" style="color: #f97316;"></i><span
-                                                id="temp_001" class="fw-semibold text-dark">--</span>°C
-                                            <span class="mx-2 text-muted" style="opacity: 0.3;">|</span>
-                                            <i class="fas fa-droplet me-1" style="color: #0ea5e9;"></i><span
-                                                id="hum_001" class="fw-semibold text-dark">--</span>%
-                                        </div>
-                                        <button
-                                            class="btn btn-sm btn-light border px-2 d-inline-flex align-items-center justify-content-center"
-                                            style="height: 31px;" onclick="openHardwareConfig('001')"
-                                            title="Cấu hình phần cứng"><i
-                                                class="fas fa-cog text-secondary"></i></button>
-                                    </div>
-                                </div>
-                                <!-- Body -->
-                                <div class="card-body p-0">
-                                    <ul class="list-group list-group-flush">
-                                        <!-- Ổ sạc 1 -->
-                                        <li
-                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                            <div class="d-flex align-items-center" style="width: 25%;">
-                                                <i class="fas fa-plug text-secondary me-2"></i>
-                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
-                                                    1</span>
-                                            </div>
-                                            <div style="width: 20%;" class="text-center">
-                                                <span id="stat_badge_001_1"
-                                                     class="badge bg-light text-secondary border rounded-pill fw-normal">Chờ...</span>
-                                            </div>
-                                            <div style="width: 30%;" class="text-center text-muted small">
-                                                <span id="stat_v_001_1">0.0</span>V &bull; <span
-                                                    id="stat_i_001_1">0.00</span>A<br>
-                                                <strong class="text-dark"><span id="stat_p_001_1">0.0</span>
-                                                    W</strong>
-                                            </div>
-                                            <div style="width: 25%; text-align: right;">
-                                                <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
-                                                        onclick="sendCmd('START_CHARGE', '001', 1)">Bật</button>
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
-                                                        onclick="sendCmd('STOP_CHARGE', '001', 1)">Tắt</button>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <!-- Ổ sạc 2 -->
-                                        <li
-                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                            <div class="d-flex align-items-center" style="width: 25%;">
-                                                <i class="fas fa-plug text-secondary me-2"></i>
-                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
-                                                    2</span>
-                                            </div>
-                                            <div style="width: 20%;" class="text-center">
-                                                <span id="stat_badge_001_2"
-                                                     class="badge bg-light text-secondary border rounded-pill fw-normal">Chờ...</span>
-                                            </div>
-                                            <div style="width: 30%;" class="text-center text-muted small">
-                                                <span id="stat_v_001_2">0.0</span>V &bull; <span
-                                                    id="stat_i_001_2">0.00</span>A<br>
-                                                <strong class="text-dark"><span id="stat_p_001_2">0.0</span>
-                                                    W</strong>
-                                            </div>
-                                            <div style="width: 25%; text-align: right;">
-                                                <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
-                                                        onclick="sendCmd('START_CHARGE', '001', 2)">Bật</button>
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
-                                                        onclick="sendCmd('STOP_CHARGE', '001', 2)">Tắt</button>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Trạng thái Tủ 2 -->
-                        <div class="col-lg-6">
-                            <div class="card stat-card-clean h-100 border-0 shadow-sm"
-                                style="border-radius: 12px; overflow: hidden;">
-                                <!-- Header -->
-                                <div
-                                    class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
-                                    <div class="d-flex align-items-center">
-                                        <div class="icon-wrapper-stat me-3"
-                                            style="width: 42px; height: 42px; background-color: rgba(16, 185, 129, 0.15);">
-                                            <i class="fas fa-server" style="color: #10b981;"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0 fw-bold text-dark">Tủ sạc 2</h6>
-                                            <div class="text-muted" style="font-size: 0.75rem;">ID: 002</div>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="border rounded px-2 text-secondary d-flex align-items-center bg-white"
-                                            style="font-size: 0.8rem; height: 31px;">
-                                            <i class="fas fa-temperature-half me-1" style="color: #f97316;"></i><span
-                                                id="temp_002" class="fw-semibold text-dark">--</span>°C
-                                            <span class="mx-2 text-muted" style="opacity: 0.3;">|</span>
-                                            <i class="fas fa-droplet me-1" style="color: #0ea5e9;"></i><span
-                                                id="hum_002" class="fw-semibold text-dark">--</span>%
-                                        </div>
-                                        <button
-                                            class="btn btn-sm btn-light border px-2 d-inline-flex align-items-center justify-content-center"
-                                            style="height: 31px;" onclick="openHardwareConfig('002')"
-                                            title="Cấu hình phần cứng"><i
-                                                class="fas fa-cog text-secondary"></i></button>
-                                    </div>
-                                </div>
-                                <!-- Body -->
-                                <div class="card-body p-0">
-                                    <ul class="list-group list-group-flush">
-                                        <!-- Ổ sạc 1 -->
-                                        <li
-                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                            <div class="d-flex align-items-center" style="width: 25%;">
-                                                <i class="fas fa-plug text-secondary me-2"></i>
-                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
-                                                    1</span>
-                                            </div>
-                                            <div style="width: 20%;" class="text-center">
-                                                <span id="stat_badge_002_1"
-                                                     class="badge bg-light text-secondary border rounded-pill fw-normal">Chờ...</span>
-                                            </div>
-                                            <div style="width: 30%;" class="text-center text-muted small">
-                                                <span id="stat_v_002_1">0.0</span>V &bull; <span
-                                                    id="stat_i_002_1">0.00</span>A<br>
-                                                <strong class="text-dark"><span id="stat_p_002_1">0.0</span>
-                                                    W</strong>
-                                            </div>
-                                            <div style="width: 25%; text-align: right;">
-                                                <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
-                                                        onclick="sendCmd('START_CHARGE', '002', 1)">Bật</button>
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
-                                                        onclick="sendCmd('STOP_CHARGE', '002', 1)">Tắt</button>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <!-- Ổ sạc 2 -->
-                                        <li
-                                            class="list-group-item d-flex justify-content-between align-items-center p-3">
-                                            <div class="d-flex align-items-center" style="width: 25%;">
-                                                <i class="fas fa-plug text-secondary me-2"></i>
-                                                <span class="fw-semibold text-dark" style="font-size: 0.9rem;">Cổng
-                                                    2</span>
-                                            </div>
-                                            <div style="width: 20%;" class="text-center">
-                                                <span id="stat_badge_002_2"
-                                                     class="badge bg-light text-secondary border rounded-pill fw-normal">Chờ...</span>
-                                            </div>
-                                            <div style="width: 30%;" class="text-center text-muted small">
-                                                <span id="stat_v_002_2">0.0</span>V &bull; <span
-                                                    id="stat_i_002_2">0.00</span>A<br>
-                                                <strong class="text-dark"><span id="stat_p_002_2">0.0</span>
-                                                    W</strong>
-                                            </div>
-                                            <div style="width: 25%; text-align: right;">
-                                                <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 20px 0 0 20px; font-size: 0.8rem;"
-                                                        onclick="sendCmd('START_CHARGE', '002', 2)">Bật</button>
-                                                    <button class="btn btn-sm btn-outline-secondary px-3"
-                                                        style="border-radius: 0 20px 20px 0; font-size: 0.8rem;"
-                                                        onclick="sendCmd('STOP_CHARGE', '002', 2)">Tắt</button>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: hidden;">
                         <div
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -691,6 +503,7 @@
                                 <table class="table table-hover mb-0 text-center align-middle">
                                     <thead class="table-light">
                                         <tr>
+                                            <th style="width: 40px;"></th>
                                             <th>Mã Trạm (ID)</th>
                                             <th>Tên / Vị trí</th>
                                             <th>Trạng thái mạng</th>
@@ -1354,13 +1167,6 @@
                         // 2. Cập nhật trên DANH SÁCH TRẠM (Chỉ thay đổi text, không làm chớp nháy bảng)
                         if (!document.getElementById('tab-stations').classList.contains('d-none')) {
                             data.data.forEach(st => {
-                                const cell = document.getElementById('table_th_' + st.station_id);
-                                if (cell) {
-                                    let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
-                                    let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
-                                    cell.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span>`;
-                                }
-                                
                                 const kwhCell = document.getElementById('table_kwh_' + st.station_id);
                                 if (kwhCell) {
                                     let kwh = parseFloat(st.total_kwh).toFixed(2);
@@ -1544,9 +1350,27 @@
         }
 
         // --- QUẢN LÝ TRẠM SẠC ---
+        const expandedStations = new Set();
+
+        function toggleOutletsRow(stationId, btn) {
+            const row = document.getElementById('outlets_row_' + stationId);
+            const chevron = btn.querySelector('.fa-chevron-right');
+            if (row) {
+                if (row.classList.contains('d-none')) {
+                    row.classList.remove('d-none');
+                    if (chevron) chevron.classList.add('rotate-90');
+                    expandedStations.add(stationId);
+                } else {
+                    row.classList.add('d-none');
+                    if (chevron) chevron.classList.remove('rotate-90');
+                    expandedStations.delete(stationId);
+                }
+            }
+        }
+
         function loadStations() {
             if (!authToken) {
-                document.getElementById('stations_table_body').innerHTML = `<tr><td colspan="6" class="text-danger">Vui lòng đăng nhập!</td></tr>`;
+                document.getElementById('stations_table_body').innerHTML = `<tr><td colspan="8" class="text-danger">Vui lòng đăng nhập!</td></tr>`;
                 return;
             }
 
@@ -1562,20 +1386,81 @@
                             let badge = st.status === 'online' ? '<span class="badge bg-success">Online</span>' : (st.status === 'maintenance' ? '<span class="badge bg-warning text-dark">Bảo trì</span>' : '<span class="badge bg-danger">Offline</span>');
                             let kwh = parseFloat(st.total_kwh).toFixed(2);
                             let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
-                            let tempVal = st.temperature != null ? `${st.temperature} °C` : '-- °C';
-                            let humVal = st.humidity != null ? `${st.humidity} %` : '-- %';
-                            tbody.innerHTML += `<tr>
+                            let isExpanded = expandedStations.has(st.station_id);
+                            
+                            tbody.innerHTML += `<tr class="align-middle" style="cursor: pointer;" onclick="toggleOutletsRow('${st.station_id}', this)">
+                        <td>
+                            <button class="btn btn-link btn-sm text-secondary p-0" onclick="event.stopPropagation(); toggleOutletsRow('${st.station_id}', this.parentElement.parentElement)">
+                                <i class="fas fa-chevron-right transition-rotate ${isExpanded ? 'rotate-90' : ''}"></i>
+                            </button>
+                        </td>
                         <td><strong>${st.station_id}</strong></td>
                         <td>${st.name}<br><small class="text-muted">${st.location}</small></td>
                         <td>${badge}</td>
-                        <td id="table_th_${st.station_id}"><span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> ${tempVal}</span><br><span class="text-info fw-bold"><i class="fas fa-droplet"></i> ${humVal}</span></td>
+                        <td id="table_th_${st.station_id}">
+                            <span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> <span id="temp_${st.station_id}">${st.temperature != null ? st.temperature : '--'}</span> °C</span><br>
+                            <span class="text-info fw-bold"><i class="fas fa-droplet"></i> <span id="hum_${st.station_id}">${st.humidity != null ? st.humidity : '--'}</span> %</span>
+                        </td>
                         <td id="table_kwh_${st.station_id}">${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin" onclick="openEditStation('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng" onclick="openHardwareConfig('${st.station_id}')"><i class="fas fa-cog"></i></button>
+                            <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin" onclick="event.stopPropagation(); openEditStation('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng" onclick="event.stopPropagation(); openHardwareConfig('${st.station_id}')"><i class="fas fa-cog"></i></button>
                         </td>
                     </tr>`;
+
+                            let outletsHtml = '';
+                            if (st.outlets && st.outlets.length > 0) {
+                                outletsHtml = st.outlets.map(outlet => {
+                                    const uniqueId = `${st.station_id}_${outlet.id}`;
+                                    let badgeClass = "bg-light text-secondary border";
+                                    let displayStatus = "Chờ...";
+                                    if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
+                                        badgeClass = "bg-success text-white";
+                                        displayStatus = "Đang sạc";
+                                    } else if (outlet.status === 'available') {
+                                        badgeClass = "bg-light text-secondary border";
+                                        displayStatus = "Sẵn sàng";
+                                    }
+                                    
+                                    return `
+                                    <div class="col-md-6">
+                                        <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
+                                            <div class="d-flex align-items-center" style="width: 25%;">
+                                                <div class="icon-wrapper-stat me-2" style="width: 32px; height: 32px; background-color: rgba(13, 110, 253, 0.08); color: #0d6efd; border-radius: 6px; flex-shrink: 0; display:flex; align-items:center; justify-content:center;">
+                                                    <i class="fas fa-plug text-primary" style="font-size: 0.9rem;"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-dark" style="font-size: 0.85rem;">Cổng ${outlet.id}</div>
+                                                    <span id="stat_badge_${uniqueId}" class="badge ${badgeClass} rounded-pill fw-normal mt-1" style="font-size: 0.7rem;">${displayStatus}</span>
+                                                </div>
+                                            </div>
+                                            <div style="width: 45%;" class="text-center px-1 text-muted small">
+                                                <span id="stat_v_${uniqueId}">${(outlet.voltage || 0).toFixed(1)}</span>V &bull; <span id="stat_i_${uniqueId}">${(outlet.current || 0).toFixed(2)}</span>A<br>
+                                                <strong class="text-dark"><span id="stat_p_${uniqueId}">${(outlet.power || 0).toFixed(1)}</span> W</strong>
+                                            </div>
+                                            <div style="width: 30%; text-align: right;">
+                                                <div class="btn-group shadow-sm rounded-pill" role="group">
+                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 20px 0 0 20px; font-size: 0.75rem;" onclick="event.stopPropagation(); sendCmd('START_CHARGE', '${st.station_id}', ${outlet.id})">Bật</button>
+                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 0 20px 20px 0; font-size: 0.75rem;" onclick="event.stopPropagation(); sendCmd('STOP_CHARGE', '${st.station_id}', ${outlet.id})">Tắt</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    `;
+                                }).join('');
+                            }
+
+                            tbody.innerHTML += `<tr id="outlets_row_${st.station_id}" class="${isExpanded ? '' : 'd-none'} outlets-row border-bottom">
+                                <td colspan="8" class="p-3 border-0">
+                                    <div class="px-3 py-3 border rounded-3 bg-light">
+                                        <h6 class="mb-3 fw-bold text-secondary" style="font-size: 0.85rem;"><i class="fas fa-bolt text-warning me-2"></i>Điều khiển trực tiếp & Đo lường thời gian thực</h6>
+                                        <div class="row g-3">
+                                            ${outletsHtml}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>`;
                         });
                     }
                 });
