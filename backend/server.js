@@ -540,6 +540,16 @@ app.delete('/api/sessions/history', verifyToken, (req, res) => {
 
 // API Lấy danh sách Trạm sạc và Tổng điện năng
 app.get('/api/stations', verifyToken, (req, res) => {
+    const { startDate, endDate } = req.query;
+    
+    let joinCondition = "cs.station_id LIKE CONCAT(s.station_id, '.%') AND cs.status = 'completed'";
+    let params = [];
+    
+    if (startDate && endDate) {
+        joinCondition += " AND cs.start_time >= ? AND cs.start_time <= ?";
+        params.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+    }
+
     // Câu lệnh SQL: Lấy thông tin trạm VÀ tính tổng kWh từ các hóa đơn đã hoàn tất
     const sql = `
         SELECT 
@@ -550,10 +560,10 @@ app.get('/api/stations', verifyToken, (req, res) => {
             s.status,
             COALESCE(SUM(cs.total_kwh), 0) as total_kwh
         FROM stations s
-        LEFT JOIN charging_sessions cs ON cs.station_id LIKE CONCAT(s.station_id, '.%') AND cs.status = 'completed'
+        LEFT JOIN charging_sessions cs ON ${joinCondition}
         GROUP BY s.station_id
     `;
-    db.query(sql, (err, results) => {
+    db.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
 
         // Lấy danh sách các ổ cắm đang được sạc (ongoing)
