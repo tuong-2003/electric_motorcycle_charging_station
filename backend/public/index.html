@@ -732,7 +732,8 @@
     <div class="modal fade" id="stationSettingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
-                <div class="modal-header border-0 pb-2" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                <div class="modal-header border-0 pb-2"
+                    style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
                     <div>
                         <h5 class="modal-title fw-bold text-white mb-0">
                             <i class="fas fa-cog me-2" style="color: #38bdf8;"></i>
@@ -744,12 +745,14 @@
                 <!-- Tabs nav -->
                 <ul class="nav nav-tabs border-0 px-3 pt-3 bg-white" id="stationSettingsTabs">
                     <li class="nav-item">
-                        <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab_info" type="button">
+                        <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab_info"
+                            type="button">
                             <i class="fas fa-info-circle me-1 text-primary"></i> Thông tin
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab_hardware" type="button">
+                        <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab_hardware"
+                            type="button">
                             <i class="fas fa-microchip me-1 text-warning"></i> Phần cứng
                         </button>
                     </li>
@@ -761,11 +764,13 @@
                         <div class="tab-pane fade show active" id="tab_info">
                             <div class="mb-3">
                                 <label class="form-label text-muted small fw-semibold">Tên tủ sạc hiển thị</label>
-                                <input type="text" id="edit_station_name" class="form-control" placeholder="Ví dụ: Tủ sạc 1 - Khu A">
+                                <input type="text" id="edit_station_name" class="form-control"
+                                    placeholder="Ví dụ: Tủ sạc 1 - Khu A">
                             </div>
                             <div class="mb-4">
                                 <label class="form-label text-muted small fw-semibold">Vị trí / Địa chỉ</label>
-                                <input type="text" id="edit_station_location" class="form-control" placeholder="Ví dụ: Bãi đỗ xe hầm B1">
+                                <input type="text" id="edit_station_location" class="form-control"
+                                    placeholder="Ví dụ: Bãi đỗ xe hầm B1">
                             </div>
                             <button class="btn btn-primary w-100 fw-bold" type="button" onclick="saveStation()">
                                 <i class="fas fa-save me-1"></i> Lưu thông tin
@@ -782,7 +787,8 @@
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
+                                <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ
+                                    (°C)</label>
                                 <input type="number" class="form-control" value="65">
                                 <div class="form-text">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
                             </div>
@@ -790,7 +796,8 @@
                                 <label class="form-label text-muted small fw-semibold">Chế độ hoạt động</label>
                                 <div class="form-check form-switch mt-1">
                                     <input class="form-check-input" type="checkbox" id="maintenanceSwitch">
-                                    <label class="form-check-label text-danger" for="maintenanceSwitch">Chế độ bảo trì</label>
+                                    <label class="form-check-label text-danger" for="maintenanceSwitch">Chế độ bảo
+                                        trì</label>
                                 </div>
                             </div>
                             <hr>
@@ -1551,8 +1558,7 @@
                     if (data.success) {
                         var modalEl = document.getElementById('stationSettingsModal');
                         var modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) modalInstance.hide();
-                        loadStations();
+                        if (modalInstance) modalInstance.hide(); loadStations();
                     }
                 })
                 .catch(err => {
