@@ -616,11 +616,11 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền chỉnh sửa trạm sạc!' });
 
     const stationId = req.params.id;
-    const { name, location } = req.body;
+    const { name } = req.body;
 
-    if (!name || !location) return res.status(400).json({ success: false, message: 'Vui lòng nhập đủ Tên và Địa chỉ!' });
+    if (!name) return res.status(400).json({ success: false, message: 'Vui lòng nhập Tên tủ sạc!' });
 
-    db.query('UPDATE stations SET name = ?, location = ? WHERE station_id = ?', [name, location, stationId], (err) => {
+    db.query('UPDATE stations SET name = ? WHERE station_id = ?', [name, stationId], (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật trạm sạc' });
 
         // [TỐI ƯU] Xóa Cache tạm thời nếu có hoặc chỉnh sửa cơ chế Reload (Ở đây DB đã nhận 100% chuẩn)
