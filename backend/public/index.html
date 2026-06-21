@@ -129,9 +129,10 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: 0.95rem; /* Tăng kích thước để cân đối với chuông */
             font-weight: 600;
             transition: all 0.25s ease;
+            gap: 8px; /* Căn chỉnh khoảng cách ngang tự động */
         }
 
         .status-badge.online {
@@ -159,11 +160,17 @@
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
-            margin-right: 6px;
-            display: inline-block;
+            flex-shrink: 0; /* Đảm bảo hình tròn không bị méo */
+        }
+
+        /* Badge Bảo trì màu cam đồng bộ */
+        .badge-maint-orange {
+            background-color: rgba(217, 119, 6, 0.08) !important;
+            color: #d97706 !important;
+            border: 1px solid rgba(217, 119, 6, 0.2) !important;
         }
 
         /* Cố định kích thước ví tiền để tránh dịch chuyển layout khi số tiền thay đổi */
@@ -282,6 +289,27 @@
 
         .form-switch-danger .form-check-input:not(:checked):focus {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
+        }
+
+        /* Nút gạt cổng sạc màu xanh lá */
+        .form-switch-success .form-check-input {
+            border-color: #10b981;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2310b981'/%3e%3c/svg%3e");
+        }
+
+        .form-switch-success .form-check-input:checked {
+            background-color: #10b981;
+            border-color: #10b981;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+        }
+
+        .form-switch-success .form-check-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25);
+        }
+
+        .form-switch-success .form-check-input:not(:checked):focus {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2310b981'/%3e%3c/svg%3e");
         }
 
         /* Bỏ viền xanh Bootstrap ở bộ lọc thời gian */
@@ -1060,7 +1088,7 @@
                     const isMaint = (limits.status === 'maintenance');
 
                     if (isMaint) {
-                        badgeElem.className = "badge bg-danger-light text-danger border border-danger-subtle rounded-pill fw-normal";
+                        badgeElem.className = "badge badge-maint-orange rounded-pill fw-normal";
                         displayStatus = "Bảo trì";
                     } else if (data.status === 'CHARGING') {
                         badgeElem.className = "badge bg-success rounded-pill fw-normal";
@@ -1084,9 +1112,9 @@
                         
                         if (iconWrapper && plugIcon) {
                             if (isMaint) {
-                                iconWrapper.style.backgroundColor = "rgba(220, 53, 69, 0.08)";
-                                iconWrapper.style.color = "#dc3545";
-                                plugIcon.style.color = "#dc3545";
+                                iconWrapper.style.backgroundColor = "rgba(217, 119, 6, 0.08)";
+                                iconWrapper.style.color = "#d97706";
+                                plugIcon.style.color = "#d97706";
                             } else if (data.status === 'CHARGING') {
                                 iconWrapper.style.backgroundColor = "rgba(16, 185, 129, 0.08)";
                                 iconWrapper.style.color = "#10b981";
@@ -1098,12 +1126,12 @@
                             }
                         }
 
-                        // Vô hiệu hóa nút Bật/Tắt nếu tủ sạc đang ở chế độ bảo trì
-                        outletCard.querySelectorAll('button').forEach(btn => {
-                            if (btn.innerText === 'Bật' || btn.innerText === 'Tắt') {
-                                btn.disabled = isMaint;
-                            }
-                        });
+                        // Cập nhật và Vô hiệu hóa nút gạt switch nếu tủ sạc đang ở chế độ bảo trì
+                        const chk = document.getElementById('switch_' + uniqueId);
+                        if (chk) {
+                            chk.disabled = isMaint;
+                            chk.checked = (data.status === 'CHARGING');
+                        }
                     }
                 }
 
@@ -1605,21 +1633,21 @@
                                      // Nếu trạm sạc đang ở chế độ bảo trì
                                      const isMaint = (st.status === 'maintenance');
                                      if (isMaint) {
-                                         badgeClass = "bg-danger-light text-danger border border-danger-subtle";
+                                         badgeClass = "badge-maint-orange";
                                          displayStatus = "Bảo trì";
                                      }
  
                                      const disabledAttr = isMaint ? 'disabled' : '';
-
-                                     // Màu icon động theo trạng thái của từng cổng
+ 
+                                     // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam)
                                      let iconBg = "rgba(107, 114, 128, 0.08)";
                                      let iconColor = "#6b7280";
                                      if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
                                          iconBg = "rgba(16, 185, 129, 0.08)";
                                          iconColor = "#10b981";
                                      } else if (outlet.status === 'maintenance' || isMaint) {
-                                         iconBg = "rgba(220, 53, 69, 0.08)";
-                                         iconColor = "#dc3545";
+                                         iconBg = "rgba(217, 119, 6, 0.08)";
+                                         iconColor = "#d97706";
                                      }
  
                                      return `
@@ -1641,10 +1669,9 @@
                                                      <div>Công suất: <strong class="text-dark"><span id="stat_p_${uniqueId}">${(outlet.power || 0).toFixed(1)}</span> W</strong></div>
                                                  </div>
                                              </div>
-                                             <div style="width: 30%; text-align: right;">
-                                                 <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                     <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 20px 0 0 20px; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('START_CHARGE', '${st.station_id}', ${outlet.id})">Bật</button>
-                                                     <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 0 20px 20px 0; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('STOP_CHARGE', '${st.station_id}', ${outlet.id})">Tắt</button>
+                                             <div style="width: 30%; text-align: right; display: flex; justify-content: flex-end;">
+                                                 <div class="form-check form-switch form-switch-success" style="padding-left: 2.5em; margin-bottom: 0;">
+                                                     <input class="form-check-input" type="checkbox" id="switch_${uniqueId}" ${disabledAttr} ${outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other' ? 'checked' : ''} onclick="event.stopPropagation(); sendCmd(this.checked ? 'START_CHARGE' : 'STOP_CHARGE', '${st.station_id}', ${outlet.id})">
                                                  </div>
                                              </div>
                                          </div>
@@ -1687,41 +1714,14 @@
                         <td>
                             <button class="btn btn-sm btn-success" onclick="addBalance(${user.id}, 50000)">+ 50k</button>
                             <button class="btn btn-sm btn-warning" onclick="addBalance(${user.id}, 100000)">+ 100k</button>
-                            <button class="btn btn-sm btn-danger ms-1" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-sm btn-danger ms-1" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>`;
                         });
-                    } else {
-                        tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${data.message}</td></tr>`;
                     }
                 });
         }
 
-        function registerUser() {
-            const u = document.getElementById('new_user_name').value;
-            const p = document.getElementById('new_user_pass').value;
-            const r = document.getElementById('new_user_role').value;
-            fetch('/api/users/register', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-                body: JSON.stringify({ username: u, password: p, role: r })
-            }).then(res => res.json()).then(data => {
-                alert(data.message);
-                if (data.success) { document.getElementById('new_user_name').value = ''; document.getElementById('new_user_pass').value = ''; loadUsers(); }
-            });
-        }
-
-        function addBalance(userId, amount) {
-            if (!confirm(`Xác nhận nạp ${amount.toLocaleString('vi-VN')} đ cho User ID ${userId}?`)) return;
-            fetch('/api/users/add_balance', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-                body: JSON.stringify({ userId: userId, amount: amount })
-            }).then(res => res.json()).then(data => {
-                alert(data.message);
-                if (data.success) { loadUsers(); fetchUserProfile(); }
-            });
-        }
-
-        // Hàm gọi API Xóa User
         function deleteUser(userId, username) {
             if (!confirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`)) return;
 
@@ -1741,13 +1741,17 @@
 
         // Hàm gửi lệnh từ Web xuống Backend Node.js API
         function sendCmd(command, stationId, outletId) {
+            const chk = document.getElementById(`switch_${stationId}_${outletId}`);
+            
             if (!authToken) {
                 alert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!");
+                if (chk) chk.checked = (command !== 'START_CHARGE');
                 return;
             }
 
-            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẮT';
+            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẤT';
             if (!confirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`)) {
+                if (chk) chk.checked = (command !== 'START_CHARGE');
                 return;
             }
 
@@ -1755,20 +1759,31 @@
             if (command === 'START_CHARGE') endpoint = '/api/charge/start';
             else if (command === 'STOP_CHARGE') endpoint = '/api/charge/stop';
 
+            if (chk) chk.disabled = true; // Khóa tạm thời tránh spam
+
             fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + authToken // [QUAN TRỌNG] Đính kèm Token
+                    'Authorization': 'Bearer ' + authToken
                 },
-                body: JSON.stringify({ stationId: stationId, outletId: outletId }) // Gửi ID ổ cắm lên Backend
+                body: JSON.stringify({ stationId: stationId, outletId: outletId })
             })
                 .then(response => response.json())
                 .then(data => {
                     console.log("Backend trả lời:", data);
                     alert("Hệ thống: " + data.message);
 
-                    // Cập nhật lại ví tiền và bảng lịch sử sau khi vừa chốt đơn sạc
+                    if (chk) chk.disabled = false;
+
+                    if (!data.success) {
+                        // Trả lại trạng thái cũ nếu API báo lỗi
+                        if (chk) chk.checked = (command !== 'START_CHARGE');
+                    } else {
+                        // Đồng bộ trực tiếp trạng thái sạc
+                        if (chk) chk.checked = (command === 'START_CHARGE');
+                    }
+
                     fetchUserProfile();
                     if (!document.getElementById('tab-history').classList.contains('d-none')) {
                         loadHistory();
@@ -1777,6 +1792,10 @@
                 .catch(error => {
                     console.error("Lỗi khi gọi API Backend:", error);
                     alert("Không thể kết nối đến Backend Server!");
+                    if (chk) {
+                        chk.disabled = false;
+                        chk.checked = (command !== 'START_CHARGE');
+                    }
                 });
         }
 
