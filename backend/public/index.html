@@ -263,10 +263,11 @@
         .transition-rotate {
             transition: transform 0.2s ease-in-out;
         }
+
         .rotate-90 {
             transform: rotate(90deg);
         }
-        
+
         /* Hàng chứa Cổng sạc */
         .outlets-row {
             background-color: #f8f9fa;
@@ -479,7 +480,8 @@
                             <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-database me-2 text-secondary"></i>Cơ sở
                                 dữ liệu Trạm</h6>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <select id="station_energy_filter" class="form-select form-select-sm" style="width: auto;" onchange="onStationFilterChange()">
+                                <select id="station_energy_filter" class="form-select form-select-sm"
+                                    style="width: auto;" onchange="onStationFilterChange()">
                                     <option value="all">Từ trước đến nay</option>
                                     <option value="today">Hôm nay</option>
                                     <option value="week">Tuần này</option>
@@ -487,9 +489,11 @@
                                     <option value="custom">Tùy chọn ngày</option>
                                 </select>
                                 <div id="station_custom_date_wrapper" class="d-none align-items-center gap-2">
-                                    <input type="date" id="station_start_date" class="form-control form-control-sm" style="width: auto;">
+                                    <input type="date" id="station_start_date" class="form-control form-control-sm"
+                                        style="width: auto;">
                                     <span>-</span>
-                                    <input type="date" id="station_end_date" class="form-control form-control-sm" style="width: auto;">
+                                    <input type="date" id="station_end_date" class="form-control form-control-sm"
+                                        style="width: auto;">
                                     <button class="btn btn-sm btn-secondary" onclick="loadStations()">Lọc</button>
                                 </div>
                                 <button class="btn btn-sm btn-primary shadow-sm px-3" style="border-radius: 6px;"
@@ -503,14 +507,14 @@
                                 <table class="table table-hover mb-0 text-center align-middle">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 40px;"></th>
-                                            <th>Mã Trạm (ID)</th>
-                                            <th>Tên / Vị trí</th>
-                                            <th>Trạng thái mạng</th>
+                                            <th style="width: 36px;"></th>
+                                            <th style="width: 70px;">ID</th>
+                                            <th>Tên tủ sạc</th>
+                                            <th>Trạng thái tủ sạc</th>
                                             <th>Nhiệt độ / Độ ẩm</th>
                                             <th>Tổng điện năng</th>
                                             <th>Đơn giá (VNĐ/kWh)</th>
-                                            <th>Cài đặt</th>
+                                            <th style="width: 80px;">Cài đặt</th>
                                         </tr>
                                     </thead>
                                     <tbody id="stations_table_body">
@@ -1115,12 +1119,12 @@
             let filterVal = 'all';
             const filterEl = document.getElementById('station_energy_filter');
             if (filterEl) filterVal = filterEl.value;
-            
+
             let queryStr = '';
             if (filterVal !== 'all') {
                 const now = new Date();
                 let startDate, endDate;
-                
+
                 if (filterVal === 'today') {
                     startDate = now.toISOString().split('T')[0];
                     endDate = startDate;
@@ -1138,7 +1142,7 @@
                         startDate = ''; endDate = '';
                     }
                 }
-                
+
                 if (startDate && endDate) {
                     queryStr = `?startDate=${startDate}&endDate=${endDate}`;
                 }
@@ -1383,29 +1387,39 @@
                     tbody.innerHTML = '';
                     if (data.success) {
                         data.data.forEach(st => {
-                            let badge = st.status === 'online' ? '<span class="badge bg-success">Online</span>' : (st.status === 'maintenance' ? '<span class="badge bg-warning text-dark">Bảo trì</span>' : '<span class="badge bg-danger">Offline</span>');
+                            // Trạng thái tủ sạc (cabinet level)
+                            let cabinetStatus;
+                            if (st.status === 'online') {
+                                cabinetStatus = '<span class="badge" style="background-color: rgba(16,185,129,0.15); color: #059669; border: 1px solid rgba(16,185,129,0.4); font-weight: 600;"><i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>Hoạt động</span>';
+                            } else if (st.status === 'maintenance') {
+                                cabinetStatus = '<span class="badge" style="background-color: rgba(245,158,11,0.15); color: #d97706; border: 1px solid rgba(245,158,11,0.4); font-weight: 600;"><i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>Bảo trì</span>';
+                            } else {
+                                cabinetStatus = '<span class="badge" style="background-color: rgba(239,68,68,0.15); color: #dc2626; border: 1px solid rgba(239,68,68,0.4); font-weight: 600;"><i class="fas fa-circle me-1" style="font-size:0.5rem; vertical-align:middle;"></i>Offline</span>';
+                            }
                             let kwh = parseFloat(st.total_kwh).toFixed(2);
                             let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
                             let isExpanded = expandedStations.has(st.station_id);
-                            
+
                             tbody.innerHTML += `<tr class="align-middle" style="cursor: pointer;" onclick="toggleOutletsRow('${st.station_id}', this)">
                         <td>
                             <button class="btn btn-link btn-sm text-secondary p-0" onclick="event.stopPropagation(); toggleOutletsRow('${st.station_id}', this.parentElement.parentElement)">
                                 <i class="fas fa-chevron-right transition-rotate ${isExpanded ? 'rotate-90' : ''}"></i>
                             </button>
                         </td>
-                        <td><strong>${st.station_id}</strong></td>
-                        <td>${st.name}<br><small class="text-muted">${st.location}</small></td>
-                        <td>${badge}</td>
+                        <td class="text-center"><strong>${st.station_id}</strong></td>
+                        <td class="text-start">${st.name}</td>
+                        <td>${cabinetStatus}</td>
                         <td id="table_th_${st.station_id}">
-                            <span class="text-danger fw-bold"><i class="fas fa-temperature-half"></i> <span id="temp_${st.station_id}">${st.temperature != null ? st.temperature : '--'}</span> °C</span><br>
-                            <span class="text-info fw-bold"><i class="fas fa-droplet"></i> <span id="hum_${st.station_id}">${st.humidity != null ? st.humidity : '--'}</span> %</span>
+                            <div class="border rounded px-2 py-1 d-inline-flex align-items-center gap-2 bg-white" style="font-size: 0.8rem;">
+                                <span><i class="fas fa-temperature-half me-1" style="color: #f97316;"></i><span id="temp_${st.station_id}" class="fw-semibold text-dark">${st.temperature != null ? st.temperature : '--'}</span>°C</span>
+                                <span class="text-muted" style="opacity:0.4;">|</span>
+                                <span><i class="fas fa-droplet me-1" style="color: #0ea5e9;"></i><span id="hum_${st.station_id}" class="fw-semibold text-dark">${st.humidity != null ? st.humidity : '--'}</span>%</span>
+                            </div>
                         </td>
                         <td id="table_kwh_${st.station_id}">${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" title="Chỉnh sửa thông tin" onclick="event.stopPropagation(); openEditStation('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-outline-info" title="Cấu hình phần cứng" onclick="event.stopPropagation(); openHardwareConfig('${st.station_id}')"><i class="fas fa-cog"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" title="Cài đặt & Chỉnh sửa" onclick="event.stopPropagation(); openStationSettings('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-cog"></i></button>
                         </td>
                     </tr>`;
 
@@ -1422,7 +1436,7 @@
                                         badgeClass = "bg-light text-secondary border";
                                         displayStatus = "Sẵn sàng";
                                     }
-                                    
+
                                     return `
                                     <div class="col-md-6">
                                         <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
