@@ -1362,12 +1362,12 @@
         // --- QUẢN LÝ TRẠM SẠC ---
         const expandedStations = new Set();
 
-        // Mở Modal Cài đặt Trạm Sạc (Phục hồi chức năng nút bánh răng)
+        // Mở Modal Cài đặt Trạm Sạc (Gộp chức năng thông tin và cấu hình)
         function openStationSettings(stationId, name, location) {
             document.getElementById('settings_station_id').value = stationId;
             document.getElementById('settings_station_label').innerText = stationId;
-            document.getElementById('edit_station_name').value = name;
-            document.getElementById('edit_station_location').value = location;
+            document.getElementById('edit_station_name').value = name || '';
+            document.getElementById('edit_station_location').value = location || '';
             
             // Đặt lại tab đầu tiên mỗi lần mở
             const tabInfoBtn = document.querySelector('#stationSettingsTabs [data-bs-target="#tab_info"]');
@@ -1376,7 +1376,9 @@
                 tab.show();
             }
             
-            new bootstrap.Modal(document.getElementById('stationSettingsModal')).show();
+            const modalEl = document.getElementById('stationSettingsModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
         }
 
         // Giả lương thương thức ngược (Dùng để mở tab phần cứng)
@@ -1400,7 +1402,7 @@
             const stationId = document.getElementById('settings_station_id').value;
             alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + stationId + ' qua MQTT!');
             var modalEl = document.getElementById('stationSettingsModal');
-            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
             if (modalInstance) modalInstance.hide();
         }
 
@@ -1436,7 +1438,7 @@
                     alert(data.message);
                     if (data.success) {
                         var modalEl = document.getElementById('stationSettingsModal');
-                        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                         if (modalInstance) modalInstance.hide();
                         loadStations();
                     }
