@@ -730,137 +730,82 @@
         </div>
     </div>
 
-    <!-- Modal Cấu hình phần cứng (Cũ - Để dùng) -->
-    <div class="modal fade" id="hardwareConfigModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="hwConfigTitle">Cấu hình Tủ sạc</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="hw_station_id">
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo
-                            vệ)</label>
-                        <select class="form-select bg-light border-0">
-                            <option value="10">10A (Sạc chậm - An toàn)</option>
-                            <option value="16" selected>16A (Tiêu chuẩn)</option>
-                            <option value="32">32A (Sạc nhanh - Yêu cầu cáp lớn)</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
-                        <input type="number" class="form-control bg-light border-0" value="65">
-                        <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo
-                            động đỏ.</div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label text-muted small fw-semibold">Chế độ hoạt động</label>
-                        <div class="form-check form-switch mt-1">
-                            <input class="form-check-input" type="checkbox" id="maintenanceSwitch">
-                            <label class="form-check-label text-danger" for="maintenanceSwitch">Chế độ bảo
-                                trì</label>
-                        </div>
-                    </div>
-
-                    <hr class="text-muted">
-
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i
-                                class="fas fa-power-off me-1"></i>Khởi động lại</button>
-                        <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
-                                class="fas fa-check me-1"></i>Lưu cấu hình</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Cài đặt Trạm Sạc (Tabs: Thông tin + Phần cứng) -->
     <div class="modal fade" id="stationSettingsModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Cài đặt Tủ sạc <strong id="settings_station_label">001</strong></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header border-0 pb-2" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                    <div>
+                        <h5 class="modal-title fw-bold text-white mb-0">
+                            <i class="fas fa-cog me-2" style="color: #38bdf8;"></i>
+                            Cài đặt tủ sạc <span id="settings_station_label" class="text-info"></span>
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <!-- Tabs nav -->
+                <ul class="nav nav-tabs border-0 px-3 pt-3 bg-white" id="stationSettingsTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tab_info" type="button">
+                            <i class="fas fa-info-circle me-1 text-primary"></i> Thông tin
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tab_hardware" type="button">
+                            <i class="fas fa-microchip me-1 text-warning"></i> Phần cứng
+                        </button>
+                    </li>
+                </ul>
+                <div class="modal-body p-4">
                     <input type="hidden" id="settings_station_id">
-                    
-                    <!-- Tabs Navigation -->
-                    <ul class="nav nav-tabs mb-3" id="stationSettingsTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tab_info_btn" data-bs-toggle="tab" data-bs-target="#tab_info" type="button" role="tab" aria-controls="tab_info" aria-selected="true">
-                                <i class="fas fa-info-circle me-2"></i>Thông tin
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab_hardware_btn" data-bs-toggle="tab" data-bs-target="#tab_hardware" type="button" role="tab" aria-controls="tab_hardware" aria-selected="false">
-                                <i class="fas fa-microchip me-2"></i>Phần cứng
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="stationSettingsTabContent">
-                        <!-- Tab: Thông tin cơ bản -->
-                        <div class="tab-pane fade show active" id="tab_info" role="tabpanel" aria-labelledby="tab_info_btn">
+                    <div class="tab-content">
+                        <!-- Tab Thông tin -->
+                        <div class="tab-pane fade show active" id="tab_info">
                             <div class="mb-3">
-                                <label class="form-label text-muted small">Tên tủ sạc hiển thị</label>
-                                <input type="text" id="edit_station_name" class="form-control bg-light" placeholder="Ví dụ: Tủ sạc 1 - Khu A">
+                                <label class="form-label text-muted small fw-semibold">Tên tủ sạc hiển thị</label>
+                                <input type="text" id="edit_station_name" class="form-control" placeholder="Ví dụ: Tủ sạc 1 - Khu A">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label text-muted small">Vị trí / Địa chỉ</label>
-                                <input type="text" id="edit_station_location" class="form-control bg-light" placeholder="Ví dụ: Bãi đỗ xe hầm B1">
+                            <div class="mb-4">
+                                <label class="form-label text-muted small fw-semibold">Vị trí / Địa chỉ</label>
+                                <input type="text" id="edit_station_location" class="form-control" placeholder="Ví dụ: Bãi đỗ xe hầm B1">
                             </div>
+                            <button class="btn btn-primary w-100 fw-bold" type="button" onclick="saveStation()">
+                                <i class="fas fa-save me-1"></i> Lưu thông tin
+                            </button>
                         </div>
-
-                        <!-- Tab: Cấu hình phần cứng -->
-                        <div class="tab-pane fade" id="tab_hardware" role="tabpanel" aria-labelledby="tab_hardware_btn">
+                        <!-- Tab Phần cứng -->
+                        <div class="tab-pane fade" id="tab_hardware">
                             <div class="mb-3">
-                                <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo vệ)</label>
-                                <select class="form-select bg-light border-0">
+                                <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa</label>
+                                <select class="form-select">
                                     <option value="10">10A (Sạc chậm - An toàn)</option>
                                     <option value="16" selected>16A (Tiêu chuẩn)</option>
                                     <option value="32">32A (Sạc nhanh - Yêu cầu cáp lớn)</option>
                                 </select>
                             </div>
-
                             <div class="mb-3">
                                 <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
-                                <input type="number" class="form-control bg-light border-0" value="65">
-                                <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
+                                <input type="number" class="form-control" value="65">
+                                <div class="form-text">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
                             </div>
-
                             <div class="mb-4">
                                 <label class="form-label text-muted small fw-semibold">Chế độ hoạt động</label>
                                 <div class="form-check form-switch mt-1">
-                                    <input class="form-check-input" type="checkbox" id="maintenanceSwitchSettings">
-                                    <label class="form-check-label text-danger" for="maintenanceSwitchSettings">Chế độ bảo trì</label>
+                                    <input class="form-check-input" type="checkbox" id="maintenanceSwitch">
+                                    <label class="form-check-label text-danger" for="maintenanceSwitch">Chế độ bảo trì</label>
                                 </div>
                             </div>
-
-                            <hr class="text-muted">
-
-                            <div class="d-flex justify-content-between align-items-center">
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
                                 <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()">
                                     <i class="fas fa-power-off me-1"></i>Khởi động lại
                                 </button>
-                                <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()">
+                                <button class="btn btn-success fw-semibold px-3" onclick="saveHardwareConfig()">
                                     <i class="fas fa-check me-1"></i>Lưu cấu hình
                                 </button>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Nút Lưu chung cho Tab Thông tin -->
-                    <button class="btn btn-primary w-100 fw-bold mt-3" type="button" onclick="saveStation()">
-                        Lưu thay đổi
-                    </button>
                 </div>
             </div>
         </div>
@@ -1426,7 +1371,10 @@
             
             // Đặt lại tab đầu tiên mỗi lần mở
             const tabInfoBtn = document.querySelector('#stationSettingsTabs [data-bs-target="#tab_info"]');
-            if (tabInfoBtn) bootstrap.Tab.getOrCreateInstance(tabInfoBtn).show();
+            if (tabInfoBtn) {
+                const tab = bootstrap.Tab.getOrCreateInstance(tabInfoBtn);
+                tab.show();
+            }
             
             new bootstrap.Modal(document.getElementById('stationSettingsModal')).show();
         }
@@ -1436,7 +1384,10 @@
             openStationSettings(stationId, '', '');
             setTimeout(() => {
                 const tabHwBtn = document.querySelector('#stationSettingsTabs [data-bs-target="#tab_hardware"]');
-                if (tabHwBtn) bootstrap.Tab.getOrCreateInstance(tabHwBtn).show();
+                if (tabHwBtn) {
+                    const tab = bootstrap.Tab.getOrCreateInstance(tabHwBtn);
+                    tab.show();
+                }
             }, 100);
         }
 
