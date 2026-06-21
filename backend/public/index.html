@@ -133,6 +133,7 @@
             font-weight: 600;
             transition: all 0.25s ease;
             gap: 8px; /* Căn chỉnh khoảng cách ngang tự động */
+            margin-right: 16px; /* Căn lề thẳng với bảng bên dưới */
         }
 
         .status-badge.online {
@@ -293,8 +294,12 @@
 
         /* Nút gạt cổng sạc màu xanh lá */
         .form-switch-success .form-check-input {
+            width: 2.8em !important;
+            height: 1.4em !important;
+            margin-left: -2.8em !important;
             border-color: #10b981;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2310b981'/%3e%3c/svg%3e");
+            cursor: pointer;
         }
 
         .form-switch-success .form-check-input:checked {
@@ -312,25 +317,20 @@
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2310b981'/%3e%3c/svg%3e");
         }
 
-        /* Bỏ viền xanh Bootstrap ở bộ lọc thời gian */
-        #station_energy_filter:focus,
-        #station_start_date:focus,
-        #station_end_date:focus {
-            border-color: #dee2e6;
-            box-shadow: none;
-        }
-
-        /* Bộ lọc thời gian - bỏ màu xanh Bootstrap */
+        /* Bộ lọc thời gian - đổi sang màu xám khi hover/focus */
         #station_energy_filter:hover,
         #station_energy_filter:focus,
+        #station_energy_filter:active,
         #station_start_date:hover,
         #station_start_date:focus,
+        #station_start_date:active,
         #station_end_date:hover,
-        #station_end_date:focus {
-            border-color: #dee2e6 !important;
-            box-shadow: none !important;
+        #station_end_date:focus,
+        #station_end_date:active {
+            border-color: #cbd5e1 !important;
+            box-shadow: 0 0 0 0.25rem rgba(203, 213, 225, 0.3) !important;
+            outline: none !important;
         }
-
         /* Đồng bộ màu xanh lá thương hiệu (#10b981) cho toàn bộ web */
         .btn-success {
             background-color: #10b981 !important;
@@ -552,8 +552,7 @@
                     <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: hidden;">
                         <div
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-database me-2 text-secondary"></i>Cơ sở
-                                dữ liệu Trạm</h6>
+                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h6>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <select id="station_energy_filter" class="form-select form-select-sm"
                                     style="width: auto;" onchange="onStationFilterChange()">
@@ -1670,7 +1669,7 @@
                                                  </div>
                                              </div>
                                              <div style="width: 30%; text-align: right; display: flex; justify-content: flex-end;">
-                                                 <div class="form-check form-switch form-switch-success" style="padding-left: 2.5em; margin-bottom: 0;">
+                                                 <div class="form-check form-switch form-switch-success" style="padding-left: 3.2em; margin-bottom: 0;">
                                                      <input class="form-check-input" type="checkbox" id="switch_${uniqueId}" ${disabledAttr} ${outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other' ? 'checked' : ''} onclick="event.stopPropagation(); sendCmd(this.checked ? 'START_CHARGE' : 'STOP_CHARGE', '${st.station_id}', ${outlet.id})">
                                                  </div>
                                              </div>
