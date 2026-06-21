@@ -1363,7 +1363,11 @@
         const expandedStations = new Set();
 
         // Mở Modal Cài đặt Trạm Sạc (Gộp chức năng thông tin và cấu hình)
-        function openStationSettings(stationId, name, location) {
+        function openStationSettings(btn) {
+            const stationId = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            const location = btn.getAttribute('data-location');
+            
             document.getElementById('settings_station_id').value = stationId;
             document.getElementById('settings_station_label').innerText = stationId;
             document.getElementById('edit_station_name').value = name || '';
@@ -1381,21 +1385,7 @@
             modal.show();
         }
 
-        // Giả lương thương thức ngược (Dùng để mở tab phần cứng)
-        function openHardwareConfig(stationId) {
-            openStationSettings(stationId, '', '');
-            setTimeout(() => {
-                const tabHwBtn = document.querySelector('#stationSettingsTabs [data-bs-target="#tab_hardware"]');
-                if (tabHwBtn) {
-                    const tab = bootstrap.Tab.getOrCreateInstance(tabHwBtn);
-                    tab.show();
-                }
-            }, 100);
-        }
-
-        function openEditStation(id, name, location) {
-            openStationSettings(id, name, location);
-        }
+        // Không còn dùng các hàm cũ (openHardwareConfig, openEditStation) vì đã gom vào openStationSettings.
 
         // Lưu cấu hình phần cứng
         function saveHardwareConfig() {
@@ -1512,7 +1502,13 @@
                         <td id="table_kwh_${st.station_id}">${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-secondary" title="Cài đặt & Chỉnh sửa" onclick="event.stopPropagation(); openStationSettings('${st.station_id}', '${st.name}', '${st.location}')"><i class="fas fa-cog"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" title="Cài đặt & Chỉnh sửa" 
+                                data-id="${st.station_id}" 
+                                data-name="${st.name}" 
+                                data-location="${st.location}" 
+                                onclick="event.stopPropagation(); openStationSettings(this)">
+                                <i class="fas fa-cog"></i>
+                            </button>
                         </td>
                     </tr>`;
 
