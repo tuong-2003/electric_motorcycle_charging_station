@@ -87,6 +87,49 @@ db.getConnection((err, connection) => {
                 db.query("ALTER TABLE topup_history ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(100) UNIQUE AFTER id", () => {});
             }
         });
+
+        // [MỚI] Tự động cập nhật thêm cột cấu hình cho bảng stations nếu chưa có
+        db.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stations' AND COLUMN_NAME IN ('max_current', 'temp_limit')
+        `, (err, results) => {
+            if (err) {
+                console.error("⚠️ [MySQL] Lỗi query INFORMATION_SCHEMA.COLUMNS:", err.message);
+                loadStationConfigs();
+            } else if (results) {
+                const columns = results.map(r => r.COLUMN_NAME);
+                const addPromises = [];
+                if (!columns.includes('max_current')) {
+                    addPromises.push(new Promise((resolve) => {
+                        db.query("ALTER TABLE stations ADD COLUMN max_current INT NOT NULL DEFAULT 16", (err) => {
+                            if (err) console.error("⚠️ [MySQL] Lỗi thêm cột max_current:", err.message);
+                            else console.log("✅ [MySQL] Đã thêm cột max_current vào bảng stations.");
+                            resolve();
+                        });
+                    }));
+                }
+                if (!columns.includes('temp_limit')) {
+                    addPromises.push(new Promise((resolve) => {
+                        db.query("ALTER TABLE stations ADD COLUMN temp_limit INT NOT NULL DEFAULT 65", (err) => {
+                            if (err) console.error("⚠️ [MySQL] Lỗi thêm cột temp_limit:", err.message);
+                            else console.log("✅ [MySQL] Đã thêm cột temp_limit vào bảng stations.");
+                            resolve();
+                        });
+                    }));
+                }
+                
+                if (addPromises.length > 0) {
+                    Promise.all(addPromises).then(() => {
+                        loadStationConfigs();
+                    });
+                } else {
+                    loadStationConfigs();
+                }
+            } else {
+                loadStationConfigs();
+            }
+        });
     }
 });
 
@@ -115,6 +158,26 @@ const client = mqtt.connect(MQTT_BROKER);
 
 // [TỐI ƯU] Bộ nhớ đệm (RAM Cache) lưu trạng thái mới nhất của trạm
 const liveDataCache = {};
+
+// [MỚI] Bộ nhớ đệm lưu cấu hình dòng sạc và nhiệt độ cảnh báo của các trạm
+const stationConfigCache = {};
+
+function loadStationConfigs() {
+    db.query('SELECT station_id, max_current, temp_limit, status FROM stations', (err, results) => {
+        if (err) {
+            console.error('⚠️ [Cache] Lỗi đồng bộ cấu hình trạm sạc:', err.message);
+        } else if (results) {
+            results.forEach(row => {
+                stationConfigCache[row.station_id] = {
+                    max_current: row.max_current,
+                    temp_limit: row.temp_limit,
+                    status: row.status
+                };
+            });
+            console.log('📶 [Cache] Đã đồng bộ cấu hình trạm sạc vào RAM:', stationConfigCache);
+        }
+    });
+}
 
 // Dùng wildcard để hứng mọi tín hiệu từ mọi Tủ và mọi Ổ
 const TOPIC_STATUS = 'ev_station/+/outlet/+/status';
@@ -155,6 +218,44 @@ client.on('message', (topic, message) => {
             db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err) => {
                 if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
             });
+
+            // [MỚI] Kiểm tra bảo vệ quá tải và quá nhiệt từ cấu hình cache
+            const config = stationConfigCache[stationId];
+            if (config) {
+                // 1. Kiểm tra quá dòng (overcurrent protection)
+                if (data.current && data.current > config.max_current) {
+                    console.warn(`🚨 [BẢO VỆ] Phát hiện quá dòng tại Tủ ${stationId} - Cổng ${outletId}: ${data.current}A (Giới hạn: ${config.max_current}A). Đang ngắt sạc khẩn cấp!`);
+                    
+                    // Gửi lệnh ngắt sạc qua MQTT
+                    client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                    
+                    // Chốt phiên sạc trong DB
+                    db.query('SELECT user_id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [`${stationId}.${outletId}`], (err, activeSessions) => {
+                        if (!err && activeSessions && activeSessions.length > 0) {
+                            processStopCharge(stationId, outletId, activeSessions[0].user_id, () => {});
+                        }
+                    });
+                }
+
+                // 2. Kiểm tra quá nhiệt (overtemperature protection)
+                if (data.temperature && data.temperature > config.temp_limit) {
+                    console.warn(`🚨 [BẢO VỆ] Phát hiện quá nhiệt tại Tủ ${stationId}: ${data.temperature}°C (Giới hạn: ${config.temp_limit}°C). Đang ngắt sạc toàn tủ!`);
+                    
+                    // Gửi lệnh ngắt sạc qua MQTT cho cả 2 cổng
+                    client.publish(`ev_station/${stationId}/outlet/1/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                    client.publish(`ev_station/${stationId}/outlet/2/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                    
+                    // Chốt toàn bộ phiên sạc đang sạc của trạm này
+                    db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
+                        if (!err && activeSessions) {
+                            activeSessions.forEach(session => {
+                                const outId = session.station_id.split('.')[1];
+                                processStopCharge(stationId, outId, session.user_id, () => {});
+                            });
+                        }
+                    });
+                }
+            }
         } catch (error) {
             // [BẢO VỆ] Bỏ qua gói tin lỗi, ngăn Node.js bị crash (sập server) nếu nhận chuỗi không phải JSON
         }
@@ -400,6 +501,13 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
             return res.status(400).json({ success: false, message: '⛔ Số dư ví không đủ để sạc!' });
         }
 
+        // [MỚI] Kiểm tra xem tủ sạc có đang ở chế độ bảo trì hay không
+        const config = stationConfigCache[stationId];
+        if (config && config.status === 'maintenance') {
+            releaseLock();
+            return res.status(400).json({ success: false, message: '⛔ Tủ sạc này đang ở chế độ bảo trì, không thể bắt đầu sạc!' });
+        }
+
         // 2. Kiểm tra xem trụ sạc có đang rảnh không
         db.query('SELECT id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [`${stationId}.${outletId}`], (err, sessions) => {
             if (sessions.length > 0) {
@@ -558,6 +666,8 @@ app.get('/api/stations', verifyToken, (req, res) => {
             s.location, 
             s.unit_price, 
             s.status,
+            s.max_current,
+            s.temp_limit,
             COALESCE(SUM(cs.total_kwh), 0) as total_kwh
         FROM stations s
         LEFT JOIN charging_sessions cs ON ${joinCondition}
@@ -613,19 +723,47 @@ app.get('/api/stations', verifyToken, (req, res) => {
 
 // API Chỉnh sửa Tên và Địa chỉ Trạm sạc (Chỉ Admin)
 app.put('/api/stations/:id', verifyToken, (req, res) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền chỉnh sửa trạm sạc!' });
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền cấu hình trạm sạc!' });
 
     const stationId = req.params.id;
-    const { name } = req.body;
+    const { name, max_current, temp_limit, status } = req.body;
 
     if (!name) return res.status(400).json({ success: false, message: 'Vui lòng nhập Tên tủ sạc!' });
 
-    db.query('UPDATE stations SET name = ? WHERE station_id = ?', [name, stationId], (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật trạm sạc' });
+    db.query(
+        'UPDATE stations SET name = ?, max_current = ?, temp_limit = ?, status = ? WHERE station_id = ?',
+        [name, max_current || 16, temp_limit || 65, status || 'online', stationId],
+        (err) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật trạm sạc' });
 
-        // [TỐI ƯU] Xóa Cache tạm thời nếu có hoặc chỉnh sửa cơ chế Reload (Ở đây DB đã nhận 100% chuẩn)
-        res.json({ success: true, message: 'Cập nhật thông tin trạm sạc thành công!' });
-    });
+            // Đồng bộ lại cấu hình trạm sạc vào RAM Cache ngay lập tức
+            stationConfigCache[stationId] = {
+                max_current: parseInt(max_current || 16),
+                temp_limit: parseInt(temp_limit || 65),
+                status: status || 'online'
+            };
+
+            // Nếu đổi trạng thái sang Bảo trì (maintenance), tự động gửi lệnh ngắt sạc cho tất cả ổ cắm thuộc tủ này
+            if (status === 'maintenance') {
+                console.log(`🛠️ [Admin] Đặt tủ sạc ${stationId} sang chế độ BẢO TRÌ. Tự động ngắt sạc các cổng.`);
+                // Đẩy lệnh ngắt sạc qua MQTT cho cả 2 ổ sạc
+                client.publish(`ev_station/${stationId}/outlet/1/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                client.publish(`ev_station/${stationId}/outlet/2/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                
+                // Chốt các phiên sạc đang chạy của trạm này (nếu có)
+                db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
+                    if (!err && activeSessions) {
+                        activeSessions.forEach(session => {
+                            const outId = session.station_id.split('.')[1];
+                            processStopCharge(stationId, outId, session.user_id, () => {});
+                        });
+                    }
+                });
+            }
+
+            res.json({ success: true, message: 'Cập nhật cấu hình trạm sạc thành công!' });
+        }
+    );
 });
 
 // API Lấy thông tin ví tiền của User đang đăng nhập

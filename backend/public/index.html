@@ -272,6 +272,27 @@
         .outlets-row {
             background-color: #f8f9fa;
         }
+
+        /* Nút gạt chế độ bảo trì màu đỏ */
+        .form-switch-danger .form-check-input {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
+        }
+        
+        .form-switch-danger .form-check-input:checked {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+        }
+
+        .form-switch-danger .form-check-input:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }
+
+        .form-switch-danger .form-check-input:not(:checked):focus {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
+        }
     </style>
 </head>
 
@@ -750,7 +771,7 @@
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo
                             vệ)</label>
-                        <select class="form-select bg-light border-0">
+                        <select id="edit_max_current" class="form-select bg-light border-0">
                             <option value="10">10A (Sạc chậm - An toàn)</option>
                             <option value="16" selected>16A (Tiêu chuẩn)</option>
                             <option value="32">32A (Sạc nhanh - Yêu cầu cáp lớn)</option>
@@ -759,24 +780,14 @@
 
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
-                        <input type="number" class="form-control bg-light border-0" value="65">
+                        <input type="number" id="edit_temp_limit" class="form-control bg-light border-0" value="65">
                         <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo
                             động đỏ.</div>
                     </div>
 
-                    <style>
-                        #maintenanceSwitch:checked {
-                            background-color: #dc3545;
-                            border-color: #dc3545;
-                        }
-                        #maintenanceSwitch:focus {
-                            border-color: #dc3545;
-                            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
-                        }
-                    </style>
                     <div class="mb-3">
                         <label class="form-label text-danger small fw-semibold">Chế độ hoạt động</label>
-                        <div class="form-check form-switch mt-1">
+                        <div class="form-check form-switch form-switch-danger mt-1">
                             <input class="form-check-input" type="checkbox" id="maintenanceSwitch">
                             <label class="form-check-label text-danger" for="maintenanceSwitch">Bảo trì</label>
                         </div>
@@ -802,6 +813,7 @@
     <script>
         // --- HỆ THỐNG CẢNH BÁO (ALERTS ENGINE) ---
         let systemAlerts = [];
+        const stationLimits = {}; // Lưu trữ cấu hình giới hạn các trạm ở client-side
 
         function addSystemAlert(id, message, type) {
             const existing = systemAlerts.find(a => a.id === id);
@@ -1032,18 +1044,19 @@
                 // Cập nhật nhiệt độ & độ ẩm nếu mạch phần cứng có gửi lên
                 if (data.temperature !== undefined) {
                     const tempEl = document.getElementById('temp_' + stationId);
+                    const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16 };
                     if (tempEl) {
                         tempEl.innerText = data.temperature;
-                        if (data.temperature > 60) {
+                        if (data.temperature > limits.temp_limit) {
                             tempEl.className = "fw-bold text-danger";
                         } else {
                             tempEl.className = "fw-semibold text-dark";
                         }
                     }
 
-                    // Thêm/Xóa cảnh báo quá nhiệt (nếu > 60 độ C)
-                    if (data.temperature > 60) {
-                        addSystemAlert('temp_' + stationId, `Nhiệt độ Tủ sạc ${stationId} quá cao: ${data.temperature}°C!`, 'warning');
+                    // Thêm/Xóa cảnh báo quá nhiệt (nếu vượt ngưỡng)
+                    if (data.temperature > limits.temp_limit) {
+                        addSystemAlert('temp_' + stationId, `Nhiệt độ Tủ sạc ${stationId} quá cao: ${data.temperature}°C! (Giới hạn: ${limits.temp_limit}°C)`, 'danger');
                     } else {
                         removeSystemAlert('temp_' + stationId);
                     }
@@ -1051,6 +1064,14 @@
                 if (data.humidity !== undefined) {
                     const humEl = document.getElementById('hum_' + stationId);
                     if (humEl) humEl.innerText = data.humidity;
+                }
+
+                // [MỚI] Thêm/Xóa cảnh báo quá tải dòng sạc thực tế (nếu vượt ngưỡng)
+                const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16 };
+                if (data.current !== undefined && data.current > limits.max_current) {
+                    addSystemAlert('current_' + uniqueId, `Cổng ${stationId}.${outletId} quá tải dòng sạc: ${data.current.toFixed(2)}A! (Giới hạn: ${limits.max_current}A)`, 'danger');
+                } else {
+                    removeSystemAlert('current_' + uniqueId);
                 }
 
                 // Cập nhật Card tổng quan (Cộng gộp công suất)
@@ -1348,10 +1369,16 @@
         function openStationSettings(btn) {
             const stationId = btn.getAttribute('data-id');
             const name = btn.getAttribute('data-name');
+            const maxCurrent = btn.getAttribute('data-max-current') || '16';
+            const tempLimit = btn.getAttribute('data-temp-limit') || '65';
+            const status = btn.getAttribute('data-status') || 'online';
 
             document.getElementById('settings_station_id').value = stationId;
             document.getElementById('settings_station_label').innerText = 'Cài đặt tủ ' + stationId;
             document.getElementById('edit_station_name').value = name || '';
+            document.getElementById('edit_max_current').value = maxCurrent;
+            document.getElementById('edit_temp_limit').value = tempLimit;
+            document.getElementById('maintenanceSwitch').checked = (status === 'maintenance');
 
             const modalEl = document.getElementById('stationSettingsModal');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -1364,6 +1391,10 @@
         function saveHardwareConfig() {
             const id = document.getElementById('settings_station_id').value;
             const newName = document.getElementById('edit_station_name').value;
+            const maxCurrent = document.getElementById('edit_max_current').value;
+            const tempLimit = document.getElementById('edit_temp_limit').value;
+            const isMaintenance = document.getElementById('maintenanceSwitch').checked;
+            const status = isMaintenance ? 'maintenance' : 'online';
 
             if (!newName) {
                 alert("Vui lòng nhập tên tủ sạc!");
@@ -1376,12 +1407,17 @@
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + authToken
                 },
-                body: JSON.stringify({ name: newName })
+                body: JSON.stringify({ 
+                    name: newName,
+                    max_current: parseInt(maxCurrent),
+                    temp_limit: parseInt(tempLimit),
+                    status: status
+                })
             })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + id + ' qua MQTT!\n\n' + data.message);
+                        alert('Đã lưu cấu hình và gửi lệnh cập nhật xuống Tủ sạc ' + id + '!\n\n' + data.message);
                         var modalEl = document.getElementById('stationSettingsModal');
                         var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                         if (modalInstance) modalInstance.hide();
@@ -1435,6 +1471,12 @@
                     tbody.innerHTML = '';
                     if (data.success) {
                         data.data.forEach(st => {
+                            // Cập nhật cache giới hạn của trạm sạc ở client
+                            stationLimits[st.station_id] = {
+                                max_current: st.max_current || 16,
+                                temp_limit: st.temp_limit || 65
+                            };
+
                             // Trạng thái tủ sạc (cabinet level)
                             let cabinetStatus;
                             if (st.status === 'online') {
@@ -1471,6 +1513,9 @@
                                 data-id="${st.station_id}" 
                                 data-name="${st.name}" 
                                 data-location="${st.location}" 
+                                data-max-current="${st.max_current || 16}"
+                                data-temp-limit="${st.temp_limit || 65}"
+                                data-status="${st.status}"
                                 onclick="event.stopPropagation(); openStationSettings(this)">
                                 <i class="fas fa-cog"></i>
                             </button>
