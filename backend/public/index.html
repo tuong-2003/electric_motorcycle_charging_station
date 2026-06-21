@@ -728,34 +728,9 @@
                 </div>
             </div>
         </div>
-    </div><!-- Modal Sửa Trạm Sạc -->
-    <div class="modal fade" id="editStationModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Chỉnh sửa Tủ sạc</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="edit_station_id">
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">Tên tủ sạc hiển thị</label>
-                        <input type="text" id="edit_station_name" class="form-control bg-light"
-                            placeholder="Ví dụ: Tủ sạc 1 - Khu A">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">Vị trí / Địa chỉ</label>
-                        <input type="text" id="edit_station_location" class="form-control bg-light"
-                            placeholder="Ví dụ: Bãi đỗ xe hầm B1">
-                    </div>
-                    <button class="btn btn-primary w-100 fw-bold mt-2" type="button" onclick="saveStation()">Lưu thay
-                        đổi</button>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Modal Cấu hình phần cứng -->
+    <!-- Modal Cấu hình phần cứng (Cũ - Để dùng) -->
     <div class="modal fade" id="hardwareConfigModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
@@ -800,6 +775,92 @@
                         <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
                                 class="fas fa-check me-1"></i>Lưu cấu hình</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cài đặt Trạm Sạc (Tabs: Thông tin + Phần cứng) -->
+    <div class="modal fade" id="stationSettingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Cài đặt Tủ sạc <strong id="settings_station_label">001</strong></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="settings_station_id">
+                    
+                    <!-- Tabs Navigation -->
+                    <ul class="nav nav-tabs mb-3" id="stationSettingsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab_info_btn" data-bs-toggle="tab" data-bs-target="#tab_info" type="button" role="tab" aria-controls="tab_info" aria-selected="true">
+                                <i class="fas fa-info-circle me-2"></i>Thông tin
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab_hardware_btn" data-bs-toggle="tab" data-bs-target="#tab_hardware" type="button" role="tab" aria-controls="tab_hardware" aria-selected="false">
+                                <i class="fas fa-microchip me-2"></i>Phần cứng
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="stationSettingsTabContent">
+                        <!-- Tab: Thông tin cơ bản -->
+                        <div class="tab-pane fade show active" id="tab_info" role="tabpanel" aria-labelledby="tab_info_btn">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Tên tủ sạc hiển thị</label>
+                                <input type="text" id="edit_station_name" class="form-control bg-light" placeholder="Ví dụ: Tủ sạc 1 - Khu A">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Vị trí / Địa chỉ</label>
+                                <input type="text" id="edit_station_location" class="form-control bg-light" placeholder="Ví dụ: Bãi đỗ xe hầm B1">
+                            </div>
+                        </div>
+
+                        <!-- Tab: Cấu hình phần cứng -->
+                        <div class="tab-pane fade" id="tab_hardware" role="tabpanel" aria-labelledby="tab_hardware_btn">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo vệ)</label>
+                                <select class="form-select bg-light border-0">
+                                    <option value="10">10A (Sạc chậm - An toàn)</option>
+                                    <option value="16" selected>16A (Tiêu chuẩn)</option>
+                                    <option value="32">32A (Sạc nhanh - Yêu cầu cáp lớn)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
+                                <input type="number" class="form-control bg-light border-0" value="65">
+                                <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label text-muted small fw-semibold">Chế độ hoạt động</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="maintenanceSwitchSettings">
+                                    <label class="form-check-label text-danger" for="maintenanceSwitchSettings">Chế độ bảo trì</label>
+                                </div>
+                            </div>
+
+                            <hr class="text-muted">
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()">
+                                    <i class="fas fa-power-off me-1"></i>Khởi động lại
+                                </button>
+                                <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()">
+                                    <i class="fas fa-check me-1"></i>Lưu cấu hình
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nút Lưu chung cho Tab Thông tin -->
+                    <button class="btn btn-primary w-100 fw-bold mt-3" type="button" onclick="saveStation()">
+                        Lưu thay đổi
+                    </button>
                 </div>
             </div>
         </div>
@@ -1356,6 +1417,85 @@
         // --- QUẢN LÝ TRẠM SẠC ---
         const expandedStations = new Set();
 
+        // Mở Modal Cài đặt Trạm Sạc (Phục hồi chức năng nút bánh răng)
+        function openStationSettings(stationId, name, location) {
+            document.getElementById('settings_station_id').value = stationId;
+            document.getElementById('settings_station_label').innerText = stationId;
+            document.getElementById('edit_station_name').value = name;
+            document.getElementById('edit_station_location').value = location;
+            
+            // Đặt lại tab đầu tiên mỗi lần mở
+            const tabInfoBtn = document.querySelector('#stationSettingsTabs [data-bs-target="#tab_info"]');
+            if (tabInfoBtn) bootstrap.Tab.getOrCreateInstance(tabInfoBtn).show();
+            
+            new bootstrap.Modal(document.getElementById('stationSettingsModal')).show();
+        }
+
+        // Giả lương thương thức ngược (Dùng để mở tab phần cứng)
+        function openHardwareConfig(stationId) {
+            openStationSettings(stationId, '', '');
+            setTimeout(() => {
+                const tabHwBtn = document.querySelector('#stationSettingsTabs [data-bs-target="#tab_hardware"]');
+                if (tabHwBtn) bootstrap.Tab.getOrCreateInstance(tabHwBtn).show();
+            }, 100);
+        }
+
+        function openEditStation(id, name, location) {
+            openStationSettings(id, name, location);
+        }
+
+        // Lưu cấu hình phần cứng
+        function saveHardwareConfig() {
+            const stationId = document.getElementById('settings_station_id').value;
+            alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + stationId + ' qua MQTT!');
+            var modalEl = document.getElementById('stationSettingsModal');
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        // Khởi động lại Tủ sạc
+        function rebootStation() {
+            const stationId = document.getElementById('settings_station_id').value;
+            if (confirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?')) {
+                alert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!');
+            }
+        }
+
+        // Lưu dữ liệu Edit lên Server
+        function saveStation() {
+            const id = document.getElementById('settings_station_id').value;
+            const newName = document.getElementById('edit_station_name').value;
+            const newLocation = document.getElementById('edit_station_location').value;
+
+            if (!newName || !newLocation) {
+                alert("Vui lòng nhập đủ tên và địa chỉ!");
+                return;
+            }
+
+            fetch('/api/stations/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ name: newName, location: newLocation })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) {
+                        var modalEl = document.getElementById('stationSettingsModal');
+                        var modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                        loadStations();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Lỗi kết nối máy chủ");
+                });
+        }
+
         function toggleOutletsRow(stationId, btn) {
             const row = document.getElementById('outlets_row_' + stationId);
             const chevron = btn.querySelector('.fa-chevron-right');
@@ -1477,76 +1617,6 @@
                             </tr>`;
                         });
                     }
-                });
-        }
-
-        // Mở Popup Cấu hình phần cứng
-        function openHardwareConfig(stationId) {
-            document.getElementById('hw_station_id').value = stationId;
-            document.getElementById('hwConfigTitle').innerText = 'Cấu hình Tủ sạc ' + stationId;
-            var hwModal = new bootstrap.Modal(document.getElementById('hardwareConfigModal'));
-            hwModal.show();
-        }
-
-        // Lưu cấu hình phần cứng
-        function saveHardwareConfig() {
-            const stationId = document.getElementById('hw_station_id').value;
-            alert('Đã gửi lệnh cập nhật cấu hình xuống Tủ sạc ' + stationId + ' qua MQTT!');
-            var modalEl = document.getElementById('hardwareConfigModal');
-            var modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
-        }
-
-        // Khởi động lại Tủ sạc
-        function rebootStation() {
-            const stationId = document.getElementById('hw_station_id').value;
-            if (confirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?')) {
-                alert('Đã gửi lệnh [REBOOT] xuống Tủ sạc ' + stationId + '!');
-            }
-        }
-
-        // Mở Popup Edit
-        function openEditStation(id, name, location) {
-            document.getElementById('edit_station_id').value = id;
-            document.getElementById('edit_station_name').value = name;
-            document.getElementById('edit_station_location').value = location;
-
-            var editModal = new bootstrap.Modal(document.getElementById('editStationModal'));
-            editModal.show();
-        }
-
-        // Lưu dữ liệu Edit lên Server
-        function saveStation() {
-            const id = document.getElementById('edit_station_id').value;
-            const newName = document.getElementById('edit_station_name').value;
-            const newLocation = document.getElementById('edit_station_location').value;
-
-            if (!newName || !newLocation) {
-                alert("Vui lòng nhập đủ tên và địa chỉ!");
-                return;
-            }
-
-            fetch('/api/stations/' + id, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + authToken
-                },
-                body: JSON.stringify({ name: newName, location: newLocation })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    alert(data.message);
-                    if (data.success) {
-                        var modalEl = document.getElementById('editStationModal');
-                        var modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) modalInstance.hide();
-                        loadStations();
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("Lỗi kết nối máy chủ");
                 });
         }
 
