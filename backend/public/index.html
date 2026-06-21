@@ -82,7 +82,7 @@
         }
 
         .border-success-left {
-            border-left: 4px solid #198754 !important;
+            border-left: 4px solid #10b981 !important;
         }
 
         .border-info-left {
@@ -110,8 +110,8 @@
         }
 
         .bg-success-light {
-            background-color: rgba(25, 135, 84, 0.08) !important;
-            color: #198754 !important;
+            background-color: rgba(16, 185, 129, 0.08) !important;
+            color: #10b981 !important;
         }
 
         .bg-info-light {
@@ -124,34 +124,26 @@
             color: #dc3545 !important;
         }
 
-        /* Connection Status Badge (Pill Style) */
+        /* Connection Status Badge (Text with Dot Only) */
         .status-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: 600;
             transition: all 0.25s ease;
-            border: 1px solid transparent;
-            min-width: 135px;
         }
 
         .status-badge.online {
-            background-color: rgba(25, 135, 84, 0.08);
-            color: #198754;
-            border-color: rgba(25, 135, 84, 0.15);
+            color: #10b981;
         }
 
         .status-badge.online .status-dot {
-            background-color: #198754;
+            background-color: #10b981;
         }
 
         .status-badge.warning {
-            background-color: rgba(255, 193, 7, 0.08);
             color: #f59e0b;
-            border-color: rgba(255, 193, 7, 0.15);
         }
 
         .status-badge.warning .status-dot {
@@ -159,9 +151,7 @@
         }
 
         .status-badge.danger {
-            background-color: rgba(220, 53, 69, 0.08);
             color: #dc3545;
-            border-color: rgba(220, 53, 69, 0.15);
         }
 
         .status-badge.danger .status-dot {
@@ -311,6 +301,23 @@
         #station_end_date:focus {
             border-color: #dee2e6 !important;
             box-shadow: none !important;
+        }
+
+        /* Đồng bộ màu xanh lá thương hiệu (#10b981) cho toàn bộ web */
+        .btn-success {
+            background-color: #10b981 !important;
+            border-color: #10b981 !important;
+        }
+        .btn-success:hover, .btn-success:focus, .btn-success:active {
+            background-color: #059669 !important;
+            border-color: #059669 !important;
+            box-shadow: none !important;
+        }
+        .text-success {
+            color: #10b981 !important;
+        }
+        .bg-success {
+            background-color: #10b981 !important;
         }
     </style>
 </head>
@@ -1050,18 +1057,11 @@
                 if (badgeElem) {
                     const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16, status: 'online' };
                     let displayStatus = data.status;
-                    if (limits.status === 'maintenance') {
+                    const isMaint = (limits.status === 'maintenance');
+
+                    if (isMaint) {
                         badgeElem.className = "badge bg-danger-light text-danger border border-danger-subtle rounded-pill fw-normal";
                         displayStatus = "Bảo trì";
-                        // Vô hiệu hóa nút Bật/Tắt
-                        const row = document.getElementById('outlets_row_' + stationId);
-                        if (row) {
-                            row.querySelectorAll('button').forEach(btn => {
-                                if (btn.innerText === 'Bật' || btn.innerText === 'Tắt') {
-                                    btn.disabled = true;
-                                }
-                            });
-                        }
                     } else if (data.status === 'CHARGING') {
                         badgeElem.className = "badge bg-success rounded-pill fw-normal";
                         displayStatus = "Đang sạc";
@@ -1075,6 +1075,36 @@
                     document.getElementById('stat_v_' + uniqueId).innerText = data.voltage.toFixed(1);
                     document.getElementById('stat_i_' + uniqueId).innerText = data.current.toFixed(2);
                     document.getElementById('stat_p_' + uniqueId).innerText = data.power.toFixed(1);
+
+                    // Cập nhật trạng thái màu của icon cắm sạc & nút điều khiển Bật/Tắt của riêng cổng này
+                    const outletCard = badgeElem.closest('.p-3');
+                    if (outletCard) {
+                        const iconWrapper = outletCard.querySelector('.icon-wrapper-stat');
+                        const plugIcon = iconWrapper?.querySelector('.fa-plug');
+                        
+                        if (iconWrapper && plugIcon) {
+                            if (isMaint) {
+                                iconWrapper.style.backgroundColor = "rgba(220, 53, 69, 0.08)";
+                                iconWrapper.style.color = "#dc3545";
+                                plugIcon.style.color = "#dc3545";
+                            } else if (data.status === 'CHARGING') {
+                                iconWrapper.style.backgroundColor = "rgba(16, 185, 129, 0.08)";
+                                iconWrapper.style.color = "#10b981";
+                                plugIcon.style.color = "#10b981";
+                            } else {
+                                iconWrapper.style.backgroundColor = "rgba(107, 114, 128, 0.08)";
+                                iconWrapper.style.color = "#6b7280";
+                                plugIcon.style.color = "#6b7280";
+                            }
+                        }
+
+                        // Vô hiệu hóa nút Bật/Tắt nếu tủ sạc đang ở chế độ bảo trì
+                        outletCard.querySelectorAll('button').forEach(btn => {
+                            if (btn.innerText === 'Bật' || btn.innerText === 'Tắt') {
+                                btn.disabled = isMaint;
+                            }
+                        });
+                    }
                 }
 
                 // Cập nhật nhiệt độ & độ ẩm nếu mạch phần cứng có gửi lên
@@ -1558,56 +1588,70 @@
                         </td>
                     </tr>`;
 
-                            let outletsHtml = '';
-                            if (st.outlets && st.outlets.length > 0) {
-                                outletsHtml = st.outlets.map(outlet => {
-                                    const uniqueId = `${st.station_id}_${outlet.id}`;
-                                    let badgeClass = "bg-light text-secondary border";
-                                    let displayStatus = "Chờ...";
-                                    if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
-                                        badgeClass = "bg-success text-white";
-                                        displayStatus = "Đang sạc";
-                                    } else if (outlet.status === 'available') {
-                                        badgeClass = "bg-light text-secondary border";
-                                        displayStatus = "Sẵn sàng";
-                                    }
+                             let outletsHtml = '';
+                             if (st.outlets && st.outlets.length > 0) {
+                                 outletsHtml = st.outlets.map(outlet => {
+                                     const uniqueId = `${st.station_id}_${outlet.id}`;
+                                     let badgeClass = "bg-light text-secondary border";
+                                     let displayStatus = "Chờ...";
+                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
+                                         badgeClass = "bg-success text-white";
+                                         displayStatus = "Đang sạc";
+                                     } else if (outlet.status === 'available') {
+                                         badgeClass = "bg-light text-secondary border";
+                                         displayStatus = "Sẵn sàng";
+                                     }
+ 
+                                     // Nếu trạm sạc đang ở chế độ bảo trì
+                                     const isMaint = (st.status === 'maintenance');
+                                     if (isMaint) {
+                                         badgeClass = "bg-danger-light text-danger border border-danger-subtle";
+                                         displayStatus = "Bảo trì";
+                                     }
+ 
+                                     const disabledAttr = isMaint ? 'disabled' : '';
 
-                                    // Nếu trạm sạc đang ở chế độ bảo trì
-                                    const isMaint = (st.status === 'maintenance');
-                                    if (isMaint) {
-                                        badgeClass = "bg-danger-light text-danger border border-danger-subtle";
-                                        displayStatus = "Bảo trì";
-                                    }
-
-                                    const disabledAttr = isMaint ? 'disabled' : '';
-
-                                    return `
-                                    <div class="col-md-6">
-                                        <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
-                                            <div class="d-flex align-items-center" style="width: 25%;">
-                                                <div class="icon-wrapper-stat me-2" style="width: 32px; height: 32px; background-color: rgba(13, 110, 253, 0.08); color: #0d6efd; border-radius: 6px; flex-shrink: 0; display:flex; align-items:center; justify-content:center;">
-                                                    <i class="fas fa-plug text-primary" style="font-size: 0.9rem;"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="fw-bold text-dark" style="font-size: 0.85rem;">Cổng ${outlet.id}</div>
-                                                    <span id="stat_badge_${uniqueId}" class="badge ${badgeClass} rounded-pill fw-normal mt-1" style="font-size: 0.7rem;">${displayStatus}</span>
-                                                </div>
-                                            </div>
-                                            <div style="width: 45%;" class="text-center px-1 text-muted small">
-                                                <span id="stat_v_${uniqueId}">${(outlet.voltage || 0).toFixed(1)}</span>V &bull; <span id="stat_i_${uniqueId}">${(outlet.current || 0).toFixed(2)}</span>A<br>
-                                                <strong class="text-dark"><span id="stat_p_${uniqueId}">${(outlet.power || 0).toFixed(1)}</span> W</strong>
-                                            </div>
-                                            <div style="width: 30%; text-align: right;">
-                                                <div class="btn-group shadow-sm rounded-pill" role="group">
-                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 20px 0 0 20px; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('START_CHARGE', '${st.station_id}', ${outlet.id})">Bật</button>
-                                                    <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 0 20px 20px 0; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('STOP_CHARGE', '${st.station_id}', ${outlet.id})">Tắt</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    `;
-                                }).join('');
-                            }
+                                     // Màu icon động theo trạng thái của từng cổng
+                                     let iconBg = "rgba(107, 114, 128, 0.08)";
+                                     let iconColor = "#6b7280";
+                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
+                                         iconBg = "rgba(16, 185, 129, 0.08)";
+                                         iconColor = "#10b981";
+                                     } else if (outlet.status === 'maintenance' || isMaint) {
+                                         iconBg = "rgba(220, 53, 69, 0.08)";
+                                         iconColor = "#dc3545";
+                                     }
+ 
+                                     return `
+                                     <div class="col-md-6">
+                                         <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
+                                             <div class="d-flex align-items-center" style="width: 25%;">
+                                                 <div class="icon-wrapper-stat me-2" style="width: 32px; height: 32px; background-color: ${iconBg}; color: ${iconColor}; border-radius: 6px; flex-shrink: 0; display:flex; align-items:center; justify-content:center;">
+                                                     <i class="fas fa-plug" style="font-size: 0.9rem; color: ${iconColor};"></i>
+                                                 </div>
+                                                 <div>
+                                                     <div class="fw-bold text-dark" style="font-size: 0.85rem;">Cổng ${outlet.id}</div>
+                                                     <span id="stat_badge_${uniqueId}" class="badge ${badgeClass} rounded-pill fw-normal mt-1" style="font-size: 0.7rem;">${displayStatus}</span>
+                                                 </div>
+                                             </div>
+                                             <div style="width: 45%;" class="text-start px-2 text-muted small">
+                                                 <div style="line-height: 1.5;">
+                                                     <div>Điện áp: <strong class="text-dark"><span id="stat_v_${uniqueId}">${(outlet.voltage || 0).toFixed(1)}</span> V</strong></div>
+                                                     <div>Dòng sạc: <strong class="text-dark"><span id="stat_i_${uniqueId}">${(outlet.current || 0).toFixed(2)}</span> A</strong></div>
+                                                     <div>Công suất: <strong class="text-dark"><span id="stat_p_${uniqueId}">${(outlet.power || 0).toFixed(1)}</span> W</strong></div>
+                                                 </div>
+                                             </div>
+                                             <div style="width: 30%; text-align: right;">
+                                                 <div class="btn-group shadow-sm rounded-pill" role="group">
+                                                     <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 20px 0 0 20px; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('START_CHARGE', '${st.station_id}', ${outlet.id})">Bật</button>
+                                                     <button class="btn btn-sm btn-outline-secondary px-2" style="border-radius: 0 20px 20px 0; font-size: 0.75rem;" ${disabledAttr} onclick="event.stopPropagation(); sendCmd('STOP_CHARGE', '${st.station_id}', ${outlet.id})">Tắt</button>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </div>
+                                     `;
+                                 }).join('');
+                             }
 
                             tbody.innerHTML += `<tr id="outlets_row_${st.station_id}" class="${isExpanded ? '' : 'd-none'} outlets-row border-bottom">
                                 <td colspan="8" class="p-3 border-0">
