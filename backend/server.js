@@ -33,7 +33,15 @@ const db = mysql.createPool({
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    timezone: '+07:00' // Bổ sung cấu hình này để driver format đúng Date objects
+});
+
+// Thiết lập múi giờ cho mọi kết nối khi chúng được khởi tạo trong Pool
+db.on('connection', (connection) => {
+    connection.query("SET time_zone = '+07:00';", (err) => {
+        if (err) console.error('⚠️ [MySQL] Lỗi set timezone cho kết nối mới:', err.message);
+    });
 });
 
 db.getConnection((err, connection) => {
@@ -42,11 +50,6 @@ db.getConnection((err, connection) => {
     } else {
         console.log('🗄️ [MySQL] Đã kết nối tới Database thành công (Connection Pool)!');
         connection.release(); // Trả kết nối lại cho pool
-
-        // [FIX] Ép múi giờ của Database về giờ Việt Nam (GMT+7) cho mọi truy vấn
-        db.query("SET time_zone = '+07:00';", (err) => {
-            if (err) console.error('⚠️ [MySQL] Không thể set timezone:', err.message);
-        });
 
         // [MỚI] Tự động tạo tài khoản Admin mặc định nếu chưa có
         const adminUser = process.env.ADMIN_USERNAME || 'Admin';
@@ -521,11 +524,11 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
                 if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc trên Database!' });
 
                 console.log(`📲 [API] User [${req.user.username}] bắt đầu sạc tại Tủ ${stationId}, Ổ ${outletId}`);
-                
+
                 // Gửi lệnh sạc xuống thiết bị qua MQTT
                 const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
                 client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
-                
+
                 res.json({ success: true, message: `Bắt đầu phiên sạc thành công cho Cổng ${outletId} - Tủ ${stationId}!` });
             });
         });
@@ -914,18 +917,18 @@ function runBackgroundWorker() {
                         return; // Đã chốt hóa đơn do rớt mạng, dừng xử lý tiếp
                     }
 
-                    // --- TÍNH NĂNG: TỰ ĐỘNG NGẮT KHI SẠC ĐẦY / KHÔNG TẢI (DÒNG < 0.01A TRONG 2 PHÚT) ---
-                    if (session.duration_sec >= 120) {
+                    // --- TÍNH NĂNG: TỰ ĐỘNG NGẮT KHI SẠC ĐẦY / KHÔNG TẢI (DÒNG < 0.01A TRONG 5 PHÚT) ---
+                    if (session.duration_sec >= 300) {
                         db.query(
-                            'SELECT AVG(t.current) as avg_current, COUNT(t.id) as count FROM telemetry t JOIN charging_sessions s ON s.id = ? WHERE t.station_id = s.station_id AND t.created_at >= s.start_time AND t.created_at >= NOW() - INTERVAL 2 MINUTE',
+                            'SELECT AVG(t.current) as avg_current, COUNT(t.id) as count FROM telemetry t JOIN charging_sessions s ON s.id = ? WHERE t.station_id = s.station_id AND t.created_at >= s.start_time AND t.created_at >= NOW() - INTERVAL 5 MINUTE',
                             [session.id],
                             (err, currentRes) => {
                                 if (!err && currentRes && currentRes.length > 0) {
                                     const avgCurrent = currentRes[0].avg_current;
                                     const count = currentRes[0].count;
 
-                                    if (count >= 15 && avgCurrent !== null && avgCurrent < 0.01) {
-                                        console.log(`🔌 [Worker] Phát hiện SẠC ĐẦY / KHÔNG TẢI tại ${session.station_id} (Dòng TB 2 phút: ${avgCurrent.toFixed(2)}A). Tự động ngắt sạc!`);
+                                    if (count >= 30 && avgCurrent !== null && avgCurrent < 0.01) {
+                                        console.log(`🔌 [Worker] Phát hiện SẠC ĐẦY / KHÔNG TẢI tại ${session.station_id} (Dòng TB 5 phút: ${avgCurrent.toFixed(4)}A). Tự động ngắt sạc!`);
                                         const [stId, outId] = session.station_id.split('.');
                                         processStopCharge(stId, outId, session.user_id, () => { });
                                         return;
@@ -957,8 +960,8 @@ function runBackgroundWorker() {
                         }
                     );
                 });
-            });
         });
+    });
 }
 
 // [MỚI] Tách riêng tác vụ dọn dẹp Database chạy mỗi 24h (Thay vì 15 giây 1 lần gây giật lag máy chủ)

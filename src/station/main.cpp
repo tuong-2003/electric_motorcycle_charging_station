@@ -331,12 +331,18 @@ void loop() {
     }
     modbus.clearCommandOutlet1();
     updateDisplay();
+    modbus.updateTelemetry(current_temp, current_hum, 
+                           current_v[0], current_a[0], current_w[0], is_charging[0],
+                           current_v[1], current_a[1], current_w[1], is_charging[1]);
   } else if (cmd1 == 0) {
     is_charging[0] = false;
     outlet_error[0] = 0; // Xóa lỗi cũ
     digitalWrite(RELAY1_PIN, HIGH);
     modbus.clearCommandOutlet1();
     updateDisplay();
+    modbus.updateTelemetry(current_temp, current_hum, 
+                           current_v[0], current_a[0], current_w[0], is_charging[0],
+                           current_v[1], current_a[1], current_w[1], is_charging[1]);
   }
 
   int cmd2 = modbus.getCommandOutlet2();
@@ -348,12 +354,18 @@ void loop() {
     }
     modbus.clearCommandOutlet2();
     updateDisplay();
+    modbus.updateTelemetry(current_temp, current_hum, 
+                           current_v[0], current_a[0], current_w[0], is_charging[0],
+                           current_v[1], current_a[1], current_w[1], is_charging[1]);
   } else if (cmd2 == 0) {
     is_charging[1] = false;
     outlet_error[1] = 0; // Xóa lỗi cũ
     digitalWrite(RELAY2_PIN, HIGH);
     modbus.clearCommandOutlet2();
     updateDisplay();
+    modbus.updateTelemetry(current_temp, current_hum, 
+                           current_v[0], current_a[0], current_w[0], is_charging[0],
+                           current_v[1], current_a[1], current_w[1], is_charging[1]);
   }
 
   // --- CẬP NHẬT CẢM BIẾN LÊN THANH GHI MODBUS MỖI 5 GIÂY ---
@@ -370,19 +382,18 @@ void loop() {
     }
 
     for (int i = 1; i <= 2; i++) {
-      // Con trỏ tự động chọn pzem tương ứng với từng ổ sạc
-      PZEM004Tv30* current_pzem = (i == 1) ? &pzem : &pzem2;
-      
-      float voltage = current_pzem->voltage();
-      float current = current_pzem->current();
-      float power = current_pzem->power();
-      
-      current_v[i-1] = !isnan(voltage) ? voltage : 0.0;
-      current_a[i-1] = !isnan(current) ? current : 0.0;
-      current_w[i-1] = !isnan(power) ? power : 0.0;
-      
-      // Tự động ép về 0 nếu đang ngắt sạc (không cho rò dòng)
-      if (!is_charging[i-1]) {
+      if (is_charging[i-1]) {
+        PZEM004Tv30* current_pzem = (i == 1) ? &pzem : &pzem2;
+        float voltage = current_pzem->voltage();
+        float current = current_pzem->current();
+        float power = current_pzem->power();
+        
+        if (!isnan(voltage)) current_v[i-1] = voltage;
+        if (!isnan(current)) current_a[i-1] = current;
+        if (!isnan(power)) current_w[i-1] = power;
+      } else {
+        // Cổng sạc tắt: Không đọc PZEM để tránh timeout gây nghẽn Modbus
+        current_v[i-1] = 0.0;
         current_a[i-1] = 0.0;
         current_w[i-1] = 0.0;
       }
