@@ -397,7 +397,7 @@
                     <a href="#" onclick="switchTab('stations')"><i class="fas fa-charging-station me-2"></i> Trạm
                         sạc</a>
                     <a href="#" onclick="switchTab('users')"><i class="fas fa-id-card me-2"></i> Người dùng</a>
-                    <a href="#" onclick="switchTab('history')"><i class="fas fa-history me-2"></i> Hóa đơn</a>
+                    <a href="#" onclick="switchTab('history')"><i class="fas fa-file-invoice me-2"></i> Hóa đơn</a>
                     <a href="#" onclick="switchTab('settings')"><i class="fas fa-cog me-2"></i> Cài đặt</a>
                 </nav>
 
@@ -564,7 +564,7 @@
 
                 <!-- Stations Tab (Quản lý Trạm sạc) -->
                 <div id="tab-stations" class="p-4 tab-content d-none">
-                    <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: visible;">
+                    <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
                         <div
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <h6 class="mb-0 fw-bold text-dark"><i
@@ -627,7 +627,7 @@
                                     </thead>
                                     <tbody id="stations_table_body">
                                         <tr>
-                                            <td colspan="7">Đang tải dữ liệu...</td>
+                                            <td colspan="8">Đang tải dữ liệu...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -638,9 +638,11 @@
 
                 <!-- History Tab (Hóa đơn) -->
                 <div id="tab-history" class="p-4 tab-content d-none">
-                    <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: visible;">
+                    <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
                         <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-history me-2 text-secondary"></i>Danh sách hóa đơn</h6>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-file-invoice me-2 text-secondary"></i>Danh sách hóa đơn</h6>
+                            </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <!-- Bộ lọc tên người dùng (chỉ hiện cho Admin) -->
                                 <input type="text" id="history_filter_username" class="form-control form-control-sm d-none" placeholder="Tìm người dùng..." style="width: 150px;">
@@ -652,10 +654,29 @@
                                     <option value="002">Trạm 002</option>
                                 </select>
 
-                                <!-- Khoảng ngày -->
-                                <input type="date" id="history_start_date" class="form-control form-control-sm" style="width: auto;">
-                                <span>-</span>
-                                <input type="date" id="history_end_date" class="form-control form-control-sm" style="width: auto;">
+                                <!-- Bộ lọc thời gian chuẩn dropdown giống trạm sạc -->
+                                <div class="dropdown">
+                                    <button class="btn btn-sm dropdown-toggle px-3" type="button"
+                                        id="historyFilterDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
+                                        Từ trước đến nay
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="historyFilterDropdownBtn"
+                                        style="border-radius: 8px;">
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryEnergyFilter('all', 'Từ trước đến nay')">Từ trước đến nay</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryEnergyFilter('today', 'Hôm nay')">Hôm nay</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryEnergyFilter('week', 'Tuần này')">Tuần này</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryEnergyFilter('month', 'Tháng này')">Tháng này</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryEnergyFilter('custom', 'Tùy chọn ngày')">Tùy chọn ngày</a></li>
+                                    </ul>
+                                </div>
+                                <input type="hidden" id="history_start_date">
+                                <input type="hidden" id="history_end_date">
                                 
                                 <button class="btn btn-sm btn-secondary" onclick="loadHistory()">Lọc</button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="resetHistoryFilter()">Reset</button>
@@ -664,13 +685,15 @@
                                 <button class="btn btn-sm btn-outline-danger" id="btn_clear_history" onclick="clearHistory()">Xóa lịch sử</button>
                             </div>
                         </div>
+                        <!-- Thanh tóm tắt số liệu chuyên nghiệp -->
+                        <div class="bg-light border-bottom d-flex gap-4 align-items-center flex-wrap" style="font-size: 0.88rem; padding: 10px 24px;">
+                            <div class="text-muted">Tổng số phiên: <span id="summary_total_sessions" class="text-dark fw-bold">0</span></div>
+                            <div class="vr text-muted opacity-25" style="height: 16px;"></div>
+                            <div class="text-muted">Tổng điện năng: <span id="summary_total_kwh" class="text-dark fw-bold">0.00</span> kWh</div>
+                            <div class="vr text-muted opacity-25" style="height: 16px;"></div>
+                            <div class="text-muted">Tổng tiền: <span id="summary_total_cost" class="text-dark fw-bold text-success">0</span> VNĐ</div>
+                        </div>
                         <div class="card-body p-0">
-                            <!-- Tóm tắt số liệu đơn giản và chuyên nghiệp -->
-                            <div class="bg-light border-bottom px-4 py-2 d-flex justify-content-between align-items-center flex-wrap gap-3" style="font-size: 0.88rem; font-weight: 500;">
-                                <div class="text-muted">Tổng số phiên: <span id="summary_total_sessions" class="text-dark fw-bold">0</span></div>
-                                <div class="text-muted">Tổng điện năng: <span id="summary_total_kwh" class="text-dark fw-bold">0.00</span> kWh</div>
-                                <div class="text-muted">Tổng thành tiền: <span id="summary_total_cost" class="text-dark fw-bold">0</span> VNĐ</div>
-                            </div>
                             <div class="table-responsive">
                                 <table class="table table-hover mb-0 text-center align-middle">
                                     <thead class="table-light">
@@ -1509,8 +1532,28 @@
         function loadHistory() {
             if (!authToken) return;
 
-            const startDate = document.getElementById('history_start_date').value;
-            const endDate = document.getElementById('history_end_date').value;
+            let filterVal = currentHistoryFilter || 'all';
+            let startDate = '';
+            let endDate = '';
+
+            if (filterVal !== 'all') {
+                const now = new Date();
+                if (filterVal === 'today') {
+                    startDate = now.toISOString().split('T')[0];
+                    endDate = startDate;
+                } else if (filterVal === 'week') {
+                    const firstDay = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)));
+                    startDate = firstDay.toISOString().split('T')[0];
+                    endDate = new Date().toISOString().split('T')[0];
+                } else if (filterVal === 'month') {
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+                } else if (filterVal === 'custom') {
+                    startDate = document.getElementById('history_start_date').value;
+                    endDate = document.getElementById('history_end_date').value;
+                }
+            }
+
             const stationId = document.getElementById('history_filter_station').value;
             const username = document.getElementById('history_filter_username')?.value || '';
 
@@ -1567,6 +1610,9 @@
         }
 
         function resetHistoryFilter() {
+            currentHistoryFilter = 'all';
+            const btn = document.getElementById('historyFilterDropdownBtn');
+            if (btn) btn.innerText = 'Từ trước đến nay';
             document.getElementById('history_start_date').value = '';
             document.getElementById('history_end_date').value = '';
             document.getElementById('history_filter_station').value = '';
@@ -2193,9 +2239,12 @@
 
         // --- BỘ LỌC THỜI GIAN (DROPDOWN + POPUP) ---
         let currentStationFilter = 'all';
+        let currentHistoryFilter = 'all';
+        let activeDateFilterTarget = 'stations'; // 'stations' hoặc 'history'
 
         function setStationEnergyFilter(filterValue, label) {
             currentStationFilter = filterValue;
+            activeDateFilterTarget = 'stations';
             // Cập nhật text nút dropdown
             const btn = document.getElementById('stationFilterDropdownBtn');
             if (btn) btn.innerText = label;
@@ -2207,6 +2256,23 @@
                 modal.show();
             } else {
                 loadStations();
+            }
+        }
+
+        function setHistoryEnergyFilter(filterValue, label) {
+            currentHistoryFilter = filterValue;
+            activeDateFilterTarget = 'history';
+            // Cập nhật text nút dropdown
+            const btn = document.getElementById('historyFilterDropdownBtn');
+            if (btn) btn.innerText = label;
+
+            if (filterValue === 'custom') {
+                // Mở popup chọn ngày tùy chỉnh
+                const modalEl = document.getElementById('dateFilterModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } else {
+                loadHistory();
             }
         }
 
@@ -2224,18 +2290,24 @@
                 return;
             }
 
-            // Gán giá trị vào các input ẩn để getStationQueryStr() sử dụng
-            document.getElementById('station_start_date').value = startDate;
-            document.getElementById('station_end_date').value = endDate;
-
-            currentStationFilter = 'custom';
-
             // Đóng popup
             const modalEl = document.getElementById('dateFilterModal');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.hide();
 
-            loadStations();
+            if (activeDateFilterTarget === 'history') {
+                // Gán giá trị vào các input ẩn để loadHistory() sử dụng
+                document.getElementById('history_start_date').value = startDate;
+                document.getElementById('history_end_date').value = endDate;
+                currentHistoryFilter = 'custom';
+                loadHistory();
+            } else {
+                // Gán giá trị vào các input ẩn để getStationQueryStr() sử dụng
+                document.getElementById('station_start_date').value = startDate;
+                document.getElementById('station_end_date').value = endDate;
+                currentStationFilter = 'custom';
+                loadStations();
+            }
         }
     </script>
 
