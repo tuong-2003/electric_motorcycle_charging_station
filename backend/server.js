@@ -542,7 +542,7 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
                 pendingStarts.delete(key);
                 releaseLock();
                 res.status(408).json({ success: false, message: `⛔ Lỗi: Trạm sạc không phản hồi lệnh bật sạc Cổng ${outletId} - Tủ ${stationId} (Hết thời gian chờ ACK)!` });
-            }, 3000); // Chờ tối đa 3 giây do Gateway đã được tối ưu hóa phản hồi lập tức
+            }, 10000); // Chờ tối đa 10 giây để đảm bảo phản hồi tin cậy qua Broker mạng ngoài
 
             pendingStarts.set(key, {
                 resolve: () => {
