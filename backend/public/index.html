@@ -337,9 +337,9 @@
         #historyFilterDropdownBtn:hover,
         #historyFilterDropdownBtn:focus,
         #historyFilterDropdownBtn:active,
-        #history_filter_station:hover,
-        #history_filter_station:focus,
-        #history_filter_station:active,
+        #historyStationDropdownBtn:hover,
+        #historyStationDropdownBtn:focus,
+        #historyStationDropdownBtn:active,
         #history_filter_username:hover,
         #history_filter_username:focus,
         #history_filter_username:active {
@@ -654,14 +654,31 @@
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <!-- Bộ lọc tên người dùng (chỉ hiện cho Admin) -->
-                                <input type="text" id="history_filter_username" class="form-control form-control-sm d-none" placeholder="Tìm người dùng..." style="width: 150px;" oninput="loadHistory()">
+                                <div class="input-group input-group-sm d-none" id="history_username_group" style="width: 200px;">
+                                    <input type="text" id="history_filter_username" class="form-control" placeholder="Tìm người dùng..." onkeydown="if(event.key==='Enter') loadHistory()">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="loadHistory()">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
                                 
                                 <!-- Chọn trạm sạc -->
-                                <select id="history_filter_station" class="form-select form-select-sm" style="width: 120px;" onchange="loadHistory()">
-                                    <option value="">Tất cả trạm</option>
-                                    <option value="001">Trạm 001</option>
-                                    <option value="002">Trạm 002</option>
-                                </select>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm dropdown-toggle px-3" type="button"
+                                        id="historyStationDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
+                                        Tất cả trạm
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="historyStationDropdownBtn"
+                                        style="border-radius: 8px;">
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryStationFilter('', 'Tất cả trạm')">Tất cả trạm</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryStationFilter('001', 'Trạm 001')">Trạm 001</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setHistoryStationFilter('002', 'Trạm 002')">Trạm 002</a></li>
+                                    </ul>
+                                </div>
+                                <input type="hidden" id="history_filter_station" value="">
 
                                 <!-- Bộ lọc thời gian chuẩn dropdown giống trạm sạc -->
                                 <div class="dropdown">
@@ -697,7 +714,7 @@
                             <div class="vr text-muted opacity-25" style="height: 16px;"></div>
                             <div class="text-muted">Tổng điện năng: <span id="summary_total_kwh" class="text-dark fw-bold">0.00</span> kWh</div>
                             <div class="vr text-muted opacity-25" style="height: 16px;"></div>
-                            <div class="text-muted">Tổng tiền: <span id="summary_total_cost" class="text-dark fw-bold text-success">0</span> VNĐ</div>
+                            <div class="text-muted">Tổng tiền: <span id="summary_total_cost" class="text-dark fw-bold">0</span> VNĐ</div>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -1432,11 +1449,11 @@
                         // Cập nhật phân quyền người dùng để điều chỉnh giao diện Tab Hóa đơn
                         currentUserRole = data.data.role;
                         if (currentUserRole === 'admin') {
-                            document.getElementById('history_filter_username')?.classList.remove('d-none');
+                            document.getElementById('history_username_group')?.classList.remove('d-none');
                             document.getElementById('th_history_user')?.classList.remove('d-none');
                             document.getElementById('btn_clear_history')?.classList.add('d-none');
                         } else {
-                            document.getElementById('history_filter_username')?.classList.add('d-none');
+                            document.getElementById('history_username_group')?.classList.add('d-none');
                             document.getElementById('th_history_user')?.classList.add('d-none');
                             document.getElementById('btn_clear_history')?.classList.remove('d-none');
                         }
@@ -2280,6 +2297,13 @@
             } else {
                 loadHistory();
             }
+        }
+
+        function setHistoryStationFilter(stationId, label) {
+            document.getElementById('history_filter_station').value = stationId;
+            const btn = document.getElementById('historyStationDropdownBtn');
+            if (btn) btn.innerText = label;
+            loadHistory();
         }
 
         function applyPopupDateFilter() {
