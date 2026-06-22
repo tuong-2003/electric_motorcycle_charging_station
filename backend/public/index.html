@@ -648,17 +648,23 @@
                 <!-- History Tab (Hóa đơn) -->
                 <div id="tab-history" class="p-4 tab-content d-none">
                     <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
-                        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div
+                            class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div>
-                                <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-file-invoice me-2 text-secondary"></i>Danh sách hóa đơn</h5>
+                                <h5 class="mb-0 fw-bold text-dark fs-5"><i
+                                        class="fas fa-file-invoice me-2 text-secondary"></i>Danh sách hóa đơn</h5>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <!-- Bộ lọc tên người dùng (chỉ hiện cho Admin) -->
                                 <div class="position-relative d-none" id="history_username_group" style="width: 180px;">
-                                    <input type="text" id="history_filter_username" class="form-control form-control-sm" placeholder="Tìm người dùng..." onkeydown="if(event.key==='Enter') loadHistory()" style="padding-right: 30px;">
-                                    <i class="fas fa-search text-muted" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; z-index: 5;" onclick="loadHistory()"></i>
+                                    <input type="text" id="history_filter_username" class="form-control form-control-sm"
+                                        placeholder="Tìm người dùng..."
+                                        onkeydown="if(event.key==='Enter') loadHistory()" style="padding-right: 30px;">
+                                    <i class="fas fa-search text-muted"
+                                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; z-index: 5;"
+                                        onclick="loadHistory()"></i>
                                 </div>
-                                
+
                                 <!-- Chọn tủ sạc -->
                                 <div class="dropdown">
                                     <button class="btn btn-sm dropdown-toggle px-3" type="button"
@@ -666,8 +672,8 @@
                                         style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
                                         Tất cả tủ
                                     </button>
-                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="historyStationDropdownBtn"
-                                        style="border-radius: 8px;">
+                                    <ul class="dropdown-menu shadow border-0"
+                                        aria-labelledby="historyStationDropdownBtn" style="border-radius: 8px;">
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
                                                 onclick="setHistoryStationFilter('', 'Tất cả tủ')">Tất cả tủ</a></li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
@@ -688,31 +694,40 @@
                                     <ul class="dropdown-menu shadow border-0" aria-labelledby="historyFilterDropdownBtn"
                                         style="border-radius: 8px;">
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
-                                                onclick="setHistoryEnergyFilter('all', 'Từ trước đến nay')">Từ trước đến nay</a></li>
+                                                onclick="setHistoryEnergyFilter('all', 'Từ trước đến nay')">Từ trước đến
+                                                nay</a></li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
                                                 onclick="setHistoryEnergyFilter('today', 'Hôm nay')">Hôm nay</a></li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
                                                 onclick="setHistoryEnergyFilter('week', 'Tuần này')">Tuần này</a></li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
-                                                onclick="setHistoryEnergyFilter('month', 'Tháng này')">Tháng này</a></li>
+                                                onclick="setHistoryEnergyFilter('month', 'Tháng này')">Tháng này</a>
+                                        </li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
-                                                onclick="setHistoryEnergyFilter('custom', 'Tùy chọn ngày')">Tùy chọn ngày</a></li>
+                                                onclick="setHistoryEnergyFilter('custom', 'Tùy chọn ngày')">Tùy chọn
+                                                ngày</a></li>
                                     </ul>
                                 </div>
                                 <input type="hidden" id="history_start_date">
                                 <input type="hidden" id="history_end_date">
-                                
-                                <button class="btn btn-sm btn-outline-success" onclick="exportHistoryCSV()">Xuất CSV</button>
-                                <button class="btn btn-sm btn-outline-danger" id="btn_clear_history" onclick="clearHistory()">Xóa lịch sử</button>
+
+                                <button class="btn btn-sm btn-outline-success" onclick="exportHistoryCSV()">Xuất
+                                    CSV</button>
+                                <button class="btn btn-sm btn-outline-danger" id="btn_clear_history"
+                                    onclick="clearHistory()">Xóa lịch sử</button>
                             </div>
                         </div>
                         <!-- Thanh tóm tắt số liệu chuyên nghiệp -->
-                        <div class="bg-light border-bottom d-flex gap-4 align-items-center flex-wrap" style="font-size: 0.88rem; padding: 10px 24px;">
-                            <div class="text-muted">Tổng số phiên: <span id="summary_total_sessions" class="text-dark fw-bold">0</span></div>
+                        <div class="bg-light border-bottom d-flex gap-4 align-items-center flex-wrap"
+                            style="font-size: 0.88rem; padding: 10px 24px;">
+                            <div class="text-muted">Tổng số phiên: <span id="summary_total_sessions"
+                                    class="text-dark fw-bold">0</span></div>
                             <div class="vr text-muted opacity-25" style="height: 16px;"></div>
-                            <div class="text-muted">Tổng điện năng: <span id="summary_total_kwh" class="text-dark fw-bold">0.00</span> kWh</div>
+                            <div class="text-muted">Tổng điện năng: <span id="summary_total_kwh"
+                                    class="text-dark fw-bold">0.00</span> kWh</div>
                             <div class="vr text-muted opacity-25" style="height: 16px;"></div>
-                            <div class="text-muted">Tổng tiền: <span id="summary_total_cost" class="text-dark fw-bold">0</span> VNĐ</div>
+                            <div class="text-muted">Tổng tiền: <span id="summary_total_cost"
+                                    class="text-dark fw-bold">0</span> VNĐ</div>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -743,42 +758,62 @@
                 <!-- Users Tab (Quản lý User) -->
                 <div id="tab-users" class="p-4 tab-content d-none">
 
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="card card-stat p-3">
-                                <h5 class="mb-3">Tạo tài khoản mới</h5>
-                                <input type="text" id="new_user_name" class="form-control mb-2"
-                                    placeholder="Tên đăng nhập">
-                                <input type="email" id="new_user_email" class="form-control mb-2" placeholder="Email">
-                                <input type="password" id="new_user_pass" class="form-control mb-2"
-                                    placeholder="Mật khẩu">
-                                <select id="new_user_role" class="form-select mb-3">
-                                    <option value="user">User (Khách hàng)</option>
-                                    <option value="admin">Admin (Quản trị viên)</option>
-                                </select>
-                                <button class="btn btn-primary w-100" onclick="registerUser()">Tạo tài khoản</button>
+                    <div class="row g-4 mt-1">
+                        <!-- Danh sách người dùng -->
+                        <div class="col-md-8 col-lg-9">
+                            <div class="card card-stat border-0 shadow-sm" style="border-radius: 12px; overflow: visible;">
+                                <div class="card-header bg-white border-bottom py-3">
+                                    <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-users me-2 text-secondary"></i>Danh sách người dùng</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0 text-center align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 70px;">ID</th>
+                                                    <th>Tên đăng nhập</th>
+                                                    <th>Email</th>
+                                                    <th>Phân quyền</th>
+                                                    <th>Số dư ví</th>
+                                                    <th>Ngày đăng ký</th>
+                                                    <th style="width: 80px;">Hành động</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="users_table_body">
+                                                <tr>
+                                                    <td colspan="7">Đang tải dữ liệu...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="card card-stat">
-                        <div class="card-body p-0">
-                            <table class="table table-hover mb-0 text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Username</th>
-                                        <th>Phân quyền</th>
-                                        <th>Số dư ví</th>
-                                        <th>Hành động (Nạp tiền)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="users_table_body">
-                                    <tr>
-                                        <td colspan="5">Đang tải dữ liệu...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <!-- Tạo tài khoản mới -->
+                        <div class="col-md-4 col-lg-3">
+                            <div class="card card-stat border-0 shadow-sm" style="border-radius: 12px;">
+                                <div class="card-header bg-white border-bottom py-3">
+                                    <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-user-plus me-2 text-secondary"></i>Tạo tài khoản</h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-semibold">Tên đăng nhập</label>
+                                        <input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Nhập tên đăng nhập...">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-semibold">Địa chỉ Email</label>
+                                        <input type="email" id="new_user_email" class="form-control form-control-sm" placeholder="Nhập email...">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label text-muted small fw-semibold">Mật khẩu</label>
+                                        <input type="password" id="new_user_pass" class="form-control form-control-sm" placeholder="Nhập mật khẩu...">
+                                    </div>
+                                    <!-- Ẩn lựa chọn admin, mặc định là user -->
+                                    <input type="hidden" id="new_user_role" value="user">
+                                    <button class="btn btn-sm btn-success w-100 py-2 fw-semibold" onclick="registerUser()">Tạo tài khoản</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1538,7 +1573,7 @@
             const titleMap = {
                 'dashboard': 'Tổng quan hệ thống',
                 'stations': 'Quản lý trạm sạc',
-                'users': 'Người dùng & Ví tiền',
+                'users': 'Quản lý người dùng',
                 'history': 'Hóa đơn',
                 'settings': 'Cài đặt hệ thống'
             };
@@ -1602,7 +1637,7 @@
                             let costFormat = parseInt(row.total_cost).toLocaleString('vi-VN') + ' đ';
                             let kwhFormat = parseFloat(row.total_kwh).toFixed(3);
                             let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
-                            
+
                             let userTd = currentUserRole === 'admin' ? `<td>${row.username || '-'}</td>` : '';
 
                             tbody.innerHTML += `<tr>
@@ -1653,7 +1688,7 @@
             }
 
             let csvContent = "\uFEFF"; // UTF-8 BOM để Excel hiển thị đúng dấu tiếng Việt
-            
+
             let headers = ['Ma Hoa Don'];
             if (currentUserRole === 'admin') headers.push('Nguoi Dung');
             headers.push('Tram', 'Bat Dau', 'Ket Thuc', 'Dien Nang (kWh)', 'Thanh Tien (VND)', 'Trang Thai');
@@ -1962,7 +1997,7 @@
         // --- QUẢN LÝ USER & VÍ TIỀN ---
         function loadUsers() {
             if (!authToken) {
-                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="5" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
+                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="7" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
                 return;
             }
             fetch('/api/users', { headers: { 'Authorization': 'Bearer ' + authToken } })
@@ -1974,14 +2009,22 @@
                         data.data.forEach(user => {
                             let balanceFormat = parseInt(user.balance).toLocaleString('vi-VN') + ' đ';
                             let roleBadge = user.role === 'admin' ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>';
+                            let createdAtFormat = user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '-';
+                            let emailFormat = user.email || '-';
+
                             tbody.innerHTML += `<tr>
-                        <td>#${user.id}</td><td>${user.username}</td><td>${roleBadge}</td><td><b>${balanceFormat}</b></td>
-                        <td>
-                            <button class="btn btn-sm btn-success" onclick="addBalance(${user.id}, 50000)">+ 50k</button>
-                            <button class="btn btn-sm btn-warning" onclick="addBalance(${user.id}, 100000)">+ 100k</button>
-                            <button class="btn btn-sm btn-danger ms-1" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User"><i class="bi bi-trash"></i></button>
-                        </td>
-                    </tr>`;
+                                <td>#${user.id}</td>
+                                <td>${user.username}</td>
+                                <td>${emailFormat}</td>
+                                <td>${roleBadge}</td>
+                                <td><b>${balanceFormat}</b></td>
+                                <td>${createdAtFormat}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
                         });
                     }
                 });
