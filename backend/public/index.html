@@ -583,12 +583,20 @@
             opacity: 1;
             visibility: visible;
         }
+
+        body.auth-locked #adminApp {
+            display: none !important;
+        }
+
+        body.auth-locked #loginModal .btn-close {
+            display: none !important;
+        }
     </style>
 </head>
 
-<body>
+<body class="auth-locked">
 
-    <div class="container-fluid px-0">
+    <div class="container-fluid px-0" id="adminApp">
         <div class="d-flex">
             <!-- Sidebar Navigation -->
             <div class="sidebar d-none d-md-flex flex-column">
@@ -1601,6 +1609,23 @@
         let authToken = localStorage.getItem('ev_token') || ''; // Lấy Token từ LocalStorage nếu có
         let currentUserRole = '';
 
+        function showLoginGate() {
+            document.body.classList.add('auth-locked');
+            const loginModalEl = document.getElementById('loginModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(loginModalEl, {
+                backdrop: 'static',
+                keyboard: false
+            });
+            modal.show();
+        }
+
+        function showAdminApp() {
+            document.body.classList.remove('auth-locked');
+            const loginModalEl = document.getElementById('loginModal');
+            const modalInstance = bootstrap.Modal.getInstance(loginModalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
         // Khoi phục login khi F5
         if (authToken) {
             // Hiển thị khung ví tiền ngay lập tức với số dư đệm để tránh giật/nhảy giao diện khi tải trang
@@ -1612,6 +1637,8 @@
                 if (balanceEl) balanceEl.innerText = cachedBalance;
             }
             fetchUserProfile();
+        } else {
+            showLoginGate();
         }
 
         // Hàm gọi API lấy số dư ví tiền hiện tại
@@ -1650,9 +1677,7 @@
                         document.getElementById('sidebar_auth').classList.remove('d-none');
 
                         // Ẩn Modal Đăng nhập đi tự động sau khi login thành công
-                        const loginModalEl = document.getElementById('loginModal');
-                        const modalInstance = bootstrap.Modal.getInstance(loginModalEl);
-                        if (modalInstance) modalInstance.hide();
+                        showAdminApp();
 
                         // [MỚI] Tải ngay Nhiệt độ/Độ ẩm để hiển thị tức thì khi vừa đăng nhập xong
                         syncStationsData();
@@ -1667,7 +1692,10 @@
                         doLogout(false);
                     }
                 })
-                .catch(err => console.error("Lỗi lấy thông tin ví:", err));
+                .catch(err => {
+                    console.error("Lỗi lấy thông tin ví:", err);
+                    doLogout(false);
+                });
         }
 
         function doLogin() {
@@ -1702,6 +1730,7 @@
             if (walletInfo) walletInfo.classList.add('d-none');
             document.getElementById('sidebar_unauth').classList.remove('d-none');
             document.getElementById('sidebar_auth').classList.add('d-none');
+            showLoginGate();
 
             if (!document.getElementById('tab-users').classList.contains('d-none')) loadUsers();
             if (shouldShowAlert !== false) showAlert("Đã đăng xuất thành công!", 'success');
