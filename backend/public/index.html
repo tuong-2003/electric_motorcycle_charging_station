@@ -402,6 +402,20 @@
         .bg-success {
             background-color: #10b981 !important;
         }
+
+        /* Thùng rác xóa người dùng tinh tế, không quá nổi bật */
+        .btn-delete-user {
+            color: #94a3b8 !important;
+            background-color: transparent !important;
+            border: 1px solid #e2e8f0 !important;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete-user:hover {
+            color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+            border-color: #fee2e2 !important;
+        }
     </style>
 </head>
 
@@ -787,7 +801,6 @@
                                                     <th style="width: 70px;">ID</th>
                                                     <th>Tên đăng nhập</th>
                                                     <th>Email</th>
-                                                    <th>Phân quyền</th>
                                                     <th>Số dư ví</th>
                                                     <th>Ngày đăng ký</th>
                                                     <th style="width: 80px;">Hành động</th>
@@ -795,7 +808,7 @@
                                             </thead>
                                             <tbody id="users_table_body">
                                                 <tr>
-                                                    <td colspan="7">Đang tải dữ liệu...</td>
+                                                    <td colspan="6">Đang tải dữ liệu...</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -2011,7 +2024,7 @@
         // --- QUẢN LÝ USER & VÍ TIỀN ---
         function loadUsers() {
             if (!authToken) {
-                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="7" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
+                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="6" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
                 return;
             }
             fetch('/api/users', { headers: { 'Authorization': 'Bearer ' + authToken } })
@@ -2020,12 +2033,13 @@
                     const tbody = document.getElementById('users_table_body');
                     tbody.innerHTML = '';
                     if (data.success) {
+                        let count = 0;
                         data.data.forEach(user => {
                             // Ẩn tài khoản admin khỏi danh sách người dùng
                             if (user.username.toLowerCase() === 'admin' || user.role === 'admin') return;
+                            count++;
 
                             let balanceFormat = parseInt(user.balance).toLocaleString('vi-VN') + ' đ';
-                            let roleBadge = user.role === 'admin' ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>';
                             let createdAtFormat = user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '-';
                             let emailFormat = user.email || '-';
 
@@ -2033,16 +2047,19 @@
                                 <td>#${user.id}</td>
                                 <td>${user.username}</td>
                                 <td>${emailFormat}</td>
-                                <td>${roleBadge}</td>
                                 <td><b>${balanceFormat}</b></td>
                                 <td>${createdAtFormat}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User">
+                                    <button class="btn btn-sm btn-delete-user" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>`;
                         });
+
+                        if (count === 0) {
+                            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">Không tìm thấy người dùng nào!</td></tr>`;
+                        }
                     }
                 });
         }
