@@ -32,7 +32,7 @@ const db = mysql.createPool({
     database: process.env.DB_NAME || 'ev_station',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 3,
     queueLimit: 0,
     timezone: '+07:00' // Bổ sung cấu hình này để driver format đúng Date objects
 });
@@ -65,11 +65,10 @@ db.getConnection((err, connection) => {
                     });
                 } catch (e) { console.error('Lỗi tạo admin mặc định', e); }
             } else if (!err && results.length > 0) {
-                // [FIX] Nếu tài khoản đã tồn tại, ép đồng bộ lại mật khẩu và email theo cấu hình mới nhất
-                try {
-                    const hashed = await bcrypt.hash(adminPass, 10);
-                    db.query('UPDATE users SET password = ?, email = ?, role = "admin" WHERE username = ?', [hashed, adminEmail, adminUser]);
-                } catch (e) { console.error('Lỗi cập nhật pass admin', e); }
+                // Khong ghi de password Admin da ton tai; mat khau co the duoc doi tu web admin.
+                db.query('UPDATE users SET email = ?, role = "admin" WHERE username = ?', [adminEmail, adminUser], (err) => {
+                    if (err) console.error('Loi dong bo thong tin admin', err.message);
+                });
             }
         });
 
@@ -749,6 +748,20 @@ app.get('/api/stations', verifyToken, (req, res) => {
     });
 });
 
+// API Cập nhật đơn giá sạc cho toàn bộ các Tủ sạc (Chỉ Admin)
+app.put('/api/stations/price', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền cấu hình đơn giá!' });
+    const { unitPrice } = req.body;
+    if (unitPrice == null || isNaN(unitPrice) || parseInt(unitPrice) < 0) {
+        return res.status(400).json({ success: false, message: 'Đơn giá mới không hợp lệ!' });
+    }
+
+    db.query('UPDATE stations SET unit_price = ?', [parseInt(unitPrice)], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật đơn giá' });
+        res.json({ success: true, message: 'Đã cập nhật đơn giá mới cho toàn bộ các tủ sạc!' });
+    });
+});
+
 // API Chỉnh sửa Tên và Địa chỉ Trạm sạc (Chỉ Admin)
 app.put('/api/stations/:id', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền cấu hình trạm sạc!' });
@@ -840,19 +853,7 @@ app.post('/api/user/change-password', verifyToken, async (req, res) => {
     });
 });
 
-// API Cập nhật đơn giá sạc cho toàn bộ các Tủ sạc (Chỉ Admin)
-app.put('/api/stations/price', verifyToken, (req, res) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền cấu hình đơn giá!' });
-    const { unitPrice } = req.body;
-    if (unitPrice == null || isNaN(unitPrice) || parseInt(unitPrice) < 0) {
-        return res.status(400).json({ success: false, message: 'Đơn giá mới không hợp lệ!' });
-    }
 
-    db.query('UPDATE stations SET unit_price = ?', [parseInt(unitPrice)], (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật đơn giá' });
-        res.json({ success: true, message: 'Đã cập nhật đơn giá mới cho toàn bộ các tủ sạc!' });
-    });
-});
 
 // API Lấy danh sách User (Chỉ Admin)
 app.get('/api/users', verifyToken, (req, res) => {

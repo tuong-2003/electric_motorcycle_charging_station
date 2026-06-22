@@ -455,7 +455,8 @@
             width: 32px;
             height: 32px;
             border-radius: 6px;
-            color: #9ca3af; /* Gray-400 */
+            color: #9ca3af;
+            /* Gray-400 */
             background-color: transparent;
             display: flex;
             align-items: center;
@@ -465,7 +466,8 @@
         }
 
         .btn-sidebar-toggle-sidebar:hover {
-            background-color: #1f2937 !important; /* Gray-800 */
+            background-color: #1f2937 !important;
+            /* Gray-800 */
             color: #ffffff !important;
         }
 
@@ -524,7 +526,8 @@
         }
 
         .sidebar.collapsed #sidebar_auth a::after {
-            display: none !important; /* Ẩn mũi tên dropdown */
+            display: none !important;
+            /* Ẩn mũi tên dropdown */
         }
 
         .sidebar.collapsed #sidebar_auth strong {
@@ -599,8 +602,11 @@
                         <i class="fas fa-bolt me-2 brand-icon" style="color: #10b981;"></i>
                         <span class="brand-name">Trạm Sạc HVT</span>
                     </div>
-                    <button class="btn btn-sidebar-toggle-sidebar p-0 border-0" id="sidebarToggleBtn" onclick="toggleSidebar()" data-tooltip="Đóng thanh bên">
-                        <svg id="sidebarToggleIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <button class="btn btn-sidebar-toggle-sidebar p-0 border-0" id="sidebarToggleBtn"
+                        onclick="toggleSidebar()" data-tooltip="Đóng thanh bên">
+                        <svg id="sidebarToggleIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18"
+                            height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                             <line x1="9" y1="3" x2="9" y2="21" />
                             <path d="M16 15l-3-3 3-3" stroke-width="2" />
@@ -608,11 +614,17 @@
                     </button>
                 </div>
                 <nav class="nav flex-column mt-3 w-100">
-                    <a href="#" class="active nav-item-tooltip" onclick="switchTab('dashboard')" data-tooltip="Tổng quan"><i class="fas fa-chart-pie"></i> <span class="nav-text">Tổng quan</span></a>
-                    <a href="#" class="nav-item-tooltip" onclick="switchTab('stations')" data-tooltip="Trạm sạc"><i class="fas fa-charging-station"></i> <span class="nav-text">Trạm sạc</span></a>
-                    <a href="#" class="nav-item-tooltip" onclick="switchTab('users')" data-tooltip="Người dùng"><i class="fas fa-id-card"></i> <span class="nav-text">Người dùng</span></a>
-                    <a href="#" class="nav-item-tooltip" onclick="switchTab('history')" data-tooltip="Hóa đơn"><i class="fas fa-file-invoice"></i> <span class="nav-text">Hóa đơn</span></a>
-                    <a href="#" class="nav-item-tooltip" onclick="switchTab('settings')" data-tooltip="Cài đặt"><i class="fas fa-cog"></i> <span class="nav-text">Cài đặt</span></a>
+                    <a href="#" class="active nav-item-tooltip" onclick="switchTab('dashboard')"
+                        data-tooltip="Tổng quan"><i class="fas fa-chart-pie"></i> <span class="nav-text">Tổng
+                            quan</span></a>
+                    <a href="#" class="nav-item-tooltip" onclick="switchTab('stations')" data-tooltip="Trạm sạc"><i
+                            class="fas fa-charging-station"></i> <span class="nav-text">Trạm sạc</span></a>
+                    <a href="#" class="nav-item-tooltip" onclick="switchTab('users')" data-tooltip="Người dùng"><i
+                            class="fas fa-id-card"></i> <span class="nav-text">Người dùng</span></a>
+                    <a href="#" class="nav-item-tooltip" onclick="switchTab('history')" data-tooltip="Hóa đơn"><i
+                            class="fas fa-file-invoice"></i> <span class="nav-text">Hóa đơn</span></a>
+                    <a href="#" class="nav-item-tooltip" onclick="switchTab('settings')" data-tooltip="Cài đặt"><i
+                            class="fas fa-cog"></i> <span class="nav-text">Cài đặt</span></a>
                 </nav>
 
                 <!-- Quản trị viên (Chuẩn UX kiểu ChatGPT) -->
@@ -966,9 +978,11 @@
                     <div class="row gx-4 gy-3 gy-md-0">
                         <!-- Danh sách người dùng -->
                         <div class="col-md-8 col-lg-9">
-                            <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
+                            <div class="card card-stat border-0 shadow-sm mt-1"
+                                style="border-radius: 12px; overflow: visible;">
                                 <div class="card-header bg-white border-bottom py-3">
-                                    <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-users me-2 text-secondary"></i>Danh sách người dùng</h5>
+                                    <h5 class="mb-0 fw-bold text-dark fs-5"><i
+                                            class="fas fa-users me-2 text-secondary"></i>Danh sách người dùng</h5>
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-responsive">
@@ -998,24 +1012,29 @@
                         <div class="col-md-4 col-lg-3">
                             <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px;">
                                 <div class="card-header bg-white border-bottom py-3">
-                                    <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-user-plus me-2 text-secondary"></i>Tạo tài khoản</h5>
+                                    <h5 class="mb-0 fw-bold text-dark fs-5"><i
+                                            class="fas fa-user-plus me-2 text-secondary"></i>Tạo tài khoản</h5>
                                 </div>
                                 <div class="card-body p-4">
                                     <div class="mb-3">
                                         <label class="form-label text-muted small fw-semibold">Tên đăng nhập</label>
-                                        <input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Nhập tên đăng nhập...">
+                                        <input type="text" id="new_user_name" class="form-control form-control-sm"
+                                            placeholder="Nhập tên đăng nhập...">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label text-muted small fw-semibold">Địa chỉ Email</label>
-                                        <input type="email" id="new_user_email" class="form-control form-control-sm" placeholder="Nhập email...">
+                                        <input type="email" id="new_user_email" class="form-control form-control-sm"
+                                            placeholder="Nhập email...">
                                     </div>
                                     <div class="mb-4">
                                         <label class="form-label text-muted small fw-semibold">Mật khẩu</label>
-                                        <input type="password" id="new_user_pass" class="form-control form-control-sm" placeholder="Nhập mật khẩu...">
+                                        <input type="password" id="new_user_pass" class="form-control form-control-sm"
+                                            placeholder="Nhập mật khẩu...">
                                     </div>
                                     <!-- Ẩn lựa chọn admin, mặc định là user -->
                                     <input type="hidden" id="new_user_role" value="user">
-                                    <button class="btn btn-sm btn-success w-100 py-2 fw-semibold" onclick="registerUser()">Tạo tài khoản</button>
+                                    <button class="btn btn-sm btn-success w-100 py-2 fw-semibold"
+                                        onclick="registerUser()">Tạo tài khoản</button>
                                 </div>
                             </div>
                         </div>
@@ -1028,7 +1047,7 @@
                         <!-- Đổi mật khẩu -->
                         <div class="col-md-6">
                             <div class="card card-stat h-100 p-4">
-                                <h6 class="mb-3 text-success"><i class="fas fa-lock me-2"></i>Đổi mật khẩu Quản trị</h6>
+                                <h6 class="mb-3"><i class="fas fa-lock me-2"></i>Đổi mật khẩu Quản trị</h6>
                                 <div class="mb-3">
                                     <label class="form-label text-muted small">Mật khẩu hiện tại</label>
                                     <input type="password" id="setting_old_pass" class="form-control"
@@ -1039,15 +1058,15 @@
                                     <input type="password" id="setting_new_pass" class="form-control"
                                         placeholder="Nhập mật khẩu mới">
                                 </div>
-                                <button class="btn btn-success mt-auto"
-                                    onclick="changePassword()">Cập nhật mật khẩu</button>
+                                <button class="btn btn-success mt-auto" onclick="changePassword()">Cập nhật mật
+                                    khẩu</button>
                             </div>
                         </div>
 
                         <!-- Cấu hình Giá điện -->
                         <div class="col-md-6">
                             <div class="card card-stat h-100 p-4">
-                                <h6 class="mb-3 text-success"><i class="fas fa-bolt me-2"></i>Cấu hình Giá điện</h6>
+                                <h6 class="mb-3"><i class="fas fa-bolt me-2"></i>Cấu hình Giá điện</h6>
                                 <div class="mb-3">
                                     <label class="form-label text-muted small">Đơn giá mới (VNĐ/kWh)</label>
                                     <input type="number" id="setting_unit_price" class="form-control"
@@ -1057,8 +1076,8 @@
                                     <span class="text-muted small">Giá điện hiện tại: </span>
                                     <strong class="text-dark fs-5" id="setting_current_price">-- đ</strong>
                                 </div>
-                                <button class="btn btn-success mt-auto"
-                                    onclick="updateUnitPrice()">Cập nhật giá điện</button>
+                                <button class="btn btn-success mt-auto" onclick="updateUnitPrice()">Cập nhật giá
+                                    điện</button>
                             </div>
                         </div>
                     </div>
