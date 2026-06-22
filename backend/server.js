@@ -919,40 +919,82 @@ function runBackgroundWorker() {
         if (err || sessions.length === 0) return;
 
         sessions.forEach(session => {
-            // [FIX LOGIC] Chuyển kiểm tra số dư VÀO TRONG callback kiểm tra rớt mạng để tránh LỖI CHẠY ĐUA (Race Condition)
+            // --- TÍNH NĂNG: GIỚI HẠN THỜI GIAN SẠC TỐI ĐA (12 GIỜ) ---
+            if (session.duration_sec >= 43200) {
+                console.log(`⏰ [Worker] Cảnh báo: Phiên sạc #${session.id} tại ${session.station_id} vượt giới hạn thời gian (12 giờ). Tự động ngắt sạc khẩn cấp!`);
+                const [stId, outId] = session.station_id.split('.');
+                processStopCharge(stId, outId, session.user_id, () => { });
+                return;
+            }
+
+            // Truy vấn bản ghi nhịp tim gần nhất từ Database
             db.query('SELECT created_at FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
+                if (err) return;
+
+                let querySql;
+                let queryParams;
+
                 if (tele && tele.length > 0) {
-                    const lastTelemetryTime = new Date(tele[0].created_at);
-                    const sessionStartTime = new Date(session.start_time);
-                    
-                    // Lấy mốc thời gian muộn nhất giữa lúc bắt đầu sạc và lúc nhận tin nhắn cuối cùng
-                    const lastActiveTime = lastTelemetryTime > sessionStartTime ? lastTelemetryTime : sessionStartTime;
-                    const secondsSinceLastHeartbeat = Math.floor((Date.now() - lastActiveTime) / 1000);
+                    // Nếu có telemetry, tính khoảng trễ dựa trên mốc mới nhất giữa lúc bắt đầu sạc và lúc nhận tin gần nhất
+                    querySql = 'SELECT TIMESTAMPDIFF(SECOND, GREATEST(?, ?), NOW()) as seconds_since';
+                    queryParams = [session.start_time, tele[0].created_at];
+                } else {
+                    // Nếu chưa có bất kỳ dữ liệu telemetry nào, tính dựa trên thời điểm bắt đầu sạc
+                    querySql = 'SELECT TIMESTAMPDIFF(SECOND, ?, NOW()) as seconds_since';
+                    queryParams = [session.start_time];
+                }
+
+                // Thực hiện tính toán khoảng trễ nhịp tim hoàn toàn trên DB (chống lệch múi giờ / lệch đồng hồ hệ thống)
+                db.query(querySql, queryParams, (err, diffRes) => {
+                    if (err || diffRes.length === 0) return;
+
+                    const secondsSinceLastHeartbeat = diffRes[0].seconds_since;
 
                     if (secondsSinceLastHeartbeat > 30) {
                         console.log(`⚠️ [Worker] Trạm ${session.station_id} mất kết nối! Tự động chốt hóa đơn #${session.id}`);
                         const [stId, outId] = session.station_id.split('.');
                         processStopCharge(stId, outId, session.user_id, () => { });
-                        return; // Đã chốt hóa đơn do rớt mạng, KHÔNG kiểm tra số dư nữa!
+                        return; // Đã chốt hóa đơn do rớt mạng, dừng xử lý tiếp
                     }
-                }
 
-                // Nếu trạm VẪN ONLINE, tiến hành kiểm tra số dư ví (Bỏ qua đối với Admin)
-                if (session.role === 'admin') {
-                    return;
-                }
+                    // --- TÍNH NĂNG: TỰ ĐỘNG NGẮT KHI SẠC ĐẦY / KHÔNG TẢI (DÒNG < 0.05A TRONG 2 PHÚT) ---
+                    if (session.duration_sec >= 120) {
+                        db.query(
+                            'SELECT AVG(current) as avg_current, COUNT(id) as count FROM telemetry WHERE station_id = ? AND created_at >= ? AND created_at >= NOW() - INTERVAL 2 MINUTE',
+                            [session.station_id, session.start_time],
+                            (err, currentRes) => {
+                                if (!err && currentRes && currentRes.length > 0) {
+                                    const avgCurrent = currentRes[0].avg_current;
+                                    const count = currentRes[0].count;
 
-                const durationHours = session.duration_sec / 3600.0;
-                db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele2) => {
-                    let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;
-                    const unitPrice = session.unit_price || 3500;
-                    const tempCost = (avgPower / 1000) * durationHours * unitPrice;
-
-                    if (tempCost >= session.balance) {
-                        console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
-                        const [stId, outId] = session.station_id.split('.');
-                        processStopCharge(stId, outId, session.user_id, () => { });
+                                    if (count >= 15 && avgCurrent !== null && avgCurrent < 0.01) {
+                                        console.log(`🔌 [Worker] Phát hiện SẠC ĐẦY / KHÔNG TẢI tại ${session.station_id} (Dòng TB 2 phút: ${avgCurrent.toFixed(2)}A). Tự động ngắt sạc!`);
+                                        const [stId, outId] = session.station_id.split('.');
+                                        processStopCharge(stId, outId, session.user_id, () => { });
+                                        return;
+                                    }
+                                }
+                            }
+                        );
                     }
+
+                    // --- TÍNH NĂNG: KIỂM TRA SỐ DƯ TÀI KHOẢN (Bỏ qua đối với Admin) ---
+                    if (session.role === 'admin') {
+                        return;
+                    }
+
+                    const durationHours = session.duration_sec / 3600.0;
+                    db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele2) => {
+                        let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;
+                        const unitPrice = session.unit_price || 3500;
+                        const tempCost = (avgPower / 1000) * durationHours * unitPrice;
+
+                        if (tempCost >= session.balance) {
+                            console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
+                            const [stId, outId] = session.station_id.split('.');
+                            processStopCharge(stId, outId, session.user_id, () => { });
+                        }
+                    });
                 });
             });
         });

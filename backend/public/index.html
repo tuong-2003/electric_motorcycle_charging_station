@@ -1857,6 +1857,7 @@
 
             // Đặt trạng thái đang xác nhận để chặn MQTT ghi đè giao diện
             underConfirm[uniqueId] = true;
+            lastSeenTime[uniqueId] = Date.now(); // Tránh watchdog báo mất kết nối giả trong lúc gửi lệnh sạc
 
             const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẮT';
             showConfirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`, (confirmed) => {
@@ -1928,7 +1929,7 @@
             const now = Date.now();
             let changed = false;
             for (let uniqueId in lastSeenTime) {
-                if (now - lastSeenTime[uniqueId] > 15000) { // Quá 15 giây không có dữ liệu (Mất mạng)
+                if (now - lastSeenTime[uniqueId] > 30000) { // Quá 30 giây không có dữ liệu (Mất mạng)
                     const badgeElem = document.getElementById('stat_badge_' + uniqueId);
                     if (badgeElem && badgeElem.innerText !== 'Mất kết nối') {
                         badgeElem.className = "badge bg-danger rounded-pill fw-normal";
