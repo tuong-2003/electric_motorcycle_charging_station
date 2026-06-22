@@ -898,25 +898,11 @@ function runBackgroundWorker() {
                 return;
             }
 
-            // Truy vấn bản ghi nhịp tim gần nhất từ Database
-            db.query('SELECT created_at FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
-                if (err) return;
-
-                let querySql;
-                let queryParams;
-
-                if (tele && tele.length > 0) {
-                    // Nếu có telemetry, tính khoảng trễ dựa trên mốc mới nhất giữa lúc bắt đầu sạc và lúc nhận tin gần nhất
-                    querySql = 'SELECT TIMESTAMPDIFF(SECOND, GREATEST(?, ?), NOW()) as seconds_since';
-                    queryParams = [session.start_time, tele[0].created_at];
-                } else {
-                    // Nếu chưa có bất kỳ dữ liệu telemetry nào, tính dựa trên thời điểm bắt đầu sạc
-                    querySql = 'SELECT TIMESTAMPDIFF(SECOND, ?, NOW()) as seconds_since';
-                    queryParams = [session.start_time];
-                }
-
-                // Thực hiện tính toán khoảng trễ nhịp tim hoàn toàn trên DB (chống lệch múi giờ / lệch đồng hồ hệ thống)
-                db.query(querySql, queryParams, (err, diffRes) => {
+            // Tính toán khoảng trễ nhịp tim hoàn toàn trên DB bằng SQL liên kết bảng sạc và telemetry (Chống lệch múi giờ / clock drift)
+            db.query(
+                'SELECT TIMESTAMPDIFF(SECOND, GREATEST(s.start_time, COALESCE((SELECT created_at FROM telemetry WHERE station_id = s.station_id ORDER BY id DESC LIMIT 1), s.start_time)), NOW()) as seconds_since FROM charging_sessions s WHERE s.id = ?',
+                [session.id],
+                (err, diffRes) => {
                     if (err || diffRes.length === 0) return;
 
                     const secondsSinceLastHeartbeat = diffRes[0].seconds_since;
@@ -928,11 +914,11 @@ function runBackgroundWorker() {
                         return; // Đã chốt hóa đơn do rớt mạng, dừng xử lý tiếp
                     }
 
-                    // --- TÍNH NĂNG: TỰ ĐỘNG NGẮT KHI SẠC ĐẦY / KHÔNG TẢI (DÒNG < 0.05A TRONG 2 PHÚT) ---
+                    // --- TÍNH NĂNG: TỰ ĐỘNG NGẮT KHI SẠC ĐẦY / KHÔNG TẢI (DÒNG < 0.01A TRONG 2 PHÚT) ---
                     if (session.duration_sec >= 120) {
                         db.query(
-                            'SELECT AVG(current) as avg_current, COUNT(id) as count FROM telemetry WHERE station_id = ? AND created_at >= ? AND created_at >= NOW() - INTERVAL 2 MINUTE',
-                            [session.station_id, session.start_time],
+                            'SELECT AVG(t.current) as avg_current, COUNT(t.id) as count FROM telemetry t JOIN charging_sessions s ON s.id = ? WHERE t.station_id = s.station_id AND t.created_at >= s.start_time AND t.created_at >= NOW() - INTERVAL 2 MINUTE',
+                            [session.id],
                             (err, currentRes) => {
                                 if (!err && currentRes && currentRes.length > 0) {
                                     const avgCurrent = currentRes[0].avg_current;
@@ -955,17 +941,21 @@ function runBackgroundWorker() {
                     }
 
                     const durationHours = session.duration_sec / 3600.0;
-                    db.query('SELECT AVG(power) as avg_power FROM telemetry WHERE station_id = ? AND created_at >= ?', [session.station_id, session.start_time], (err, tele2) => {
-                        let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;
-                        const unitPrice = session.unit_price || 3500;
-                        const tempCost = (avgPower / 1000) * durationHours * unitPrice;
+                    db.query(
+                        'SELECT AVG(t.power) as avg_power FROM telemetry t JOIN charging_sessions s ON s.id = ? WHERE t.station_id = s.station_id AND t.created_at >= s.start_time',
+                        [session.id],
+                        (err, tele2) => {
+                            let avgPower = (tele2 && tele2.length > 0 && tele2[0].avg_power != null) ? tele2[0].avg_power : 0;
+                            const unitPrice = session.unit_price || 3500;
+                            const tempCost = (avgPower / 1000) * durationHours * unitPrice;
 
-                        if (tempCost >= session.balance) {
-                            console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
-                            const [stId, outId] = session.station_id.split('.');
-                            processStopCharge(stId, outId, session.user_id, () => { });
+                            if (tempCost >= session.balance) {
+                                console.log(`💰 [Worker] Ví của User #${session.user_id} sắp hết tiền! Tự động ngắt sạc tại trụ ${session.station_id}`);
+                                const [stId, outId] = session.station_id.split('.');
+                                processStopCharge(stId, outId, session.user_id, () => { });
+                            }
                         }
-                    });
+                    );
                 });
             });
         });
