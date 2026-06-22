@@ -1108,8 +1108,14 @@
                     <input type="text" id="login_user" class="form-control form-control-lg mb-3 bg-light"
                         placeholder="Tài khoản" value="Admin">
                     <!-- Hỗ trợ nhấn Enter để Submit -->
-                    <input type="password" id="login_pass" class="form-control form-control-lg mb-4 bg-light"
+                    <input type="password" id="login_pass" class="form-control form-control-lg mb-3 bg-light"
                         placeholder="Mật khẩu" value="@minad" onkeypress="if(event.key === 'Enter') doLogin()">
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="login_remember">
+                        <label class="form-check-label small text-muted" for="login_remember">
+                            Ghi nhớ đăng nhập
+                        </label>
+                    </div>
                     <button class="btn btn-primary btn-lg w-100 fw-bold"
                         style="background-color: #10a37f; border: none;" type="button" onclick="doLogin()">Tiếp
                         tục</button>
@@ -1606,7 +1612,7 @@
         setInterval(syncStationsData, 5000);
 
         // --- XÁC THỰC BẢO MẬT (JWT) ---
-        let authToken = localStorage.getItem('ev_token') || ''; // Lấy Token từ LocalStorage nếu có
+        let authToken = localStorage.getItem('ev_token') || sessionStorage.getItem('ev_token') || ''; // Lay token da luu neu co
         let currentUserRole = '';
 
         function showLoginGate() {
@@ -1701,17 +1707,21 @@
         function doLogin() {
             const u = document.getElementById('login_user').value;
             const p = document.getElementById('login_pass').value;
+            const rememberMe = document.getElementById('login_remember')?.checked || false;
 
             fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p })
+                body: JSON.stringify({ username: u, password: p, rememberMe: rememberMe })
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         authToken = data.token;
-                        localStorage.setItem('ev_token', authToken); // Lưu Token vào bộ nhớ lâu dài của trình duyệt
+                        sessionStorage.removeItem('ev_token');
+                        localStorage.removeItem('ev_token');
+                        const tokenStorage = rememberMe ? localStorage : sessionStorage;
+                        tokenStorage.setItem('ev_token', authToken);
                         // Lấy số dư hiển thị lên ngay lập tức, xong mới bung thông báo                
                         fetchUserProfile(data.message);
                     } else {
@@ -1725,6 +1735,7 @@
         function doLogout(shouldShowAlert) {
             authToken = '';
             localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
+            sessionStorage.removeItem('ev_token');
             localStorage.removeItem('ev_balance'); // Xóa số dư đệm
             const walletInfo = document.getElementById('wallet_info');
             if (walletInfo) walletInfo.classList.add('d-none');
