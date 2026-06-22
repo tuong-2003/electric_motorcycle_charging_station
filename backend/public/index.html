@@ -333,7 +333,16 @@
         #station_end_date:active,
         #stationFilterDropdownBtn:hover,
         #stationFilterDropdownBtn:focus,
-        #stationFilterDropdownBtn:active {
+        #stationFilterDropdownBtn:active,
+        #historyFilterDropdownBtn:hover,
+        #historyFilterDropdownBtn:focus,
+        #historyFilterDropdownBtn:active,
+        #history_filter_station:hover,
+        #history_filter_station:focus,
+        #history_filter_station:active,
+        #history_filter_username:hover,
+        #history_filter_username:focus,
+        #history_filter_username:active {
             background-color: #f1f5f9 !important;
             border-color: #cbd5e1 !important;
             color: #1e293b !important;
@@ -567,8 +576,8 @@
                     <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
                         <div
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <h6 class="mb-0 fw-bold text-dark"><i
-                                    class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h6>
+                            <h5 class="mb-0 fw-bold text-dark fs-5"><i
+                                    class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h5>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <div class="dropdown">
                                     <button class="btn btn-sm dropdown-toggle px-3" type="button"
@@ -641,14 +650,14 @@
                     <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
                         <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div>
-                                <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-file-invoice me-2 text-secondary"></i>Danh sách hóa đơn</h6>
+                                <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-file-invoice me-2 text-secondary"></i>Danh sách hóa đơn</h5>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <!-- Bộ lọc tên người dùng (chỉ hiện cho Admin) -->
-                                <input type="text" id="history_filter_username" class="form-control form-control-sm d-none" placeholder="Tìm người dùng..." style="width: 150px;">
+                                <input type="text" id="history_filter_username" class="form-control form-control-sm d-none" placeholder="Tìm người dùng..." style="width: 150px;" oninput="loadHistory()">
                                 
                                 <!-- Chọn trạm sạc -->
-                                <select id="history_filter_station" class="form-select form-select-sm" style="width: 120px;">
+                                <select id="history_filter_station" class="form-select form-select-sm" style="width: 120px;" onchange="loadHistory()">
                                     <option value="">Tất cả trạm</option>
                                     <option value="001">Trạm 001</option>
                                     <option value="002">Trạm 002</option>
@@ -677,9 +686,6 @@
                                 </div>
                                 <input type="hidden" id="history_start_date">
                                 <input type="hidden" id="history_end_date">
-                                
-                                <button class="btn btn-sm btn-secondary" onclick="loadHistory()">Lọc</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="resetHistoryFilter()">Reset</button>
                                 
                                 <button class="btn btn-sm btn-outline-success" onclick="exportHistoryCSV()">Xuất CSV</button>
                                 <button class="btn btn-sm btn-outline-danger" id="btn_clear_history" onclick="clearHistory()">Xóa lịch sử</button>
