@@ -141,6 +141,7 @@ const GAS_MAIL_URL = process.env.GAS_MAIL_URL || '';
 
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
 const processingLocks = new Set(); // [CHỐNG SPAM/BẤM ĐÚP] Lock tạm thời cho các API POST
+const pendingStarts = new Map(); // [MỌI PHIÊN SẠC] Quản lý hàng chờ xác thực phản hồi (ACK) từ trạm sạc
 
 // [TỐI ƯU] Tự động dọn rác (Garbage Collection) các mã OTP hết hạn mỗi 10 phút để chống rò rỉ RAM
 setInterval(() => {
@@ -197,6 +198,15 @@ client.on('message', (topic, message) => {
             const data = JSON.parse(message.toString());
             const stationId = parts[1];
             const outletId = parts[3];
+            const key = `${stationId}_${outletId}`;
+
+            // Nếu đang chờ phản hồi Bật sạc thành công (ACK) từ thiết bị
+            if (data.status === 'CHARGING' && pendingStarts.has(key)) {
+                const pending = pendingStarts.get(key);
+                clearTimeout(pending.timeoutId);
+                pendingStarts.delete(key);
+                pending.resolve();
+            }
 
             // Lưu dữ liệu vào Database MySQL
             const tempVal = data.temperature !== undefined ? data.temperature : null;
@@ -515,15 +525,37 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
                 return res.status(400).json({ success: false, message: '⛔ Trụ sạc này đang được sử dụng!' });
             }
 
-            // 3. Tạo Phiên sạc mới
-            db.query('INSERT INTO charging_sessions (station_id, user_id, status) VALUES (?, ?, "ongoing")', [`${stationId}.${outletId}`, userId], (err) => {
-                releaseLock();
-                if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc!' });
+            // Đẩy lệnh bật sạc qua MQTT trước
+            console.log(`📲 [API] User [${req.user.username}] yêu cầu sạc tại Tủ ${stationId}, Ổ ${outletId}. Đang đợi xác nhận từ thiết bị...`);
+            const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
+            client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
 
-                console.log(`📲 [API] User [${req.user.username}] bắt đầu sạc tại Tủ ${stationId}, Ổ ${outletId}`);
-                const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
-                client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
-                res.json({ success: true, message: `Bắt đầu phiên sạc thành công cho Cổng ${outletId} - Tủ ${stationId}!` });
+            // Thiết lập hàng chờ xác nhận từ phần cứng
+            const key = `${stationId}_${outletId}`;
+            if (pendingStarts.has(key)) {
+                const oldPending = pendingStarts.get(key);
+                clearTimeout(oldPending.timeoutId);
+                oldPending.reject(new Error('Yêu cầu mới đè lên yêu cầu cũ'));
+            }
+
+            const timeoutId = setTimeout(() => {
+                pendingStarts.delete(key);
+                releaseLock();
+                res.status(408).json({ success: false, message: `⛔ Lỗi: Trạm sạc không phản hồi lệnh bật sạc Cổng ${outletId} - Tủ ${stationId} (Hết thời gian chờ ACK)!` });
+            }, 3000); // Chờ tối đa 3 giây do Gateway đã được tối ưu hóa phản hồi lập tức
+
+            pendingStarts.set(key, {
+                resolve: () => {
+                    db.query('INSERT INTO charging_sessions (station_id, user_id, status) VALUES (?, ?, "ongoing")', [`${stationId}.${outletId}`, userId], (err) => {
+                        releaseLock();
+                        if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc trên Database!' });
+                        res.json({ success: true, message: `Bắt đầu phiên sạc thành công cho Cổng ${outletId} - Tủ ${stationId}!` });
+                    });
+                },
+                reject: (err) => {
+                    releaseLock();
+                },
+                timeoutId
             });
         });
     });
@@ -888,9 +920,14 @@ function runBackgroundWorker() {
 
         sessions.forEach(session => {
             // [FIX LOGIC] Chuyển kiểm tra số dư VÀO TRONG callback kiểm tra rớt mạng để tránh LỖI CHẠY ĐUA (Race Condition)
-            db.query('SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) as seconds_since FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
+            db.query('SELECT created_at FROM telemetry WHERE station_id = ? ORDER BY id DESC LIMIT 1', [session.station_id], (err, tele) => {
                 if (tele && tele.length > 0) {
-                    const secondsSinceLastHeartbeat = tele[0].seconds_since;
+                    const lastTelemetryTime = new Date(tele[0].created_at);
+                    const sessionStartTime = new Date(session.start_time);
+                    
+                    // Lấy mốc thời gian muộn nhất giữa lúc bắt đầu sạc và lúc nhận tin nhắn cuối cùng
+                    const lastActiveTime = lastTelemetryTime > sessionStartTime ? lastTelemetryTime : sessionStartTime;
+                    const secondsSinceLastHeartbeat = Math.floor((Date.now() - lastActiveTime) / 1000);
 
                     if (secondsSinceLastHeartbeat > 30) {
                         console.log(`⚠️ [Worker] Trạm ${session.station_id} mất kết nối! Tự động chốt hóa đơn #${session.id}`);

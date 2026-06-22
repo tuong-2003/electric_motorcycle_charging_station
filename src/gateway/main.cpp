@@ -23,6 +23,35 @@ ModbusMasterTask modbus;
 const uint8_t STATION_IDS[] = {1}; 
 const int NUM_STATIONS = 1;
 
+void pollAndPublishStation(int stationId) {
+    StationData data;
+    char stationStr[4];
+    snprintf(stationStr, sizeof(stationStr), "%03d", stationId);
+    
+    if (modbus.readStation(stationId, data)) {
+        Serial.printf("Doc thanh cong TRAM %d: V=%.1f\n", stationId, data.v1);
+        
+        // --- Đẩy JSON Cổng 1 ---
+        JsonDocument doc1;
+        doc1["station_id"] = stationStr; doc1["outlet_id"] = 1; doc1["status"] = data.stat1 ? "CHARGING" : "AVAILABLE";
+        doc1["voltage"] = data.v1; doc1["current"] = data.a1; doc1["power"] = data.w1;
+        doc1["temperature"] = data.temp; doc1["humidity"] = data.hum;
+        String p1; serializeJson(doc1, p1);
+        char topic1[50]; snprintf(topic1, sizeof(topic1), "ev_station/%s/outlet/1/status", stationStr);
+        mqtt.publish(topic1, p1.c_str());
+
+        // --- Đẩy JSON Cổng 2 ---
+        JsonDocument doc2;
+        doc2["station_id"] = stationStr; doc2["outlet_id"] = 2; doc2["status"] = data.stat2 ? "CHARGING" : "AVAILABLE";
+        doc2["voltage"] = data.v2; doc2["current"] = data.a2; doc2["power"] = data.w2;
+        String p2; serializeJson(doc2, p2);
+        char topic2[50]; snprintf(topic2, sizeof(topic2), "ev_station/%s/outlet/2/status", stationStr);
+        mqtt.publish(topic2, p2.c_str());
+    } else {
+        Serial.printf("Doc THAT BAI TRAM %d! Vui long kiem tra ket noi.\n", stationId);
+    }
+}
+
 void setup_wifi() {
     Serial.println("\nDang ket noi WiFi...");
     WiFi.mode(WIFI_STA);
@@ -44,9 +73,13 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
         if (command && strcmp(command, "START_CHARGE") == 0) {
             Serial.printf("Gateway gui lenh BAT cho TRAM %d - O %d\n", stId, outId);
             modbus.sendCommand(stId, outId, true);
+            delay(150); // Chờ 150ms để tủ sạc xử lý và cập nhật rơ-le vật lý
+            pollAndPublishStation(stId);
         } else if (command && strcmp(command, "STOP_CHARGE") == 0) {
             Serial.printf("Gateway gui lenh TAT cho TRAM %d - O %d\n", stId, outId);
             modbus.sendCommand(stId, outId, false);
+            delay(150); // Chờ 150ms để tủ sạc xử lý
+            pollAndPublishStation(stId);
         }
     }
     // 2. Lắng nghe cấu hình (VD: ev_station/001/config)
@@ -62,6 +95,8 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
         Serial.printf("Gateway nhan cau hinh cho TRAM %d: MaxCurrent=%d (x100), TempLimit=%d, Status=%d\n", 
                       stId, maxCurrentVal, tempLimitVal, statusVal);
         modbus.sendConfig(stId, maxCurrentVal, tempLimitVal, statusVal);
+        delay(150);
+        pollAndPublishStation(stId);
     }
 }
 
@@ -95,32 +130,7 @@ void loop() {
         lastPoll = millis();
         
         for (int i = 0; i < NUM_STATIONS; i++) {
-            StationData data;
-            char stationStr[4];
-            snprintf(stationStr, sizeof(stationStr), "%03d", STATION_IDS[i]);
-            
-            if (modbus.readStation(STATION_IDS[i], data)) {
-                Serial.printf("Doc thanh cong TRAM %d: V=%.1f\n", STATION_IDS[i], data.v1);
-                
-                // --- Đẩy JSON Cổng 1 ---
-                JsonDocument doc1;
-                doc1["station_id"] = stationStr; doc1["outlet_id"] = 1; doc1["status"] = data.stat1 ? "CHARGING" : "AVAILABLE";
-                doc1["voltage"] = data.v1; doc1["current"] = data.a1; doc1["power"] = data.w1;
-                doc1["temperature"] = data.temp; doc1["humidity"] = data.hum;
-                String p1; serializeJson(doc1, p1);
-                char topic1[50]; snprintf(topic1, sizeof(topic1), "ev_station/%s/outlet/1/status", stationStr);
-                mqtt.publish(topic1, p1.c_str());
-
-                // --- Đẩy JSON Cổng 2 ---
-                JsonDocument doc2;
-                doc2["station_id"] = stationStr; doc2["outlet_id"] = 2; doc2["status"] = data.stat2 ? "CHARGING" : "AVAILABLE";
-                doc2["voltage"] = data.v2; doc2["current"] = data.a2; doc2["power"] = data.w2;
-                String p2; serializeJson(doc2, p2);
-                char topic2[50]; snprintf(topic2, sizeof(topic2), "ev_station/%s/outlet/2/status", stationStr);
-                mqtt.publish(topic2, p2.c_str());
-            } else {
-                Serial.printf("Doc THAT BAI TRAM %d! Vui long kiem tra ket noi.\n", STATION_IDS[i]);
-            }
+            pollAndPublishStation(STATION_IDS[i]);
         }
     }
 }
