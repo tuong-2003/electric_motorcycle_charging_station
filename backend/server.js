@@ -811,6 +811,49 @@ app.get('/api/user/me', verifyToken, (req, res) => {
     });
 });
 
+// API Đổi mật khẩu của User đang đăng nhập (Admin hoặc User thường)
+app.post('/api/user/change-password', verifyToken, async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ mật khẩu cũ và mới!' });
+    }
+
+    db.query('SELECT password FROM users WHERE id = ?', [req.user.id], async (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database truy vấn mật khẩu' });
+        if (results.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy User' });
+
+        const user = results[0];
+        try {
+            // So sánh mật khẩu cũ
+            const match = await bcrypt.compare(oldPassword, user.password);
+            if (!match) return res.status(400).json({ success: false, message: 'Mật khẩu cũ không chính xác!' });
+
+            // Hóa mật khẩu mới
+            const hashed = await bcrypt.hash(newPassword, 10);
+            db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, req.user.id], (err) => {
+                if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật mật khẩu' });
+                res.json({ success: true, message: 'Đã đổi mật khẩu thành công!' });
+            });
+        } catch (e) {
+            res.status(500).json({ success: false, message: 'Lỗi hệ thống khi mã hóa mật khẩu' });
+        }
+    });
+});
+
+// API Cập nhật đơn giá sạc cho toàn bộ các Tủ sạc (Chỉ Admin)
+app.put('/api/stations/price', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền cấu hình đơn giá!' });
+    const { unitPrice } = req.body;
+    if (unitPrice == null || isNaN(unitPrice) || parseInt(unitPrice) < 0) {
+        return res.status(400).json({ success: false, message: 'Đơn giá mới không hợp lệ!' });
+    }
+
+    db.query('UPDATE stations SET unit_price = ?', [parseInt(unitPrice)], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database cập nhật đơn giá' });
+        res.json({ success: true, message: 'Đã cập nhật đơn giá mới cho toàn bộ các tủ sạc!' });
+    });
+});
+
 // API Lấy danh sách User (Chỉ Admin)
 app.get('/api/users', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xem danh sách!' });

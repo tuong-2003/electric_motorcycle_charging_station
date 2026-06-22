@@ -1040,7 +1040,7 @@
                                         placeholder="Nhập mật khẩu mới">
                                 </div>
                                 <button class="btn btn-success mt-auto"
-                                    onclick="showAlert('Tính năng đổi mật khẩu đang phát triển!', 'warning')">Cập nhật mật khẩu</button>
+                                    onclick="changePassword()">Cập nhật mật khẩu</button>
                             </div>
                         </div>
 
@@ -1055,10 +1055,10 @@
                                 </div>
                                 <div class="mb-4">
                                     <span class="text-muted small">Giá điện hiện tại: </span>
-                                    <strong class="text-dark fs-5">3.500 đ</strong>
+                                    <strong class="text-dark fs-5" id="setting_current_price">-- đ</strong>
                                 </div>
                                 <button class="btn btn-success mt-auto"
-                                    onclick="showAlert('Tính năng cập nhật giá điện đang phát triển!', 'warning')">Cập nhật giá điện</button>
+                                    onclick="updateUnitPrice()">Cập nhật giá điện</button>
                             </div>
                         </div>
                     </div>
@@ -1717,6 +1717,86 @@
             if (tabId === 'history') loadHistory();
             if (tabId === 'users') loadUsers();
             if (tabId === 'stations') loadStations();
+            if (tabId === 'settings') loadSettings();
+        }
+
+        // --- CÀI ĐẶT (SETTINGS) ---
+        function loadSettings() {
+            if (!authToken) return;
+            fetch('/api/stations', { headers: { 'Authorization': 'Bearer ' + authToken } })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        const currentPrice = data.data[0].unit_price;
+                        const priceEl = document.getElementById('setting_current_price');
+                        if (priceEl) priceEl.innerText = parseInt(currentPrice).toLocaleString('vi-VN') + ' đ';
+                    }
+                }).catch(err => console.error("Lỗi lấy cấu hình giá:", err));
+        }
+
+        function updateUnitPrice() {
+            const priceInput = document.getElementById('setting_unit_price');
+            if (!priceInput || !priceInput.value) {
+                showAlert('Vui lòng nhập đơn giá mới!', 'warning');
+                return;
+            }
+            const price = parseInt(priceInput.value);
+            if (isNaN(price) || price < 0) {
+                showAlert('Đơn giá không hợp lệ!', 'warning');
+                return;
+            }
+
+            fetch('/api/stations/price', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({ unitPrice: price })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        priceInput.value = '';
+                        loadSettings(); // Tải lại giá hiển thị trên tab Cài đặt
+                    } else {
+                        showAlert(data.message, 'danger');
+                    }
+                })
+                .catch(err => showAlert('Không kết nối được tới máy chủ!', 'danger'));
+        }
+
+        function changePassword() {
+            const oldPassInput = document.getElementById('setting_old_pass');
+            const newPassInput = document.getElementById('setting_new_pass');
+            if (!oldPassInput || !newPassInput || !oldPassInput.value || !newPassInput.value) {
+                showAlert('Vui lòng nhập đầy đủ mật khẩu cũ và mới!', 'warning');
+                return;
+            }
+
+            fetch('/api/user/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({
+                    oldPassword: oldPassInput.value,
+                    newPassword: newPassInput.value
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        oldPassInput.value = '';
+                        newPassInput.value = '';
+                    } else {
+                        showAlert(data.message, 'danger');
+                    }
+                })
+                .catch(err => showAlert('Không kết nối được tới máy chủ!', 'danger'));
         }
 
         function loadHistory() {
