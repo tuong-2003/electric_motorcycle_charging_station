@@ -654,28 +654,26 @@
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <!-- Bộ lọc tên người dùng (chỉ hiện cho Admin) -->
-                                <div class="input-group input-group-sm d-none" id="history_username_group" style="width: 200px;">
-                                    <input type="text" id="history_filter_username" class="form-control" placeholder="Tìm người dùng..." onkeydown="if(event.key==='Enter') loadHistory()">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="loadHistory()">
-                                        <i class="fas fa-search"></i>
-                                    </button>
+                                <div class="position-relative d-none" id="history_username_group" style="width: 180px;">
+                                    <input type="text" id="history_filter_username" class="form-control form-control-sm" placeholder="Tìm người dùng..." onkeydown="if(event.key==='Enter') loadHistory()" style="padding-right: 30px;">
+                                    <i class="fas fa-search text-muted" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; z-index: 5;" onclick="loadHistory()"></i>
                                 </div>
                                 
-                                <!-- Chọn trạm sạc -->
+                                <!-- Chọn tủ sạc -->
                                 <div class="dropdown">
                                     <button class="btn btn-sm dropdown-toggle px-3" type="button"
                                         id="historyStationDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
                                         style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
-                                        Tất cả trạm
+                                        Tất cả tủ
                                     </button>
                                     <ul class="dropdown-menu shadow border-0" aria-labelledby="historyStationDropdownBtn"
                                         style="border-radius: 8px;">
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
-                                                onclick="setHistoryStationFilter('', 'Tất cả trạm')">Tất cả trạm</a></li>
+                                                onclick="setHistoryStationFilter('', 'Tất cả tủ')">Tất cả tủ</a></li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
-                                                onclick="setHistoryStationFilter('001', 'Trạm 001')">Trạm 001</a></li>
+                                                onclick="setHistoryStationFilter('001', 'Tủ 001')">Tủ 001</a></li>
                                         <li><a class="dropdown-item py-2 small fw-semibold" href="#"
-                                                onclick="setHistoryStationFilter('002', 'Trạm 002')">Trạm 002</a></li>
+                                                onclick="setHistoryStationFilter('002', 'Tủ 002')">Tủ 002</a></li>
                                     </ul>
                                 </div>
                                 <input type="hidden" id="history_filter_station" value="">
@@ -723,7 +721,7 @@
                                         <tr>
                                             <th style="width: 80px;">Mã HĐ</th>
                                             <th id="th_history_user" class="d-none">Người dùng</th>
-                                            <th>Trạm / Cổng</th>
+                                            <th>Tủ / Cổng</th>
                                             <th>Bắt đầu</th>
                                             <th>Kết thúc</th>
                                             <th>Điện năng (kWh)</th>
@@ -1636,6 +1634,8 @@
             currentHistoryFilter = 'all';
             const btn = document.getElementById('historyFilterDropdownBtn');
             if (btn) btn.innerText = 'Từ trước đến nay';
+            const stationBtn = document.getElementById('historyStationDropdownBtn');
+            if (stationBtn) stationBtn.innerText = 'Tất cả tủ';
             document.getElementById('history_start_date').value = '';
             document.getElementById('history_end_date').value = '';
             document.getElementById('history_filter_station').value = '';
