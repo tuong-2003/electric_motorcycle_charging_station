@@ -18,3 +18,4 @@ db.query('SELECT station_id, name, status, max_current, temp_limit FROM stations
     }
     db.end();
 });
+

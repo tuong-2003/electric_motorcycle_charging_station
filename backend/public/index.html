@@ -350,6 +350,20 @@
             outline: none !important;
         }
 
+        /* Định dạng lại trạng thái focus toàn hệ thống sang màu xám nhã nhặn, loại bỏ màu xanh dương mặc định */
+        input:focus,
+        select:focus,
+        textarea:focus,
+        button:focus,
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #cbd5e1 !important;
+            box-shadow: 0 0 0 0.25rem rgba(203, 213, 225, 0.3) !important;
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+            outline: none !important;
+        }
+
         /* Tùy chỉnh màu hover của item trong dropdown sang màu xám */
         .dropdown-menu .dropdown-item:hover,
         .dropdown-menu .dropdown-item:focus {
@@ -758,10 +772,10 @@
                 <!-- Users Tab (Quản lý User) -->
                 <div id="tab-users" class="p-4 tab-content d-none">
 
-                    <div class="row g-4 mt-1">
+                    <div class="row gx-4 gy-3 gy-md-0">
                         <!-- Danh sách người dùng -->
                         <div class="col-md-8 col-lg-9">
-                            <div class="card card-stat border-0 shadow-sm" style="border-radius: 12px; overflow: visible;">
+                            <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px; overflow: visible;">
                                 <div class="card-header bg-white border-bottom py-3">
                                     <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-users me-2 text-secondary"></i>Danh sách người dùng</h5>
                                 </div>
@@ -792,7 +806,7 @@
 
                         <!-- Tạo tài khoản mới -->
                         <div class="col-md-4 col-lg-3">
-                            <div class="card card-stat border-0 shadow-sm" style="border-radius: 12px;">
+                            <div class="card card-stat border-0 shadow-sm mt-1" style="border-radius: 12px;">
                                 <div class="card-header bg-white border-bottom py-3">
                                     <h5 class="mb-0 fw-bold text-dark fs-5"><i class="fas fa-user-plus me-2 text-secondary"></i>Tạo tài khoản</h5>
                                 </div>
@@ -2007,6 +2021,9 @@
                     tbody.innerHTML = '';
                     if (data.success) {
                         data.data.forEach(user => {
+                            // Ẩn tài khoản admin khỏi danh sách người dùng
+                            if (user.username.toLowerCase() === 'admin' || user.role === 'admin') return;
+
                             let balanceFormat = parseInt(user.balance).toLocaleString('vi-VN') + ' đ';
                             let roleBadge = user.role === 'admin' ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>';
                             let createdAtFormat = user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '-';
