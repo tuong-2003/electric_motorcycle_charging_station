@@ -141,7 +141,6 @@ const GAS_MAIL_URL = process.env.GAS_MAIL_URL || '';
 
 const otpStorage = new Map(); // Lưu tạm mã OTP trong RAM (sẽ tự hủy nếu reset máy chủ)
 const processingLocks = new Set(); // [CHỐNG SPAM/BẤM ĐÚP] Lock tạm thời cho các API POST
-const pendingStarts = new Map(); // [MỌI PHIÊN SẠC] Quản lý hàng chờ xác thực phản hồi (ACK) từ trạm sạc
 
 // [TỐI ƯU] Tự động dọn rác (Garbage Collection) các mã OTP hết hạn mỗi 10 phút để chống rò rỉ RAM
 setInterval(() => {
@@ -198,15 +197,6 @@ client.on('message', (topic, message) => {
             const data = JSON.parse(message.toString());
             const stationId = parts[1];
             const outletId = parts[3];
-            const key = `${stationId}_${outletId}`;
-
-            // Nếu đang chờ phản hồi Bật sạc thành công (ACK) từ thiết bị
-            if (data.status === 'CHARGING' && pendingStarts.has(key)) {
-                const pending = pendingStarts.get(key);
-                clearTimeout(pending.timeoutId);
-                pendingStarts.delete(key);
-                pending.resolve();
-            }
 
             // Lưu dữ liệu vào Database MySQL
             const tempVal = data.temperature !== undefined ? data.temperature : null;
@@ -525,37 +515,18 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
                 return res.status(400).json({ success: false, message: '⛔ Trụ sạc này đang được sử dụng!' });
             }
 
-            // Đẩy lệnh bật sạc qua MQTT trước
-            console.log(`📲 [API] User [${req.user.username}] yêu cầu sạc tại Tủ ${stationId}, Ổ ${outletId}. Đang đợi xác nhận từ thiết bị...`);
-            const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
-            client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
-
-            // Thiết lập hàng chờ xác nhận từ phần cứng
-            const key = `${stationId}_${outletId}`;
-            if (pendingStarts.has(key)) {
-                const oldPending = pendingStarts.get(key);
-                clearTimeout(oldPending.timeoutId);
-                oldPending.reject(new Error('Yêu cầu mới đè lên yêu cầu cũ'));
-            }
-
-            const timeoutId = setTimeout(() => {
-                pendingStarts.delete(key);
+            // 3. Tạo Phiên sạc mới trong Database ngay lập tức (Lạc quan - Optimistic)
+            db.query('INSERT INTO charging_sessions (station_id, user_id, status) VALUES (?, ?, "ongoing")', [`${stationId}.${outletId}`, userId], (err) => {
                 releaseLock();
-                res.status(408).json({ success: false, message: `⛔ Lỗi: Trạm sạc không phản hồi lệnh bật sạc Cổng ${outletId} - Tủ ${stationId} (Hết thời gian chờ ACK)!` });
-            }, 10000); // Chờ tối đa 10 giây để đảm bảo phản hồi tin cậy qua Broker mạng ngoài
+                if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc trên Database!' });
 
-            pendingStarts.set(key, {
-                resolve: () => {
-                    db.query('INSERT INTO charging_sessions (station_id, user_id, status) VALUES (?, ?, "ongoing")', [`${stationId}.${outletId}`, userId], (err) => {
-                        releaseLock();
-                        if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc trên Database!' });
-                        res.json({ success: true, message: `Bắt đầu phiên sạc thành công cho Cổng ${outletId} - Tủ ${stationId}!` });
-                    });
-                },
-                reject: (err) => {
-                    releaseLock();
-                },
-                timeoutId
+                console.log(`📲 [API] User [${req.user.username}] bắt đầu sạc tại Tủ ${stationId}, Ổ ${outletId}`);
+                
+                // Gửi lệnh sạc xuống thiết bị qua MQTT
+                const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
+                client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
+                
+                res.json({ success: true, message: `Bắt đầu phiên sạc thành công cho Cổng ${outletId} - Tủ ${stationId}!` });
             });
         });
     });
