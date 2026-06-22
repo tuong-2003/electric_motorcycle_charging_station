@@ -616,30 +616,52 @@ app.get('/api/telemetry/history', (req, res) => {
     });
 });
 
-// API Lấy danh sách lịch sử sạc cá nhân (Hỗ trợ lọc theo ngày)
+// API Lấy danh sách lịch sử sạc cá nhân hoặc tất cả (đối với Admin)
 app.get('/api/sessions/history', verifyToken, (req, res) => {
-    const { startDate, endDate } = req.query; // Nhận tham số lọc: startDate, endDate (YYYY-MM-DD)
+    const { startDate, endDate, stationId, username } = req.query;
 
     let sql = `
-        SELECT id, station_id, 
-               DATE_FORMAT(start_time, '%d/%m/%Y %H:%i:%s') as start, 
-               DATE_FORMAT(end_time, '%d/%m/%Y %H:%i:%s') as end, 
-               total_kwh, total_cost, status 
-        FROM charging_sessions
-        WHERE user_id = ?
+        SELECT s.id, s.station_id, u.username,
+               DATE_FORMAT(s.start_time, '%d/%m/%Y %H:%i:%s') as start, 
+               DATE_FORMAT(s.end_time, '%d/%m/%Y %H:%i:%s') as end, 
+               s.total_kwh, s.total_cost, s.status 
+        FROM charging_sessions s
+        JOIN users u ON s.user_id = u.id
     `;
-    let params = [req.user.id];
+    let params = [];
+    let conditions = [];
 
-    if (startDate && endDate) {
-        sql += ' AND start_time >= ? AND start_time <= ?';
-        params.push(`${startDate} 00:00:00`);
-        params.push(`${endDate} 23:59:59`);
+    // Phân quyền: Admin xem tất cả, User thường chỉ xem của bản thân
+    if (req.user.role !== 'admin') {
+        conditions.push('s.user_id = ?');
+        params.push(req.user.id);
+    } else if (username && username.trim() !== '') {
+        // Admin lọc theo tên người dùng
+        conditions.push('u.username LIKE ?');
+        params.push(`%${username.trim()}%`);
     }
 
-    sql += ' ORDER BY id DESC LIMIT 200';
+    if (startDate && endDate && startDate.trim() !== '' && endDate.trim() !== '') {
+        conditions.push('s.start_time >= ? AND s.start_time <= ?');
+        params.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+    }
+
+    if (stationId && stationId.trim() !== '') {
+        conditions.push('s.station_id LIKE ?');
+        params.push(`${stationId}%`);
+    }
+
+    if (conditions.length > 0) {
+        sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    sql += ' ORDER BY s.id DESC LIMIT 200';
 
     db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
+        if (err) {
+            console.error('⚠️ [MySQL] Lỗi query history:', err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi DB' });
+        }
         res.json({ success: true, data: results });
     });
 });

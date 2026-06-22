@@ -396,8 +396,8 @@
                         Tổng quan</a>
                     <a href="#" onclick="switchTab('stations')"><i class="fas fa-charging-station me-2"></i> Trạm
                         sạc</a>
-                    <a href="#" onclick="switchTab('users')"><i class="fas fa-id-card me-2"></i> Thẻ RFID / Users</a>
-                    <a href="#" onclick="switchTab('history')"><i class="fas fa-history me-2"></i> Lịch sử sạc</a>
+                    <a href="#" onclick="switchTab('users')"><i class="fas fa-id-card me-2"></i> Người dùng</a>
+                    <a href="#" onclick="switchTab('history')"><i class="fas fa-history me-2"></i> Hóa đơn</a>
                     <a href="#" onclick="switchTab('settings')"><i class="fas fa-cog me-2"></i> Cài đặt</a>
                 </nav>
 
@@ -636,28 +636,62 @@
                     </div>
                 </div>
 
-                <!-- History Tab (Lịch sử sạc) -->
+                <!-- History Tab (Hóa đơn) -->
                 <div id="tab-history" class="p-4 tab-content d-none">
-                    <div class="card card-stat">
+                    <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: visible;">
+                        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-history me-2 text-secondary"></i>Danh sách hóa đơn</h6>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Bộ lọc tên người dùng (chỉ hiện cho Admin) -->
+                                <input type="text" id="history_filter_username" class="form-control form-control-sm d-none" placeholder="Tìm người dùng..." style="width: 150px;">
+                                
+                                <!-- Chọn trạm sạc -->
+                                <select id="history_filter_station" class="form-select form-select-sm" style="width: 120px;">
+                                    <option value="">Tất cả trạm</option>
+                                    <option value="001">Trạm 001</option>
+                                    <option value="002">Trạm 002</option>
+                                </select>
+
+                                <!-- Khoảng ngày -->
+                                <input type="date" id="history_start_date" class="form-control form-control-sm" style="width: auto;">
+                                <span>-</span>
+                                <input type="date" id="history_end_date" class="form-control form-control-sm" style="width: auto;">
+                                
+                                <button class="btn btn-sm btn-secondary" onclick="loadHistory()">Lọc</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="resetHistoryFilter()">Reset</button>
+                                
+                                <button class="btn btn-sm btn-outline-success" onclick="exportHistoryCSV()">Xuất CSV</button>
+                                <button class="btn btn-sm btn-outline-danger" id="btn_clear_history" onclick="clearHistory()">Xóa lịch sử</button>
+                            </div>
+                        </div>
                         <div class="card-body p-0">
-                            <table class="table table-hover mb-0 text-center">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Mã HĐ</th>
-                                        <th>Trạm</th>
-                                        <th>Bắt đầu</th>
-                                        <th>Kết thúc</th>
-                                        <th>Điện năng (kWh)</th>
-                                        <th>Thành tiền (VNĐ)</th>
-                                        <th>Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="history_table_body">
-                                    <tr>
-                                        <td colspan="7">Đang tải dữ liệu...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <!-- Tóm tắt số liệu đơn giản và chuyên nghiệp -->
+                            <div class="bg-light border-bottom px-4 py-2 d-flex justify-content-between align-items-center flex-wrap gap-3" style="font-size: 0.88rem; font-weight: 500;">
+                                <div class="text-muted">Tổng số phiên: <span id="summary_total_sessions" class="text-dark fw-bold">0</span></div>
+                                <div class="text-muted">Tổng điện năng: <span id="summary_total_kwh" class="text-dark fw-bold">0.00</span> kWh</div>
+                                <div class="text-muted">Tổng thành tiền: <span id="summary_total_cost" class="text-dark fw-bold">0</span> VNĐ</div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 80px;">Mã HĐ</th>
+                                            <th id="th_history_user" class="d-none">Người dùng</th>
+                                            <th>Trạm / Cổng</th>
+                                            <th>Bắt đầu</th>
+                                            <th>Kết thúc</th>
+                                            <th>Điện năng (kWh)</th>
+                                            <th>Thành tiền (VNĐ)</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history_table_body">
+                                        <tr>
+                                            <td colspan="8">Đang tải dữ liệu...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1332,6 +1366,7 @@
 
         // --- XÁC THỰC BẢO MẬT (JWT) ---
         let authToken = localStorage.getItem('ev_token') || ''; // Lấy Token từ LocalStorage nếu có
+        let currentUserRole = '';
 
         // Khoi phục login khi F5
         if (authToken) {
@@ -1364,6 +1399,18 @@
                         // Giao diện ChatGPT: Cập nhật Tên, Avatar (Chữ cái đầu tiên)
                         document.getElementById('sidebar_admin_name').innerText = data.data.username;
                         document.getElementById('user_avatar').innerText = data.data.username.charAt(0).toUpperCase();
+
+                        // Cập nhật phân quyền người dùng để điều chỉnh giao diện Tab Hóa đơn
+                        currentUserRole = data.data.role;
+                        if (currentUserRole === 'admin') {
+                            document.getElementById('history_filter_username')?.classList.remove('d-none');
+                            document.getElementById('th_history_user')?.classList.remove('d-none');
+                            document.getElementById('btn_clear_history')?.classList.add('d-none');
+                        } else {
+                            document.getElementById('history_filter_username')?.classList.add('d-none');
+                            document.getElementById('th_history_user')?.classList.add('d-none');
+                            document.getElementById('btn_clear_history')?.classList.remove('d-none');
+                        }
 
                         document.getElementById('sidebar_unauth').classList.add('d-none');
                         document.getElementById('sidebar_auth').classList.remove('d-none');
@@ -1448,7 +1495,7 @@
                 'dashboard': 'Tổng quan hệ thống',
                 'stations': 'Quản lý trạm sạc',
                 'users': 'Người dùng & Ví tiền',
-                'history': 'Lịch sử Hóa đơn',
+                'history': 'Hóa đơn',
                 'settings': 'Cài đặt hệ thống'
             };
             document.getElementById('top_page_title').innerText = titleMap[tabId] || 'Trạm Sạc HVT';
@@ -1461,7 +1508,18 @@
 
         function loadHistory() {
             if (!authToken) return;
-            fetch('/api/sessions/history', {
+
+            const startDate = document.getElementById('history_start_date').value;
+            const endDate = document.getElementById('history_end_date').value;
+            const stationId = document.getElementById('history_filter_station').value;
+            const username = document.getElementById('history_filter_username')?.value || '';
+
+            let url = `/api/sessions/history?startDate=${startDate}&endDate=${endDate}&stationId=${stationId}`;
+            if (currentUserRole === 'admin' && username) {
+                url += `&username=${encodeURIComponent(username)}`;
+            }
+
+            fetch(url, {
                 headers: { 'Authorization': 'Bearer ' + authToken }
             })
                 .then(res => res.json())
@@ -1469,20 +1527,114 @@
                     if (data.success) {
                         const tbody = document.getElementById('history_table_body');
                         tbody.innerHTML = '';
+
+                        let totalKwh = 0;
+                        let totalCost = 0;
+
                         data.data.forEach(row => {
+                            totalKwh += parseFloat(row.total_kwh || 0);
+                            totalCost += parseInt(row.total_cost || 0);
+
                             let costFormat = parseInt(row.total_cost).toLocaleString('vi-VN') + ' đ';
                             let kwhFormat = parseFloat(row.total_kwh).toFixed(3);
                             let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
+                            
+                            let userTd = currentUserRole === 'admin' ? `<td>${row.username || '-'}</td>` : '';
+
                             tbody.innerHTML += `<tr>
-                            <td>#${row.id}</td><td>${row.station_id}</td>
-                            <td>${row.start}</td><td>${row.end || '-'}</td>
-                            <td>${kwhFormat}</td>
-                            <td>${costFormat}</td>
-                            <td>${badge}</td>
-                        </tr>`;
+                                <td>#${row.id}</td>
+                                ${userTd}
+                                <td>${row.station_id}</td>
+                                <td>${row.start}</td>
+                                <td>${row.end || '-'}</td>
+                                <td>${kwhFormat}</td>
+                                <td>${costFormat}</td>
+                                <td>${badge}</td>
+                            </tr>`;
                         });
+
+                        // Cập nhật các ô tóm tắt số liệu
+                        document.getElementById('summary_total_sessions').innerText = data.data.length;
+                        document.getElementById('summary_total_kwh').innerText = totalKwh.toFixed(2);
+                        document.getElementById('summary_total_cost').innerText = totalCost.toLocaleString('vi-VN');
+
+                        if (data.data.length === 0) {
+                            const colCount = currentUserRole === 'admin' ? 8 : 7;
+                            tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-muted py-3">Không tìm thấy hóa đơn nào trong khoảng thời gian này!</td></tr>`;
+                        }
                     }
                 });
+        }
+
+        function resetHistoryFilter() {
+            document.getElementById('history_start_date').value = '';
+            document.getElementById('history_end_date').value = '';
+            document.getElementById('history_filter_station').value = '';
+            const userFilter = document.getElementById('history_filter_username');
+            if (userFilter) userFilter.value = '';
+            loadHistory();
+        }
+
+        function exportHistoryCSV() {
+            const tbody = document.getElementById('history_table_body');
+            const rows = tbody.querySelectorAll('tr');
+            if (rows.length === 0 || (rows.length === 1 && rows[0].innerText.includes('Không tìm thấy'))) {
+                showAlert('Không có dữ liệu để xuất!', 'warning');
+                return;
+            }
+
+            let csvContent = "\uFEFF"; // UTF-8 BOM để Excel hiển thị đúng dấu tiếng Việt
+            
+            let headers = ['Ma Hoa Don'];
+            if (currentUserRole === 'admin') headers.push('Nguoi Dung');
+            headers.push('Tram', 'Bat Dau', 'Ket Thuc', 'Dien Nang (kWh)', 'Thanh Tien (VND)', 'Trang Thai');
+            csvContent += headers.join(",") + "\n";
+
+            rows.forEach(tr => {
+                const cols = tr.querySelectorAll('td');
+                if (cols.length < 5) return; // Bỏ qua dòng báo rỗng
+
+                let rowData = [];
+                cols.forEach(td => {
+                    let text = td.innerText.trim().replace(/,/g, '').replace(/\n/g, ' ');
+                    rowData.push(`"${text}"`);
+                });
+                csvContent += rowData.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Lich_su_hoa_don_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function clearHistory() {
+            showConfirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử sạc của mình không? Hành động này không thể hoàn tác.', (confirmed) => {
+                if (confirmed) {
+                    fetch('/api/sessions/history', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + authToken }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                showAlert('Đã xóa lịch sử sạc thành công!', 'success');
+                                loadHistory();
+                            } else {
+                                showAlert(data.message, 'danger');
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showAlert('Lỗi kết nối máy chủ', 'danger');
+                        });
+                }
+            });
         }
 
         function onStationFilterChange() {
