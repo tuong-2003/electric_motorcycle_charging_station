@@ -959,7 +959,6 @@ function runBackgroundWorker() {
                 });
             });
         });
-    });
 }
 
 // [MỚI] Tách riêng tác vụ dọn dẹp Database chạy mỗi 24h (Thay vì 15 giây 1 lần gây giật lag máy chủ)
