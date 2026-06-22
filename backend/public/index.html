@@ -129,11 +129,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.95rem; /* Tăng kích thước để cân đối với chuông */
+            font-size: 0.95rem;
+            /* Tăng kích thước để cân đối với chuông */
             font-weight: 600;
             transition: all 0.25s ease;
-            gap: 8px; /* Căn chỉnh khoảng cách ngang tự động */
-            margin-right: 16px; /* Căn lề thẳng với bảng bên dưới */
+            gap: 8px;
+            /* Căn chỉnh khoảng cách ngang tự động */
+            margin-right: 16px;
+            /* Căn lề thẳng với bảng bên dưới */
         }
 
         .status-badge.online {
@@ -164,7 +167,8 @@
             width: 9px;
             height: 9px;
             border-radius: 50%;
-            flex-shrink: 0; /* Đảm bảo hình tròn không bị méo */
+            flex-shrink: 0;
+            /* Đảm bảo hình tròn không bị méo */
         }
 
         /* Badge Bảo trì màu cam đồng bộ */
@@ -336,33 +340,42 @@
             box-shadow: 0 0 0 0.25rem rgba(203, 213, 225, 0.3) !important;
             outline: none !important;
         }
+
         /* Tùy chỉnh màu hover của item trong dropdown sang màu xám */
         .dropdown-menu .dropdown-item:hover,
         .dropdown-menu .dropdown-item:focus {
             background-color: #e2e8f0 !important;
             color: #0f172a !important;
         }
+
         .dropdown-menu .dropdown-item.active,
         .dropdown-menu .dropdown-item:active {
             background-color: #cbd5e1 !important;
             color: #0f172a !important;
         }
+
         .dropdown-menu .dropdown-item.text-success:hover {
             color: #10b981 !important;
         }
+
         /* Đồng bộ màu xanh lá thương hiệu (#10b981) cho toàn bộ web */
         .btn-success {
             background-color: #10b981 !important;
             border-color: #10b981 !important;
         }
-        .btn-success:hover, .btn-success:focus, .btn-success:active {
+
+        .btn-success:hover,
+        .btn-success:focus,
+        .btn-success:active {
             background-color: #059669 !important;
             border-color: #059669 !important;
             box-shadow: none !important;
         }
+
         .text-success {
             color: #10b981 !important;
         }
+
         .bg-success {
             background-color: #10b981 !important;
         }
@@ -554,18 +567,30 @@
                     <div class="card card-stat border-0 shadow-sm mt-5" style="border-radius: 12px; overflow: visible;">
                         <div
                             class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h6>
+                            <h6 class="mb-0 fw-bold text-dark"><i
+                                    class="fas fa-charging-station me-2 text-secondary"></i>Danh sách tủ sạc</h6>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <div class="dropdown">
-                                    <button class="btn btn-sm dropdown-toggle px-3" type="button" id="stationFilterDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
+                                    <button class="btn btn-sm dropdown-toggle px-3" type="button"
+                                        id="stationFilterDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="border-color: #dee2e6; border-radius: 6px; font-weight: 500;">
                                         Từ trước đến nay
                                     </button>
-                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="stationFilterDropdownBtn" style="border-radius: 8px;">
-                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('all', 'Từ trước đến nay')">Từ trước đến nay</a></li>
-                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('today', 'Hôm nay')">Hôm nay</a></li>
-                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('week', 'Tuần này')">Tuần này</a></li>
-                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('month', 'Tháng này')">Tháng này</a></li>
-                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#" onclick="setStationEnergyFilter('custom', 'Tùy chọn ngày')">Tùy chọn ngày</a></li>
+                                    <ul class="dropdown-menu shadow border-0" aria-labelledby="stationFilterDropdownBtn"
+                                        style="border-radius: 8px;">
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setStationEnergyFilter('all', 'Từ trước đến nay')">Từ trước đến
+                                                nay</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setStationEnergyFilter('today', 'Hôm nay')">Hôm nay</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setStationEnergyFilter('week', 'Tuần này')">Tuần này</a></li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setStationEnergyFilter('month', 'Tháng này')">Tháng này</a>
+                                        </li>
+                                        <li><a class="dropdown-item py-2 small fw-semibold" href="#"
+                                                onclick="setStationEnergyFilter('custom', 'Tùy chọn ngày')">Tùy chọn
+                                                ngày</a></li>
                                     </ul>
                                 </div>
                                 <div id="station_custom_date_wrapper" class="d-none align-items-center gap-2">
@@ -646,8 +671,7 @@
                                 <h5 class="mb-3">Tạo tài khoản mới</h5>
                                 <input type="text" id="new_user_name" class="form-control mb-2"
                                     placeholder="Tên đăng nhập">
-                                <input type="email" id="new_user_email" class="form-control mb-2"
-                                    placeholder="Email">
+                                <input type="email" id="new_user_email" class="form-control mb-2" placeholder="Email">
                                 <input type="password" id="new_user_pass" class="form-control mb-2"
                                     placeholder="Mật khẩu">
                                 <select id="new_user_role" class="form-select mb-3">
@@ -699,7 +723,8 @@
                                         placeholder="Nhập mật khẩu mới">
                                 </div>
                                 <button class="btn btn-primary mt-auto"
-                                    onclick="showAlert('Tính năng đổi mật khẩu đang phát triển!', 'warning')">Cập nhật mật
+                                    onclick="showAlert('Tính năng đổi mật khẩu đang phát triển!', 'warning')">Cập nhật
+                                    mật
                                     khẩu</button>
                             </div>
                         </div>
@@ -725,7 +750,8 @@
                                     </div>
                                 </div>
                                 <button class="btn btn-success mt-auto"
-                                    onclick="showAlert('Tính năng lưu cấu hình đang phát triển!', 'warning')">Lưu cấu hình</button>
+                                    onclick="showAlert('Tính năng lưu cấu hình đang phát triển!', 'warning')">Lưu cấu
+                                    hình</button>
                             </div>
                         </div>
 
@@ -744,7 +770,8 @@
                                     <strong class="text-dark fs-5">3.500 đ</strong>
                                 </div>
                                 <button class="btn btn-warning mt-auto text-dark"
-                                    onclick="showAlert('Tính năng cập nhật giá điện đang phát triển!', 'warning')">Cập nhật giá
+                                    onclick="showAlert('Tính năng cập nhật giá điện đang phát triển!', 'warning')">Cập
+                                    nhật giá
                                     điện</button>
                             </div>
                         </div>
@@ -765,7 +792,8 @@
                                     <strong class="text-danger fs-5">60°C</strong>
                                 </div>
                                 <button class="btn btn-danger mt-auto"
-                                    onclick="showAlert('Tính năng cập nhật ngưỡng nhiệt độ đang phát triển!', 'warning')">Lưu ngưỡng
+                                    onclick="showAlert('Tính năng cập nhật ngưỡng nhiệt độ đang phát triển!', 'warning')">Lưu
+                                    ngưỡng
                                     nhiệt độ</button>
                             </div>
                         </div>
@@ -1118,7 +1146,7 @@
                     if (outletCard) {
                         const iconWrapper = outletCard.querySelector('.icon-wrapper-stat');
                         const plugIcon = iconWrapper?.querySelector('.fa-plug');
-                        
+
                         if (iconWrapper && plugIcon) {
                             if (isMaint) {
                                 iconWrapper.style.backgroundColor = "rgba(217, 119, 6, 0.08)";
@@ -1142,7 +1170,7 @@
                             // Chặn MQTT ghi đè nút gạt trong 2 trường hợp:
                             // 1) Đang chờ xác nhận (underConfirm)
                             // 2) Vừa gửi lệnh xong, chờ phần cứng đáp ứng (5 giây)
-                            const isLocked = underConfirm[uniqueId] || 
+                            const isLocked = underConfirm[uniqueId] ||
                                 (lastCommandTime[uniqueId] && (Date.now() - lastCommandTime[uniqueId] < 5000));
                             if (!isLocked) {
                                 chk.checked = (data.status === 'CHARGING');
@@ -1632,41 +1660,41 @@
                         </td>
                     </tr>`;
 
-                             let outletsHtml = '';
-                             if (st.outlets && st.outlets.length > 0) {
-                                 outletsHtml = st.outlets.map(outlet => {
-                                     const uniqueId = `${st.station_id}_${outlet.id}`;
-                                     let badgeClass = "bg-light text-secondary border";
-                                     let displayStatus = "Chờ...";
-                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
-                                         badgeClass = "bg-success text-white";
-                                         displayStatus = "Đang sạc";
-                                     } else if (outlet.status === 'available') {
-                                         badgeClass = "bg-light text-secondary border";
-                                         displayStatus = "Sẵn sàng";
-                                     }
- 
-                                     // Nếu trạm sạc đang ở chế độ bảo trì
-                                     const isMaint = (st.status === 'maintenance');
-                                     if (isMaint) {
-                                         badgeClass = "badge-maint-orange";
-                                         displayStatus = "Bảo trì";
-                                     }
- 
-                                     const disabledAttr = isMaint ? 'disabled' : '';
- 
-                                     // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam)
-                                     let iconBg = "rgba(107, 114, 128, 0.08)";
-                                     let iconColor = "#6b7280";
-                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
-                                         iconBg = "rgba(16, 185, 129, 0.08)";
-                                         iconColor = "#10b981";
-                                     } else if (outlet.status === 'maintenance' || isMaint) {
-                                         iconBg = "rgba(217, 119, 6, 0.08)";
-                                         iconColor = "#d97706";
-                                     }
- 
-                                     return `
+                            let outletsHtml = '';
+                            if (st.outlets && st.outlets.length > 0) {
+                                outletsHtml = st.outlets.map(outlet => {
+                                    const uniqueId = `${st.station_id}_${outlet.id}`;
+                                    let badgeClass = "bg-light text-secondary border";
+                                    let displayStatus = "Chờ...";
+                                    if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
+                                        badgeClass = "bg-success text-white";
+                                        displayStatus = "Đang sạc";
+                                    } else if (outlet.status === 'available') {
+                                        badgeClass = "bg-light text-secondary border";
+                                        displayStatus = "Sẵn sàng";
+                                    }
+
+                                    // Nếu trạm sạc đang ở chế độ bảo trì
+                                    const isMaint = (st.status === 'maintenance');
+                                    if (isMaint) {
+                                        badgeClass = "badge-maint-orange";
+                                        displayStatus = "Bảo trì";
+                                    }
+
+                                    const disabledAttr = isMaint ? 'disabled' : '';
+
+                                    // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam)
+                                    let iconBg = "rgba(107, 114, 128, 0.08)";
+                                    let iconColor = "#6b7280";
+                                    if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
+                                        iconBg = "rgba(16, 185, 129, 0.08)";
+                                        iconColor = "#10b981";
+                                    } else if (outlet.status === 'maintenance' || isMaint) {
+                                        iconBg = "rgba(217, 119, 6, 0.08)";
+                                        iconColor = "#d97706";
+                                    }
+
+                                    return `
                                      <div class="col-md-6">
                                          <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
                                              <div class="d-flex align-items-center" style="width: 25%;">
@@ -1693,8 +1721,8 @@
                                          </div>
                                      </div>
                                      `;
-                                 }).join('');
-                             }
+                                }).join('');
+                            }
 
                             tbody.innerHTML += `<tr id="outlets_row_${st.station_id}" class="${isExpanded ? '' : 'd-none'} outlets-row border-bottom">
                                 <td colspan="8" class="p-3 border-0">
@@ -1820,7 +1848,7 @@
         function sendCmd(command, stationId, outletId) {
             const uniqueId = `${stationId}_${outletId}`;
             const chk = document.getElementById(`switch_${stationId}_${outletId}`);
-            
+
             if (!authToken) {
                 showAlert("⛔ Cảnh báo bảo mật: Hãy bấm nút Login để lấy Token trước khi gửi lệnh!", "warning");
                 if (chk) chk.checked = (command !== 'START_CHARGE');
@@ -1830,7 +1858,7 @@
             // Đặt trạng thái đang xác nhận để chặn MQTT ghi đè giao diện
             underConfirm[uniqueId] = true;
 
-            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẤT';
+            const actionText = command === 'START_CHARGE' ? 'BẬT' : 'TẮT';
             showConfirm(`Bạn có chắc chắn muốn ${actionText} cổng sạc ${outletId} của tủ sạc ${stationId}?`, (confirmed) => {
                 // Nếu hủy thì giải phóng ngay, nếu xác nhận thì giữ khóa thêm 5 giây
                 if (!confirmed) {
@@ -2101,7 +2129,8 @@
         <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; background-color: #ffffff;">
                 <div class="modal-header border-bottom py-3">
-                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-calendar-alt me-2 text-secondary"></i>Tùy chọn ngày</h6>
+                    <h6 class="modal-title fw-bold text-dark"><i class="fas fa-calendar-alt me-2 text-secondary"></i>Tùy
+                        chọn ngày</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">

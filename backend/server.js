@@ -84,7 +84,7 @@ db.getConnection((err, connection) => {
             if (err) console.error('⚠️ [MySQL] Lỗi tạo bảng topup_history:', err.message);
             else {
                 console.log('✅ [MySQL] Bảng topup_history đã sẵn sàng.');
-                db.query("ALTER TABLE topup_history ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(100) UNIQUE AFTER id", () => {});
+                db.query("ALTER TABLE topup_history ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(100) UNIQUE AFTER id", () => { });
             }
         });
 
@@ -118,7 +118,7 @@ db.getConnection((err, connection) => {
                         });
                     }));
                 }
-                
+
                 if (addPromises.length > 0) {
                     Promise.all(addPromises).then(() => {
                         loadStationConfigs();
@@ -225,14 +225,14 @@ client.on('message', (topic, message) => {
                 // 1. Kiểm tra quá dòng (overcurrent protection)
                 if (data.current && data.current > config.max_current) {
                     console.warn(`🚨 [BẢO VỆ] Phát hiện quá dòng tại Tủ ${stationId} - Cổng ${outletId}: ${data.current}A (Giới hạn: ${config.max_current}A). Đang ngắt sạc khẩn cấp!`);
-                    
+
                     // Gửi lệnh ngắt sạc qua MQTT
                     client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                    
+
                     // Chốt phiên sạc trong DB
                     db.query('SELECT user_id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [`${stationId}.${outletId}`], (err, activeSessions) => {
                         if (!err && activeSessions && activeSessions.length > 0) {
-                            processStopCharge(stationId, outletId, activeSessions[0].user_id, () => {});
+                            processStopCharge(stationId, outletId, activeSessions[0].user_id, () => { });
                         }
                     });
                 }
@@ -240,17 +240,17 @@ client.on('message', (topic, message) => {
                 // 2. Kiểm tra quá nhiệt (overtemperature protection)
                 if (data.temperature && data.temperature > config.temp_limit) {
                     console.warn(`🚨 [BẢO VỆ] Phát hiện quá nhiệt tại Tủ ${stationId}: ${data.temperature}°C (Giới hạn: ${config.temp_limit}°C). Đang ngắt sạc toàn tủ!`);
-                    
+
                     // Gửi lệnh ngắt sạc qua MQTT cho cả 2 cổng
                     client.publish(`ev_station/${stationId}/outlet/1/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
                     client.publish(`ev_station/${stationId}/outlet/2/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                    
+
                     // Chốt toàn bộ phiên sạc đang sạc của trạm này
                     db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
                         if (!err && activeSessions) {
                             activeSessions.forEach(session => {
                                 const outId = session.station_id.split('.')[1];
-                                processStopCharge(stationId, outId, session.user_id, () => {});
+                                processStopCharge(stationId, outId, session.user_id, () => { });
                             });
                         }
                     });
@@ -523,7 +523,7 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
                 console.log(`📲 [API] User [${req.user.username}] bắt đầu sạc tại Tủ ${stationId}, Ổ ${outletId}`);
                 const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
                 client.publish(topicCmd, JSON.stringify({ command: 'START_CHARGE' }));
-                res.json({ success: true, message: '✅ Đã bắt đầu phiên sạc thành công!' });
+                res.json({ success: true, message: `Bắt đầu phiên sạc thành công cho Cổng ${outletId} - Tủ ${stationId}!` });
             });
         });
     });
@@ -562,11 +562,11 @@ function processStopCharge(stationId, outletId, userId, callback) {
                     const isAdmin = (userRes && userRes.length > 0 && userRes[0].role === 'admin');
                     if (isAdmin) {
                         client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                        callback(true, `Đã chốt hóa đơn (Admin - Không trừ tiền)!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh`);
+                        callback(true, `Đã chốt hóa đơn Cổng ${outletId} - Tủ ${stationId}!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh\n- Số tiền: ${totalCost.toFixed(0)} VNĐ`);
                     } else {
                         db.query('UPDATE users SET balance = balance - ? WHERE id = ?', [totalCost, userId], () => {
                             client.publish(`ev_station/${stationId}/outlet/${outletId}/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                            callback(true, `Đã chốt hóa đơn!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh\n- Thành tiền: ${totalCost.toFixed(0)} VNĐ`);
+                            callback(true, `Đã chốt hóa đơn Cổng ${outletId} - Tủ ${stationId}!\n- Tiêu thụ: ${totalKwh.toFixed(4)} kWh\n- Thành tiền: ${totalCost.toFixed(0)} VNĐ`);
                         });
                     }
                 });
@@ -649,10 +649,10 @@ app.delete('/api/sessions/history', verifyToken, (req, res) => {
 // API Lấy danh sách Trạm sạc và Tổng điện năng
 app.get('/api/stations', verifyToken, (req, res) => {
     const { startDate, endDate } = req.query;
-    
+
     let joinCondition = "cs.station_id LIKE CONCAT(s.station_id, '.%') AND cs.status = 'completed'";
     let params = [];
-    
+
     if (startDate && endDate) {
         joinCondition += " AND cs.start_time >= ? AND cs.start_time <= ?";
         params.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
@@ -757,13 +757,13 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
                 // Đẩy lệnh ngắt sạc qua MQTT cho cả 2 ổ sạc
                 client.publish(`ev_station/${stationId}/outlet/1/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
                 client.publish(`ev_station/${stationId}/outlet/2/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                
+
                 // Chốt các phiên sạc đang chạy của trạm này (nếu có)
                 db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
                     if (!err && activeSessions) {
                         activeSessions.forEach(session => {
                             const outId = session.station_id.split('.')[1];
-                            processStopCharge(stationId, outId, session.user_id, () => {});
+                            processStopCharge(stationId, outId, session.user_id, () => { });
                         });
                     }
                 });
@@ -955,7 +955,7 @@ app.post('/api/payment/webhook', (req, res) => {
     // Kiểm tra Idempotency: Giao dịch này đã xử lý chưa?
     db.query('SELECT id FROM topup_history WHERE transaction_id = ?', [transactionId], (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB kiểm tra giao dịch' });
-        
+
         if (results.length > 0) {
             console.log(`⚠️ [Webhook] Bỏ qua giao dịch ${transactionId} do đã được xử lý trước đó (Idempotent).`);
             return res.status(200).json({ success: true, message: 'Webhook đã được xử lý trước đó' });
