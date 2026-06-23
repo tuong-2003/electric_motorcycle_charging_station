@@ -965,20 +965,37 @@ export default function App() {
               </View>
 
               <Text style={styles.sectionTitle}>Danh sách tủ sạc</Text>
-              {stations.map((st: any) => (
-                <TouchableOpacity key={st.station_id} style={styles.stationCard} onPress={() => setSelectedStation(st)}>
-                  <View style={styles.stationIcon}><FontAwesome5 name="charging-station" size={24} color="#27ae60" /></View>
-                  <View style={styles.stationInfo}>
-                    <Text style={styles.stationName}>{st.name}</Text>
-                    <Text style={styles.stationLocation}>ID: {st.station_id}</Text>
-                  </View>
-                  <View style={styles.stationStatus}>
-                    <Text style={[styles.statusBadge, st.status === 'online' ? styles.statusOnline : styles.statusOffline]}>
-                      {st.status === 'online' ? 'Sẵn sàng' : 'Bảo trì'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {stations.map((st: any) => {
+                const isAllBusy = st.status === 'online' && st.outlets && st.outlets.length > 0 && st.outlets.every((o: any) => o.status !== 'available');
+                
+                let badgeText = 'Bảo trì';
+                let badgeStyle = styles.statusOffline;
+                
+                if (st.status === 'online') {
+                  if (isAllBusy) {
+                    badgeText = 'Đang bận';
+                    badgeStyle = styles.statusBusy;
+                  } else {
+                    badgeText = 'Sẵn sàng';
+                    badgeStyle = styles.statusOnline;
+                  }
+                }
+                
+                return (
+                  <TouchableOpacity key={st.station_id} style={styles.stationCard} onPress={() => setSelectedStation(st)}>
+                    <View style={styles.stationIcon}><FontAwesome5 name="charging-station" size={24} color="#27ae60" /></View>
+                    <View style={styles.stationInfo}>
+                      <Text style={styles.stationName}>{st.name}</Text>
+                      <Text style={styles.stationLocation}>ID: {st.station_id}</Text>
+                    </View>
+                    <View style={styles.stationStatus}>
+                      <Text style={[styles.statusBadge, badgeStyle]}>
+                        {badgeText}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
 
               {/* <TouchableOpacity style={styles.button} onPress={startScanning}>
                 <Text style={styles.buttonText}>Quét QR Code để sạc</Text>
@@ -1664,6 +1681,7 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, fontSize: 12, fontWeight: 'bold', overflow: 'hidden' },
   statusOnline: { backgroundColor: '#e8f8f5', color: '#2ecc71' },
   statusOffline: { backgroundColor: '#fdedec', color: '#e74c3c' },
+  statusBusy: { backgroundColor: '#fef5e7', color: '#e67e22' },
   backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingVertical: 5 },
   absoluteBackButton: { position: 'absolute', top: 5, left: 20, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, zIndex: 10 },
   backButtonText: { fontSize: 16, color: '#34495e', marginLeft: 8, fontWeight: '500' },
