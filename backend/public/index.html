@@ -1592,7 +1592,8 @@
                     powerChart.data.datasets[0].data.push(p1);
                     powerChart.data.datasets[1].data.push(p2);
 
-                    if (powerChart.data.labels.length > 20) {
+                    // Giới hạn đồ thị realtime hiển thị tối đa 30 điểm (cuốn chiếu) để tránh tràn bộ nhớ trình duyệt
+                    if (powerChart.data.labels.length > 30) {
                         powerChart.data.labels.shift();
                         powerChart.data.datasets[0].data.shift();
                         powerChart.data.datasets[1].data.shift();
