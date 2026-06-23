@@ -588,13 +588,76 @@
             display: none !important;
         }
 
-        body.auth-locked #loginModal .btn-close {
+        body:not(.auth-locked) #loginScreen {
             display: none !important;
+        }
+
+        .login-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                linear-gradient(135deg, rgba(17, 24, 39, 0.88), rgba(16, 185, 129, 0.72)),
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.2), transparent 28%),
+                #111827;
+        }
+
+        .login-panel {
+            width: min(100%, 420px);
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+        }
+
+        .login-brand-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            background: #10b981;
         }
     </style>
 </head>
 
 <body class="auth-locked">
+
+    <div id="loginScreen" class="login-screen">
+        <div class="login-panel">
+            <div class="mb-4">
+                <div class="login-brand-icon mb-3">
+                    <i class="fas fa-bolt fs-4"></i>
+                </div>
+                <h3 class="fw-bold mb-1 text-dark">Trạm Sạc HVT</h3>
+                <p class="text-muted mb-0">Đăng nhập quản trị hệ thống sạc EV</p>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small text-muted fw-semibold">Tài khoản</label>
+                <input type="text" id="login_user" class="form-control form-control-lg bg-light"
+                    placeholder="Tài khoản" value="Admin">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small text-muted fw-semibold">Mật khẩu</label>
+                <input type="password" id="login_pass" class="form-control form-control-lg bg-light"
+                    placeholder="Mật khẩu" value="@minad" onkeypress="if(event.key === 'Enter') doLogin()">
+            </div>
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" id="login_remember">
+                <label class="form-check-label small text-muted" for="login_remember">
+                    Ghi nhớ đăng nhập trên thiết bị này
+                </label>
+            </div>
+            <button class="btn btn-success btn-lg w-100 fw-bold" type="button" onclick="doLogin()">
+                Đăng nhập
+            </button>
+        </div>
+    </div>
 
     <div class="container-fluid px-0" id="adminApp">
         <div class="d-flex">
@@ -642,7 +705,7 @@
                     <div id="sidebar_unauth">
                         <button
                             class="btn btn-outline-light w-100 d-flex align-items-center justify-content-center py-2 nav-item-tooltip"
-                            data-bs-toggle="modal" data-bs-target="#loginModal" data-tooltip="Đăng nhập">
+                            onclick="showLoginGate()" data-tooltip="Đăng nhập">
                             <i class="fas fa-sign-in-alt me-2"></i> <strong>Đăng nhập</strong>
                         </button>
                     </div>
@@ -1091,34 +1154,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Đăng nhập (Nổi lên giữa màn hình) -->
-    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="loginModalLabel">Đăng nhập</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="text" id="login_user" class="form-control form-control-lg mb-3 bg-light"
-                        placeholder="Tài khoản" value="Admin">
-                    <!-- Hỗ trợ nhấn Enter để Submit -->
-                    <input type="password" id="login_pass" class="form-control form-control-lg mb-3 bg-light"
-                        placeholder="Mật khẩu" value="@minad" onkeypress="if(event.key === 'Enter') doLogin()">
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="login_remember">
-                        <label class="form-check-label small text-muted" for="login_remember">
-                            Ghi nhớ đăng nhập
-                        </label>
-                    </div>
-                    <button class="btn btn-primary btn-lg w-100 fw-bold"
-                        style="background-color: #10a37f; border: none;" type="button" onclick="doLogin()">Tiếp
-                        tục</button>
                 </div>
             </div>
         </div>
@@ -1612,24 +1647,15 @@
         setInterval(syncStationsData, 5000);
 
         // --- XÁC THỰC BẢO MẬT (JWT) ---
-        let authToken = localStorage.getItem('ev_token') || sessionStorage.getItem('ev_token') || ''; // Lay token da luu neu co
+        let authToken = localStorage.getItem('ev_token') || ''; // Chi tu dong vao admin khi da ghi nho dang nhap.
         let currentUserRole = '';
 
         function showLoginGate() {
             document.body.classList.add('auth-locked');
-            const loginModalEl = document.getElementById('loginModal');
-            const modal = bootstrap.Modal.getOrCreateInstance(loginModalEl, {
-                backdrop: 'static',
-                keyboard: false
-            });
-            modal.show();
         }
 
         function showAdminApp() {
             document.body.classList.remove('auth-locked');
-            const loginModalEl = document.getElementById('loginModal');
-            const modalInstance = bootstrap.Modal.getInstance(loginModalEl);
-            if (modalInstance) modalInstance.hide();
         }
 
         // Khoi phục login khi F5
@@ -1718,10 +1744,8 @@
                 .then(data => {
                     if (data.success) {
                         authToken = data.token;
-                        sessionStorage.removeItem('ev_token');
                         localStorage.removeItem('ev_token');
-                        const tokenStorage = rememberMe ? localStorage : sessionStorage;
-                        tokenStorage.setItem('ev_token', authToken);
+                        if (rememberMe) localStorage.setItem('ev_token', authToken);
                         // Lấy số dư hiển thị lên ngay lập tức, xong mới bung thông báo                
                         fetchUserProfile(data.message);
                     } else {
@@ -1735,7 +1759,6 @@
         function doLogout(shouldShowAlert) {
             authToken = '';
             localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
-            sessionStorage.removeItem('ev_token');
             localStorage.removeItem('ev_balance'); // Xóa số dư đệm
             const walletInfo = document.getElementById('wallet_info');
             if (walletInfo) walletInfo.classList.add('d-none');
@@ -1744,7 +1767,6 @@
             showLoginGate();
 
             if (!document.getElementById('tab-users').classList.contains('d-none')) loadUsers();
-            if (shouldShowAlert !== false) showAlert("Đã đăng xuất thành công!", 'success');
         }
 
         // --- CHUYỂN TAB & LẤY LỊCH SỬ ---

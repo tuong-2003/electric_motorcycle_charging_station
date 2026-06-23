@@ -213,7 +213,8 @@ client.on('message', (topic, message) => {
             liveDataCache[stationId].outletsData[outletId] = {
                 voltage: data.voltage || 0,
                 current: data.current || 0,
-                power: data.power || 0
+                power: data.power || 0,
+                status: data.status || 'AVAILABLE'
             };
 
             const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
@@ -718,7 +719,7 @@ app.get('/api/stations', verifyToken, (req, res) => {
                 const outlets = [1, 2].map(outletId => {
                     const fullId = `${st.station_id}.${outletId}`;
                     const sessionInfo = activeMap[fullId];
-                    const outData = (liveDataCache[st.station_id] && liveDataCache[st.station_id].outletsData && liveDataCache[st.station_id].outletsData[outletId]) || { voltage: 0, current: 0, power: 0 };
+                    const outData = (liveDataCache[st.station_id] && liveDataCache[st.station_id].outletsData && liveDataCache[st.station_id].outletsData[outletId]) || { voltage: 0, current: 0, power: 0, status: 'AVAILABLE' };
 
                     let baseOutlet = {
                         id: outletId,
@@ -728,6 +729,10 @@ app.get('/api/stations', verifyToken, (req, res) => {
                     };
 
                     if (!sessionInfo) {
+                        // Nếu không có phiên sạc đang chạy trong DB, nhưng thực tế phần cứng đang chạy sạc (dựa vào status 'CHARGING' hoặc dòng điện > 0.05A)
+                        if (outData.status === 'CHARGING' || outData.current > 0.05) {
+                            return { ...baseOutlet, status: 'charging_by_other' };
+                        }
                         return { ...baseOutlet, status: 'available' };
                     } else if (sessionInfo.user_id === req.user.id) {
                         return { ...baseOutlet, status: 'charging_by_me', duration_sec: sessionInfo.duration_sec };

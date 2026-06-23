@@ -75,6 +75,7 @@ export default function App() {
   // State cho Camera quét QR
   const [isScanning, setIsScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const isProcessingScan = useRef(false);
 
   // Tự động kiểm tra trạng thái đăng nhập khi người dùng mở App
   useEffect(() => {
@@ -337,7 +338,7 @@ export default function App() {
 
       const result = await response.json();
       if (result.success) {
-        fetchProfile(authToken); // C?p nh?t l?i s? du v�
+        fetchProfile(authToken); // Cập nhật lại số dư ví
         setSelectedStation(null);
       } else {
         Alert.alert('Từ chối', result.message);
@@ -563,44 +564,77 @@ export default function App() {
         return;
       }
     }
+    isProcessingScan.current = false; // Reset cờ khóa khi bắt đầu quét mới
     setIsScanning(true);
   };
 
   // Hàm xử lý khi Camera đọc được mã QR
   const handleBarcodeScanned = async ({ type, data }: any) => {
+    if (isProcessingScan.current) return;
+    isProcessingScan.current = true;
     setIsScanning(false); // Tắt camera
 
     // Giả sử mã QR dán trên trạm có định dạng: "001.1" (Trạm 001, Ổ 1)
     const parts = data.split('.');
     if (parts.length !== 2) {
-      Alert.alert('Mã QR không hợp lệ', 'Vui lòng quét đúng mã QR trên trụ sạc!');
+      Alert.alert(
+        'Mã QR không hợp lệ',
+        'Vui lòng quét đúng mã QR trên trụ sạc!',
+        [{ text: 'Đồng ý', onPress: () => { isProcessingScan.current = false; } }]
+      );
       return;
     }
 
     const stationId = parts[0];
     const outletId = parseInt(parts[1], 10);
 
-    if (!authToken) return;
-    try {
-      const response = await fetch(`${API_URL}/api/charge/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ stationId, outletId })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        Alert.alert('Thành công!', `Đã bắt đầu sạc xe tại Trạm ${stationId} - Ổ ${outletId}`);
-        fetchProfile(authToken); // Cập nhật lại số dư ví sau khi sạc
-      } else {
-        Alert.alert('Từ chối', result.message);
-      }
-    } catch (error) {
-      Alert.alert('Lỗi mạng', 'Không thể kết nối đến máy chủ!');
+    if (!authToken) {
+      isProcessingScan.current = false;
+      return;
     }
+
+    // Hiển thị thông báo xác nhận sạc hoặc hủy
+    Alert.alert(
+      'Xác nhận sạc',
+      `Bạn có chắc chắn muốn bắt đầu sạc xe tại Tủ ${stationId} - Cổng sạc ${outletId} không?`,
+      [
+        {
+          text: 'Hủy',
+          style: 'cancel',
+          onPress: () => {
+            isProcessingScan.current = false;
+          }
+        },
+        {
+          text: 'Bắt đầu',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_URL}/api/charge/start`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ stationId, outletId })
+              });
+
+              const result = await response.json();
+              if (result.success) {
+                Alert.alert('Thành công!', `Đã bắt đầu sạc xe tại Tủ ${stationId} - Cổng ${outletId}`);
+                fetchProfile(authToken); // Cập nhật lại số dư ví sau khi sạc
+              } else {
+                Alert.alert('Từ chối', result.message);
+              }
+            } catch (error) {
+              Alert.alert('Lỗi mạng', 'Không thể kết nối đến máy chủ!');
+            } finally {
+              isProcessingScan.current = false;
+            }
+          }
+        }
+      ],
+      { cancelable: false }
+    );
   };
 
   // Giao diện Màn hình Camera Quét QR
@@ -614,7 +648,7 @@ export default function App() {
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         />
         <View style={styles.overlay}>
-          <Text style={styles.scanText}>Di chuyển camera vào mã QR trên trụ sạc</Text>
+          <Text style={styles.scanText}>Di chuyển camera vào mã QR của cổng sạc</Text>
           <TouchableOpacity style={[styles.button, { backgroundColor: '#e74c3c', width: 150 }]} onPress={() => setIsScanning(false)}>
             <Text style={styles.buttonText}>Hủy quét</Text>
           </TouchableOpacity>
@@ -644,8 +678,8 @@ export default function App() {
                 <TouchableOpacity
                   style={{
                     flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
-                    backgroundColor: topupFilterMode === '7days' ? '#ebf5fb' : '#fff',
-                    borderColor: topupFilterMode === '7days' ? '#3498db' : '#ecf0f1'
+                    backgroundColor: topupFilterMode === '7days' ? '#e9f7ef' : '#fff',
+                    borderColor: topupFilterMode === '7days' ? '#27ae60' : '#ecf0f1'
                   }}
                   onPress={() => {
                     const end = new Date().toISOString().split('T')[0];
@@ -654,13 +688,13 @@ export default function App() {
                     setTopupFilterMode('7days');
                   }}
                 >
-                  <Text style={{ fontSize: 13, color: topupFilterMode === '7days' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>7 ngày qua</Text>
+                  <Text style={{ fontSize: 13, color: topupFilterMode === '7days' ? '#27ae60' : '#2c3e50', fontWeight: 'bold' }}>7 ngày qua</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{
                     flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
-                    backgroundColor: topupFilterMode === 'month' ? '#ebf5fb' : '#fff',
-                    borderColor: topupFilterMode === 'month' ? '#3498db' : '#ecf0f1'
+                    backgroundColor: topupFilterMode === 'month' ? '#e9f7ef' : '#fff',
+                    borderColor: topupFilterMode === 'month' ? '#27ae60' : '#ecf0f1'
                   }}
                   onPress={() => {
                     const now = new Date();
@@ -670,20 +704,20 @@ export default function App() {
                     setTopupFilterMode('month');
                   }}
                 >
-                  <Text style={{ fontSize: 13, color: topupFilterMode === 'month' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tháng này</Text>
+                  <Text style={{ fontSize: 13, color: topupFilterMode === 'month' ? '#27ae60' : '#2c3e50', fontWeight: 'bold' }}>Tháng này</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{
                     flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1,
-                    backgroundColor: topupFilterMode === 'all' ? '#ebf5fb' : '#fff',
-                    borderColor: topupFilterMode === 'all' ? '#3498db' : '#ecf0f1'
+                    backgroundColor: topupFilterMode === 'all' ? '#e9f7ef' : '#fff',
+                    borderColor: topupFilterMode === 'all' ? '#27ae60' : '#ecf0f1'
                   }}
                   onPress={() => {
                     fetchTopupHistory('', '', true);
                     setTopupFilterMode('all');
                   }}
                 >
-                  <Text style={{ fontSize: 13, color: topupFilterMode === 'all' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tất cả</Text>
+                  <Text style={{ fontSize: 13, color: topupFilterMode === 'all' ? '#27ae60' : '#2c3e50', fontWeight: 'bold' }}>Tất cả</Text>
                 </TouchableOpacity>
               </View>
 
@@ -692,7 +726,7 @@ export default function App() {
                   style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ecf0f1', elevation: 2 }}
                   onPress={() => openDatePicker('start')}
                 >
-                  <FontAwesome5 name="calendar-alt" size={14} color="#3498db" style={{ marginRight: 8 }} />
+                  <FontAwesome5 name="calendar-alt" size={14} color="#27ae60" style={{ marginRight: 8 }} />
                   <View>
                     <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Từ ngày</Text>
                     <Text style={{ fontSize: 13, color: '#2c3e50', fontWeight: 'bold' }}>{historyStartDate.split('-').reverse().join('/')}</Text>
@@ -788,8 +822,8 @@ export default function App() {
                     <Text style={{ textAlign: 'center', fontSize: 13, color: '#bdc3c7', fontWeight: 'bold', marginBottom: 10 }}>NĂM</Text>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
                       {Array.from({ length: 11 }, (_, i) => 2020 + i).map(y => (
-                        <TouchableOpacity key={y} onPress={() => setTempYear(y)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempYear === y ? '#ebf5fb' : 'transparent', borderRadius: 12 }}>
-                          <Text style={{ fontSize: 18, color: tempYear === y ? '#3498db' : '#34495e', fontWeight: tempYear === y ? 'bold' : 'normal' }}>{y}</Text>
+                        <TouchableOpacity key={y} onPress={() => setTempYear(y)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempYear === y ? '#e9f7ef' : 'transparent', borderRadius: 12 }}>
+                          <Text style={{ fontSize: 18, color: tempYear === y ? '#27ae60' : '#34495e', fontWeight: tempYear === y ? 'bold' : 'normal' }}>{y}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -798,8 +832,8 @@ export default function App() {
                     <Text style={{ textAlign: 'center', fontSize: 13, color: '#bdc3c7', fontWeight: 'bold', marginBottom: 10 }}>THÁNG</Text>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
                       {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                        <TouchableOpacity key={m} onPress={() => setTempMonth(m)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempMonth === m ? '#ebf5fb' : 'transparent', borderRadius: 12 }}>
-                          <Text style={{ fontSize: 18, color: tempMonth === m ? '#3498db' : '#34495e', fontWeight: tempMonth === m ? 'bold' : 'normal' }}>Tháng {m}</Text>
+                        <TouchableOpacity key={m} onPress={() => setTempMonth(m)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempMonth === m ? '#e9f7ef' : 'transparent', borderRadius: 12 }}>
+                          <Text style={{ fontSize: 18, color: tempMonth === m ? '#27ae60' : '#34495e', fontWeight: tempMonth === m ? 'bold' : 'normal' }}>Tháng {m}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -808,8 +842,8 @@ export default function App() {
                     <Text style={{ textAlign: 'center', fontSize: 13, color: '#bdc3c7', fontWeight: 'bold', marginBottom: 10 }}>NGÀY</Text>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
                       {Array.from({ length: new Date(tempYear, tempMonth, 0).getDate() }, (_, i) => i + 1).map(d => (
-                        <TouchableOpacity key={d} onPress={() => setTempDay(d)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempDay === d ? '#ebf5fb' : 'transparent', borderRadius: 12 }}>
-                          <Text style={{ fontSize: 18, color: tempDay === d ? '#3498db' : '#34495e', fontWeight: tempDay === d ? 'bold' : 'normal' }}>{d}</Text>
+                        <TouchableOpacity key={d} onPress={() => setTempDay(d)} style={{ paddingVertical: 15, alignItems: 'center', backgroundColor: tempDay === d ? '#e9f7ef' : 'transparent', borderRadius: 12 }}>
+                          <Text style={{ fontSize: 18, color: tempDay === d ? '#27ae60' : '#34495e', fontWeight: tempDay === d ? 'bold' : 'normal' }}>{d}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -819,7 +853,7 @@ export default function App() {
                   <TouchableOpacity onPress={() => setIsDatePickerVisible(false)} style={{ flex: 1, paddingVertical: 18, marginRight: 15, alignItems: 'center', borderRadius: 15, backgroundColor: '#f1f2f6' }}>
                     <Text style={{ color: '#7f8c8d', fontWeight: 'bold', fontSize: 16 }}>Hủy bỏ</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleConfirmDate} style={{ flex: 1, paddingVertical: 18, alignItems: 'center', borderRadius: 15, backgroundColor: '#3498db' }}>
+                  <TouchableOpacity onPress={handleConfirmDate} style={{ flex: 1, paddingVertical: 18, alignItems: 'center', borderRadius: 15, backgroundColor: '#27ae60' }}>
                     <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Xác nhận</Text>
                   </TouchableOpacity>
                 </View>
@@ -924,23 +958,19 @@ export default function App() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
               <View style={styles.headerContainer}>
                 <View style={styles.logoContainer}>
-                  <FontAwesome5 name="charging-station" size={45} color="#3498db" />
+                  <FontAwesome5 name="charging-station" size={45} color="#27ae60" />
                 </View>
                 <Text style={styles.mainTitle}>Trạm Sạc Xe Máy Điện</Text>
-                <Text style={styles.subTitleText}>Xin chào, {username}! 👋</Text>
+                <Text style={styles.subTitleText}>Xin chào, {username}!</Text>
               </View>
 
-              <TouchableOpacity style={styles.button} onPress={startScanning}>
-                <Text style={styles.buttonText}>📷 Quét QR</Text>
-              </TouchableOpacity>
-
-              <Text style={styles.sectionTitle}>Danh sách Trạm sạc</Text>
+              <Text style={styles.sectionTitle}>Danh sách tủ sạc</Text>
               {stations.map((st: any) => (
                 <TouchableOpacity key={st.station_id} style={styles.stationCard} onPress={() => setSelectedStation(st)}>
-                  <View style={styles.stationIcon}><FontAwesome5 name="charging-station" size={24} color="#3498db" /></View>
+                  <View style={styles.stationIcon}><FontAwesome5 name="charging-station" size={24} color="#27ae60" /></View>
                   <View style={styles.stationInfo}>
                     <Text style={styles.stationName}>{st.name}</Text>
-                    <Text style={styles.stationLocation}>{st.location}</Text>
+                    <Text style={styles.stationLocation}>ID: {st.station_id}</Text>
                   </View>
                   <View style={styles.stationStatus}>
                     <Text style={[styles.statusBadge, st.status === 'online' ? styles.statusOnline : styles.statusOffline]}>
@@ -949,6 +979,11 @@ export default function App() {
                   </View>
                 </TouchableOpacity>
               ))}
+
+              {/* <TouchableOpacity style={styles.button} onPress={startScanning}>
+                <Text style={styles.buttonText}>Quét QR Code để sạc</Text>
+              </TouchableOpacity> */}
+
             </ScrollView>
           )}
 
@@ -957,9 +992,9 @@ export default function App() {
             <View style={{ flex: 1, paddingTop: 40 }}>
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                 <View style={styles.stationDetailHeader}>
-                  <FontAwesome5 name="charging-station" size={40} color="#3498db" style={{ marginBottom: 10 }} />
+                  <FontAwesome5 name="charging-station" size={40} color="#27ae60" style={{ marginBottom: 10 }} />
                   <Text style={styles.detailTitle}>{selectedStation.name}</Text>
-                  <Text style={styles.detailLocation}>{selectedStation.location}</Text>
+                  <Text style={styles.detailLocation}>ID: {selectedStation.station_id}</Text>
                   <Text style={styles.detailPrice}>Đơn giá: {selectedStation.unit_price.toLocaleString('vi-VN')} đ/kWh</Text>
                 </View>
 
@@ -1059,7 +1094,7 @@ export default function App() {
                               </View>
                               <View style={{ alignItems: 'center' }}>
                                 <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>DÒNG ĐIỆN</Text>
-                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#3498db' }}>{outletData.current || 0} A</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#27ae60' }}>{outletData.current || 0} A</Text>
                               </View>
                               <View style={{ alignItems: 'center' }}>
                                 <Text style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 5 }}>CÔNG SUẤT</Text>
@@ -1073,11 +1108,12 @@ export default function App() {
                                 style={{ backgroundColor: actionBtnColor, paddingVertical: 15, borderRadius: 10, alignItems: 'center' }}
                                 onPress={() => {
                                   if (outletData.status === 'available') {
-                                    startChargeFromList(selectedStation.station_id, outletData.id);
+                                    setSelectedOutletModal(null);
+                                    startScanning();
                                   } else {
                                     stopCharge(selectedStation.station_id, outletData.id);
+                                    setSelectedOutletModal(null);
                                   }
-                                  setSelectedOutletModal(null);
                                 }}
                               >
                                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>{actionBtnText}</Text>
@@ -1107,8 +1143,8 @@ export default function App() {
                   <TouchableOpacity
                     style={{
                       flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
-                      backgroundColor: historyFilterMode === '7days' ? '#ebf5fb' : '#fff',
-                      borderColor: historyFilterMode === '7days' ? '#3498db' : '#ecf0f1'
+                      backgroundColor: historyFilterMode === '7days' ? '#e9f7ef' : '#fff',
+                      borderColor: historyFilterMode === '7days' ? '#27ae60' : '#ecf0f1'
                     }}
                     onPress={() => {
                       const end = new Date().toISOString().split('T')[0];
@@ -1117,13 +1153,13 @@ export default function App() {
                       setHistoryFilterMode('7days');
                     }}
                   >
-                    <Text style={{ fontSize: 13, color: historyFilterMode === '7days' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>7 ngày qua</Text>
+                    <Text style={{ fontSize: 13, color: historyFilterMode === '7days' ? '#27ae60' : '#2c3e50', fontWeight: 'bold' }}>7 ngày qua</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{
                       flex: 1, paddingVertical: 10, borderRadius: 12, marginRight: 8, alignItems: 'center', borderWidth: 1,
-                      backgroundColor: historyFilterMode === 'month' ? '#ebf5fb' : '#fff',
-                      borderColor: historyFilterMode === 'month' ? '#3498db' : '#ecf0f1'
+                      backgroundColor: historyFilterMode === 'month' ? '#e9f7ef' : '#fff',
+                      borderColor: historyFilterMode === 'month' ? '#27ae60' : '#ecf0f1'
                     }}
                     onPress={() => {
                       const now = new Date();
@@ -1133,20 +1169,20 @@ export default function App() {
                       setHistoryFilterMode('month');
                     }}
                   >
-                    <Text style={{ fontSize: 13, color: historyFilterMode === 'month' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tháng này</Text>
+                    <Text style={{ fontSize: 13, color: historyFilterMode === 'month' ? '#27ae60' : '#2c3e50', fontWeight: 'bold' }}>Tháng này</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{
                       flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1,
-                      backgroundColor: historyFilterMode === 'all' ? '#ebf5fb' : '#fff',
-                      borderColor: historyFilterMode === 'all' ? '#3498db' : '#ecf0f1'
+                      backgroundColor: historyFilterMode === 'all' ? '#e9f7ef' : '#fff',
+                      borderColor: historyFilterMode === 'all' ? '#27ae60' : '#ecf0f1'
                     }}
                     onPress={() => {
                       fetchHistory('', '', true);
                       setHistoryFilterMode('all');
                     }}
                   >
-                    <Text style={{ fontSize: 13, color: historyFilterMode === 'all' ? '#3498db' : '#2c3e50', fontWeight: 'bold' }}>Tất cả</Text>
+                    <Text style={{ fontSize: 13, color: historyFilterMode === 'all' ? '#27ae60' : '#2c3e50', fontWeight: 'bold' }}>Tất cả</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1155,7 +1191,7 @@ export default function App() {
                     style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#ecf0f1', elevation: 2 }}
                     onPress={() => openDatePicker('start')}
                   >
-                    <FontAwesome5 name="calendar-alt" size={14} color="#3498db" style={{ marginRight: 8 }} />
+                    <FontAwesome5 name="calendar-alt" size={14} color="#27ae60" style={{ marginRight: 8 }} />
                     <View>
                       <Text style={{ fontSize: 10, color: '#bdc3c7' }}>Từ ngày</Text>
                       <Text style={{ fontSize: 13, color: '#2c3e50', fontWeight: 'bold' }}>{historyStartDate.split('-').reverse().join('/')}</Text>
@@ -1241,7 +1277,7 @@ export default function App() {
 
               <View style={styles.walletCard}>
                 <View style={styles.walletHeader}>
-                  <FontAwesome5 name="wallet" size={20} color="#3498db" />
+                  <FontAwesome5 name="wallet" size={20} color="#27ae60" />
                   <Text style={styles.walletTitle}>Ví của tôi</Text>
                 </View>
 
@@ -1350,11 +1386,11 @@ export default function App() {
               </View>
 
               <TouchableOpacity
-                style={{ flexDirection: 'row', backgroundColor: '#e8f4f8', padding: 10, borderRadius: 10, marginBottom: 20 }}
+                style={{ flexDirection: 'row', backgroundColor: '#e9f7ef', padding: 10, borderRadius: 10, marginBottom: 20 }}
                 onPress={saveQrToGallery}
               >
-                <FontAwesome5 name="download" size={16} color="#3498db" style={{ marginRight: 8, marginTop: 2 }} />
-                <Text style={{ color: '#3498db', fontWeight: 'bold' }}>Tải mã QR xuống máy</Text>
+                <FontAwesome5 name="download" size={16} color="#27ae60" style={{ marginRight: 8, marginTop: 2 }} />
+                <Text style={{ color: '#27ae60', fontWeight: 'bold' }}>Tải mã QR xuống máy</Text>
               </TouchableOpacity>
 
               {/* BẢNG TEXT COPY THỦ CÔNG */}
@@ -1367,21 +1403,21 @@ export default function App() {
                   <Text style={{ color: '#7f8c8d' }}>Số tài khoản:</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontWeight: 'bold', marginRight: 10 }}>0377326806</Text>
-                    <TouchableOpacity onPress={() => copyToClipboard('0377326806', 'Số tài khoản')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => copyToClipboard('0377326806', 'Số tài khoản')}><FontAwesome5 name="copy" size={16} color="#27ae60" /></TouchableOpacity>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
                   <Text style={{ color: '#7f8c8d' }}>Số tiền:</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontWeight: 'bold', color: '#e74c3c', marginRight: 10 }}>{parseInt(topupAmount || '0').toLocaleString('vi-VN')} đ</Text>
-                    <TouchableOpacity onPress={() => copyToClipboard(topupAmount, 'Số tiền')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => copyToClipboard(topupAmount, 'Số tiền')}><FontAwesome5 name="copy" size={16} color="#27ae60" /></TouchableOpacity>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ color: '#7f8c8d' }}>Nội dung:</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontWeight: 'bold', color: '#f39c12', marginRight: 10 }}>NAP TRAM {username}</Text>
-                    <TouchableOpacity onPress={() => copyToClipboard(`NAP TRAM ${username}`, 'Nội dung')}><FontAwesome5 name="copy" size={16} color="#3498db" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => copyToClipboard(`NAP TRAM ${username}`, 'Nội dung')}><FontAwesome5 name="copy" size={16} color="#27ae60" /></TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -1395,7 +1431,7 @@ export default function App() {
                 }}
               >
                 <Text style={styles.buttonText}>
-                  {isPollingBalance ? '⏳ Đang chờ xác nhận...' : 'TÔI ĐÃ CHUYỂN KHOẢN'}
+                  {isPollingBalance ? 'Đang chờ xác nhận...' : 'TÔI ĐÃ CHUYỂN KHOẢN'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1408,15 +1444,15 @@ export default function App() {
         {/* Bottom Tab Bar */}
         <View style={styles.tabBar}>
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
-            <FontAwesome5 name="home" size={20} color={activeTab === 'home' ? '#3498db' : '#7f8c8d'} />
+            <FontAwesome5 name="home" size={20} color={activeTab === 'home' ? '#27ae60' : '#7f8c8d'} />
             <Text style={[styles.tabText, activeTab === 'home' && styles.tabTextActive]}>Trang chủ</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('history')}>
-            <FontAwesome5 name="receipt" size={20} color={activeTab === 'history' ? '#3498db' : '#7f8c8d'} />
+            <FontAwesome5 name="receipt" size={20} color={activeTab === 'history' ? '#27ae60' : '#7f8c8d'} />
             <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>Lịch sử</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('account')}>
-            <FontAwesome5 name="user" size={20} color={activeTab === 'account' ? '#3498db' : '#7f8c8d'} />
+            <FontAwesome5 name="user" size={20} color={activeTab === 'account' ? '#27ae60' : '#7f8c8d'} />
             <Text style={[styles.tabText, activeTab === 'account' && styles.tabTextActive]}>Tài khoản</Text>
           </TouchableOpacity>
         </View>
@@ -1490,8 +1526,8 @@ export default function App() {
         </TouchableOpacity>
 
         <View style={styles.headerContainer}>
-          <View style={[styles.logoContainer, { backgroundColor: '#e1f0fa', shadowColor: '#3498db' }]}>
-            <FontAwesome5 name="user-plus" size={40} color="#3498db" />
+          <View style={[styles.logoContainer, { backgroundColor: '#e9f7ef', shadowColor: '#27ae60' }]}>
+            <FontAwesome5 name="user-plus" size={40} color="#27ae60" />
           </View>
           <Text style={styles.mainTitle}>Đăng Ký Tài Khoản</Text>
           <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>Tạo tài khoản mới để bắt đầu sạc xe</Text>
@@ -1506,7 +1542,7 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.button, { backgroundColor: '#3498db' }]} onPress={handleRegister} disabled={isRegLoading}>
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#27ae60' }]} onPress={handleRegister} disabled={isRegLoading}>
           {isRegLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Hoàn tất Đăng ký</Text>}
         </TouchableOpacity>
       </View>
@@ -1517,7 +1553,7 @@ export default function App() {
     <View style={[styles.container, { justifyContent: 'flex-start', paddingTop: 60 }]}>
       <View style={styles.headerContainer}>
         <View style={styles.logoContainer}>
-          <FontAwesome5 name="charging-station" size={45} color="#3498db" />
+          <FontAwesome5 name="charging-station" size={45} color="#27ae60" />
         </View>
         <Text style={styles.mainTitle}>Trạm Sạc Xe Điện</Text>
         <Text style={styles.subTitleText}>Đăng nhập để sử dụng dịch vụ</Text>
@@ -1583,7 +1619,7 @@ const styles = StyleSheet.create({
   passwordInputContainer: { position: 'relative', marginBottom: 15 },
   passwordInput: { marginBottom: 0, paddingRight: 45 },
   eyeIcon: { position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 15 },
-  button: { backgroundColor: '#3498db', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
+  button: { backgroundColor: '#27ae60', padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
   logoutBtn: { backgroundColor: '#e74c3c' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   walletCard: { backgroundColor: '#fff', padding: 20, borderRadius: 15, alignItems: 'center', marginBottom: 30, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, width: '100%' },
@@ -1600,27 +1636,27 @@ const styles = StyleSheet.create({
 
   // Styles mới cho form đăng nhập nâng cao
   headerContainer: { alignItems: 'center', marginBottom: 35 },
-  logoContainer: { width: 90, height: 90, backgroundColor: '#e1f0fa', borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 15, shadowColor: '#3498db', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
+  logoContainer: { width: 90, height: 90, backgroundColor: '#e9f7ef', borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 15, shadowColor: '#27ae60', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 },
   mainTitle: { fontSize: 32, fontWeight: 'bold', color: '#2c3e50', marginBottom: 8 },
   subTitleText: { fontSize: 16, color: '#7f8c8d' },
   optionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25, paddingHorizontal: 5 },
   checkboxContainer: { flexDirection: 'row', alignItems: 'center' },
-  checkbox: { width: 18, height: 18, borderWidth: 1.5, borderColor: '#3498db', borderRadius: 4, marginRight: 8, backgroundColor: '#fff' },
-  checkboxChecked: { backgroundColor: '#3498db' },
+  checkbox: { width: 18, height: 18, borderWidth: 1.5, borderColor: '#27ae60', borderRadius: 4, marginRight: 8, backgroundColor: '#fff' },
+  checkboxChecked: { backgroundColor: '#27ae60' },
   optionText: { color: '#34495e', fontSize: 14 },
   forgotPasswordText: { color: '#e74c3c', fontSize: 14, fontWeight: '600' },
   registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },
   registerText: { color: '#7f8c8d', fontSize: 15 },
-  registerLink: { color: '#3498db', fontSize: 15, fontWeight: 'bold' },
+  registerLink: { color: '#27ae60', fontSize: 15, fontWeight: 'bold' },
   tabBar: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingBottom: 20, paddingTop: 10 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 12, color: '#7f8c8d', marginTop: 4 },
-  tabTextActive: { color: '#3498db', fontWeight: 'bold' },
+  tabTextActive: { color: '#27ae60', fontWeight: 'bold' },
 
   // Styles cho danh sách Trạm sạc
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50', marginTop: 20, marginBottom: 15 },
   stationCard: { flexDirection: 'row', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 15, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
-  stationIcon: { width: 50, height: 50, backgroundColor: '#e1f0fa', borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  stationIcon: { width: 50, height: 50, backgroundColor: '#e9f7ef', borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   stationInfo: { flex: 1 },
   stationName: { fontSize: 16, fontWeight: 'bold', color: '#2c3e50', marginBottom: 4 },
   stationLocation: { fontSize: 13, color: '#7f8c8d' },
