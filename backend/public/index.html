@@ -1723,7 +1723,7 @@
         setInterval(syncStationsData, 5000);
 
         // --- XÁC THỰC BẢO MẬT (JWT) ---
-        let authToken = localStorage.getItem('ev_token') || ''; // Chi tu dong vao admin khi da ghi nho dang nhap.
+        let authToken = localStorage.getItem('ev_token') || sessionStorage.getItem('ev_token') || ''; // Khoi phuc token sau reload.
         let currentUserRole = '';
 
         function showLoginGate() {
@@ -1823,7 +1823,12 @@
                     if (data.success) {
                         authToken = data.token;
                         localStorage.removeItem('ev_token');
-                        if (rememberMe) localStorage.setItem('ev_token', authToken);
+                        sessionStorage.removeItem('ev_token');
+                        if (rememberMe) {
+                            localStorage.setItem('ev_token', authToken);
+                        } else {
+                            sessionStorage.setItem('ev_token', authToken);
+                        }
                         // Lấy số dư hiển thị lên ngay lập tức, xong mới bung thông báo                
                         fetchUserProfile(data.message);
                     } else {
@@ -1837,6 +1842,7 @@
         function doLogout(shouldShowAlert) {
             authToken = '';
             localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
+            sessionStorage.removeItem('ev_token');
             localStorage.removeItem('ev_balance'); // Xóa số dư đệm
             const walletInfo = document.getElementById('wallet_info');
             if (walletInfo) walletInfo.classList.add('d-none');
