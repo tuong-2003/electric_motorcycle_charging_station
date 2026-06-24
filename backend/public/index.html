@@ -1689,6 +1689,7 @@
 
         // Khoi phục login khi F5
         if (authToken) {
+            showAdminApp();
             // Hiển thị khung ví tiền ngay lập tức với số dư đệm để tránh giật/nhảy giao diện khi tải trang
             const walletInfo = document.getElementById('wallet_info');
             if (walletInfo) {
