@@ -1735,6 +1735,13 @@
         }
 
         // Khoi phục login khi F5
+        function clearStoredAuth() {
+            authToken = '';
+            localStorage.removeItem('ev_token');
+            sessionStorage.removeItem('ev_token');
+            localStorage.removeItem('ev_balance');
+        }
+
         if (authToken) {
             showAdminApp();
             // Hiển thị khung ví tiền ngay lập tức với số dư đệm để tránh giật/nhảy giao diện khi tải trang
@@ -1754,10 +1761,20 @@
         // Hàm gọi API lấy số dư ví tiền hiện tại
         function fetchUserProfile(loginMessage = null) {
             if (!authToken) return;
+            const tokenAtRequest = authToken;
             fetch('/api/user/me', {
-                headers: { 'Authorization': 'Bearer ' + authToken }
+                headers: { 'Authorization': 'Bearer ' + tokenAtRequest }
             })
-                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 401 || res.status === 403) {
+                        clearStoredAuth();
+                        throw new Error('AUTH_EXPIRED');
+                    }
+                    if (!res.ok) {
+                        throw new Error('PROFILE_REQUEST_FAILED');
+                    }
+                    return res.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Đã ẩn Ví tiền trên giao diện Admin
@@ -1799,12 +1816,15 @@
                         }
                     } else {
                         // Nếu Token hết hạn hoặc không hợp lệ (Backend báo lỗi), âm thầm đăng xuất
-                        doLogout(false);
+                        clearStoredAuth();
+                        showLoginGate();
                     }
                 })
                 .catch(err => {
                     console.error("Lỗi lấy thông tin ví:", err);
-                    doLogout(false);
+                    if (err.message === 'AUTH_EXPIRED') {
+                        showLoginGate();
+                    }
                 });
         }
 
@@ -1840,10 +1860,7 @@
 
         // Hàm Đăng xuất
         function doLogout(shouldShowAlert) {
-            authToken = '';
-            localStorage.removeItem('ev_token'); // Xóa Token khỏi trình duyệt
-            sessionStorage.removeItem('ev_token');
-            localStorage.removeItem('ev_balance'); // Xóa số dư đệm
+            clearStoredAuth();
             const walletInfo = document.getElementById('wallet_info');
             if (walletInfo) walletInfo.classList.add('d-none');
             document.getElementById('sidebar_unauth').classList.remove('d-none');
