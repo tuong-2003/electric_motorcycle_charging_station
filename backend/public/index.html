@@ -1652,6 +1652,41 @@
 
         // --- [MỚI] AUTO REFRESH (POLLING) CHO WEB ADMIN ---
         // Đảm bảo Nhiệt độ / Độ ẩm luôn được cập nhật thời gian thực (Giống hệt App)
+        function getTodayStationQueryStr() {
+            const today = new Date().toISOString().split('T')[0];
+            return `?startDate=${today}&endDate=${today}`;
+        }
+
+        function updateDailyEnergyCard(stations) {
+            let totalKwh = 0;
+            let totalRevenue = 0;
+
+            stations.forEach(st => {
+                const kwh = parseFloat(st.total_kwh || 0);
+                const unitPrice = parseFloat(st.unit_price || 0);
+                totalKwh += kwh;
+                totalRevenue += kwh * unitPrice;
+            });
+
+            const dailyKwhEl = document.getElementById('val_daily_kwh');
+            const revenueEl = document.getElementById('val_revenue_details');
+
+            if (dailyKwhEl) dailyKwhEl.innerText = totalKwh.toFixed(2);
+            if (revenueEl) revenueEl.innerText = `Tạm tính: ${Math.round(totalRevenue).toLocaleString('vi-VN')}đ`;
+        }
+
+        function syncDailyEnergyCard() {
+            if (!authToken) return;
+            fetch('/api/stations' + getTodayStationQueryStr(), { headers: { 'Authorization': 'Bearer ' + authToken } })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && Array.isArray(data.data)) {
+                        updateDailyEnergyCard(data.data);
+                    }
+                })
+                .catch(e => { });
+        }
+
         function syncStationsData() {
             if (!authToken) return;
             const queryStr = getStationQueryStr();
@@ -1680,6 +1715,8 @@
                         }
                     }
                 }).catch(e => { });
+
+            syncDailyEnergyCard();
         }
 
         // Quét cập nhật tự động mỗi 5 giây
@@ -1709,6 +1746,7 @@
                 if (balanceEl) balanceEl.innerText = cachedBalance;
             }
             fetchUserProfile();
+            syncStationsData();
         } else {
             showLoginGate();
         }
