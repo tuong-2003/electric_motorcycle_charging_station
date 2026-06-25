@@ -600,19 +600,25 @@ app.post('/api/charge/stop', verifyToken, (req, res) => {
 
 // API Lấy dữ liệu lịch sử để vẽ biểu đồ
 app.get('/api/telemetry/history', (req, res) => {
-    // Gom nhóm theo thời gian, tách riêng công suất ổ 1.1 và ổ 1.2
+    // Lay cac mau gan nhat va tach tong cong suat theo tung tu sac.
     const sql = `
-        SELECT 
-            DATE_FORMAT(created_at, "%H:%i:%s") as time,
-            SUM(CASE WHEN station_id LIKE '001.%' THEN power ELSE 0 END) as power_1,
-            SUM(CASE WHEN station_id LIKE '002.%' THEN power ELSE 0 END) as power_2
-        FROM telemetry 
-        GROUP BY time ORDER BY time DESC LIMIT 20
+        SELECT DATE_FORMAT(FROM_UNIXTIME(bucket_epoch), "%H:%i:%s") as time, power_1, power_2
+        FROM (
+            SELECT
+                UNIX_TIMESTAMP(created_at) as bucket_epoch,
+                SUM(CASE WHEN station_id LIKE '001.%' THEN power ELSE 0 END) as power_1,
+                SUM(CASE WHEN station_id LIKE '002.%' THEN power ELSE 0 END) as power_2
+            FROM telemetry
+            WHERE created_at >= NOW() - INTERVAL 30 MINUTE
+            GROUP BY bucket_epoch
+            ORDER BY bucket_epoch DESC
+            LIMIT 20
+        ) recent
+        ORDER BY bucket_epoch ASC
     `;
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
-        // Đảo ngược mảng để vẽ từ trái (cũ) sang phải (mới)
-        res.json({ success: true, data: results.reverse() });
+        res.json({ success: true, data: results });
     });
 });
 
