@@ -1234,6 +1234,10 @@
         let underConfirm = {}; // Lưu trữ trạng thái đang đợi xác nhận của các cổng sạc
         const stationLimits = {}; // Lưu trữ cấu hình giới hạn các trạm ở client-side
 
+        let currentStationFilter = 'all';
+        let currentHistoryFilter = 'all';
+        let activeDateFilterTarget = 'stations'; // 'stations' hoáº·c 'history'
+
         function addSystemAlert(id, message, type) {
             const existing = systemAlerts.find(a => a.id === id);
             if (existing) {
@@ -1650,6 +1654,17 @@
             return queryStr;
         }
 
+        function formatNumber(value, fallback = 0) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : fallback;
+        }
+
+        function showTableError(tbodyId, colspan, message) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-danger py-3">${message}</td></tr>`;
+        }
+
         // --- [MỚI] AUTO REFRESH (POLLING) CHO WEB ADMIN ---
         // Đảm bảo Nhiệt độ / Độ ẩm luôn được cập nhật thời gian thực (Giống hệt App)
         function getTodayStationQueryStr() {
@@ -1678,7 +1693,13 @@
         function syncDailyEnergyCard() {
             if (!authToken) return;
             fetch('/api/stations' + getTodayStationQueryStr(), { headers: { 'Authorization': 'Bearer ' + authToken } })
-                .then(res => res.json())
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || !data.success) {
+                        throw new Error(data.message || 'Khong the tai tram sac');
+                    }
+                    return data;
+                })
                 .then(data => {
                     if (data.success && Array.isArray(data.data)) {
                         updateDailyEnergyCard(data.data);
@@ -2019,7 +2040,13 @@
             fetch(url, {
                 headers: { 'Authorization': 'Bearer ' + authToken }
             })
-                .then(res => res.json())
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || !data.success) {
+                        throw new Error(data.message || 'Khong the tai hoa don');
+                    }
+                    return data;
+                })
                 .then(data => {
                     if (data.success) {
                         const tbody = document.getElementById('history_table_body');
@@ -2029,11 +2056,13 @@
                         let totalCost = 0;
 
                         data.data.forEach(row => {
-                            totalKwh += parseFloat(row.total_kwh || 0);
-                            totalCost += parseInt(row.total_cost || 0);
+                            const rowKwh = formatNumber(row.total_kwh);
+                            const rowCost = formatNumber(row.total_cost);
+                            totalKwh += rowKwh;
+                            totalCost += rowCost;
 
-                            let costFormat = parseInt(row.total_cost).toLocaleString('vi-VN') + ' đ';
-                            let kwhFormat = parseFloat(row.total_kwh).toFixed(3);
+                            let costFormat = Math.round(rowCost).toLocaleString('vi-VN') + ' đ';
+                            let kwhFormat = rowKwh.toFixed(3);
                             let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
 
                             let userTd = currentUserRole === 'admin' ? `<td>${row.username || '-'}</td>` : '';
@@ -2060,6 +2089,13 @@
                             tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-muted py-3">Không tìm thấy hóa đơn nào trong khoảng thời gian này!</td></tr>`;
                         }
                     }
+                })
+                .catch(err => {
+                    console.error('Load history failed:', err);
+                    document.getElementById('summary_total_sessions').innerText = '0';
+                    document.getElementById('summary_total_kwh').innerText = '0.00';
+                    document.getElementById('summary_total_cost').innerText = '0';
+                    showTableError('history_table_body', currentUserRole === 'admin' ? 8 : 7, 'Không tải được hóa đơn. Vui lòng thử lại hoặc kiểm tra Backend.');
                 });
         }
 
@@ -2257,7 +2293,13 @@
             const queryStr = getStationQueryStr();
 
             fetch('/api/stations' + queryStr, { headers: { 'Authorization': 'Bearer ' + authToken } })
-                .then(res => res.json())
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || !data.success) {
+                        throw new Error(data.message || 'Khong the tai tram sac');
+                    }
+                    return data;
+                })
                 .then(data => {
                     const tbody = document.getElementById('stations_table_body');
                     tbody.innerHTML = '';
@@ -2279,8 +2321,8 @@
                             } else {
                                 cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Offline</span>';
                             }
-                            let kwh = parseFloat(st.total_kwh).toFixed(2);
-                            let price = parseInt(st.unit_price).toLocaleString('vi-VN') + ' đ';
+                            let kwh = formatNumber(st.total_kwh).toFixed(2);
+                            let price = Math.round(formatNumber(st.unit_price, 3500)).toLocaleString('vi-VN') + ' đ';
                             let isExpanded = expandedStations.has(st.station_id);
 
                             tbody.innerHTML += `<tr class="align-middle" style="cursor: pointer;" onclick="toggleOutletsRow('${st.station_id}', this)">
@@ -2362,9 +2404,9 @@
                                              </div>
                                              <div style="width: 45%;" class="text-start px-2 text-muted small">
                                                  <div style="line-height: 1.5;">
-                                                     <div>Điện áp: <strong class="text-dark"><span id="stat_v_${uniqueId}">${(outlet.voltage || 0).toFixed(1)}</span> V</strong></div>
-                                                     <div>Dòng sạc: <strong class="text-dark"><span id="stat_i_${uniqueId}">${(outlet.current || 0).toFixed(2)}</span> A</strong></div>
-                                                     <div>Công suất: <strong class="text-dark"><span id="stat_p_${uniqueId}">${(outlet.power || 0).toFixed(1)}</span> W</strong></div>
+                                                     <div>Điện áp: <strong class="text-dark"><span id="stat_v_${uniqueId}">${formatNumber(outlet.voltage).toFixed(1)}</span> V</strong></div>
+                                                     <div>Dòng sạc: <strong class="text-dark"><span id="stat_i_${uniqueId}">${formatNumber(outlet.current).toFixed(2)}</span> A</strong></div>
+                                                     <div>Công suất: <strong class="text-dark"><span id="stat_p_${uniqueId}">${formatNumber(outlet.power).toFixed(1)}</span> W</strong></div>
                                                  </div>
                                              </div>
                                              <div style="width: 30%; text-align: right; display: flex; justify-content: flex-end;">
@@ -2389,6 +2431,10 @@
                             </tr>`;
                         });
                     }
+                })
+                .catch(err => {
+                    console.error('Load stations failed:', err);
+                    showTableError('stations_table_body', 8, 'Không tải được dữ liệu trạm sạc. Vui lòng thử lại hoặc kiểm tra Backend.');
                 });
         }
 
