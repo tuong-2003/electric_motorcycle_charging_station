@@ -663,8 +663,23 @@
             </div>
             <div class="mb-3">
                 <label class="form-label small text-muted fw-semibold">Mật khẩu</label>
-                <input type="password" id="login_pass" class="form-control form-control-lg bg-light"
-                    placeholder="Mật khẩu" onkeypress="if(event.key === 'Enter') doLogin()">
+                <div class="input-group">
+                    <input type="password"
+                        id="login_pass"
+                        class="form-control form-control-lg bg-light"
+                        placeholder="Mật khẩu"
+                        onkeypress="if(event.key === 'Enter') doLogin()">
+
+                    <button class="btn btn-outline-secondary"
+                            type="button"
+                            id="togglePasswordBtn"
+                            onclick="togglePasswordVisibility()"
+                            title="Hiện mật khẩu">
+
+                        <i class="fas fa-eye"></i>
+
+                    </button>
+                </div>
             </div>
             <div class="form-check mb-4">
                 <input class="form-check-input" type="checkbox" id="login_remember">
@@ -1773,6 +1788,22 @@
             localStorage.removeItem('ev_token');
             sessionStorage.removeItem('ev_token');
             localStorage.removeItem('ev_balance');
+        }
+
+        function togglePasswordVisibility() {
+
+            const input = document.getElementById('login_pass');
+            const icon = document.querySelector('#togglePasswordBtn i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
         }
 
         if (!authToken) {
