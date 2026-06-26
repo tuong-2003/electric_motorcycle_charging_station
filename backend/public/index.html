@@ -584,11 +584,19 @@
             visibility: visible;
         }
 
-        body.auth-locked #adminApp {
+        /* Trạng thái khởi tạo: chưa hiển thị gì */
+        body.app-initializing #loginScreen,
+        body.app-initializing #adminApp {
             display: none !important;
         }
 
-        body:not(.auth-locked) #loginScreen {
+        /* Chưa đăng nhập */
+        body.auth-locked:not(.app-initializing) #adminApp {
+            display: none !important;
+        }
+
+        /* Đã đăng nhập */
+        body:not(.auth-locked):not(.app-initializing) #loginScreen {
             display: none !important;
         }
 
@@ -636,7 +644,7 @@
     </style>
 </head>
 
-<body class="auth-locked">
+<body class="app-initializing">
 
     <div id="loginScreen" class="login-screen">
         <div class="login-panel">
@@ -1750,10 +1758,12 @@
         let currentUserRole = '';
 
         function showLoginGate() {
+            document.body.classList.remove('app-initializing');
             document.body.classList.add('auth-locked');
         }
 
         function showAdminApp() {
+            document.body.classList.remove('app-initializing');
             document.body.classList.remove('auth-locked');
         }
 
