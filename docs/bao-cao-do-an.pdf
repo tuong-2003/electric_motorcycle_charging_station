@@ -1,0 +1,71 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 992 >>
+stream
+BT
+/F1 16 Tf
+50 790 Td
+(Bao cao do an: He thong tram sac xe dien thong minh) Tj
+0 -28 Td
+() Tj
+0 -28 Td
+(Muc tieu: xay dung mo hinh tram sac xe dien co giam sat, dieu khien) Tj
+0 -28 Td
+(va thanh toan qua ung dung.) Tj
+0 -28 Td
+() Tj
+0 -28 Td
+(Thanh phan: ESP32 Station, ESP32 Gateway, Node.js Backend, MySQL,) Tj
+0 -28 Td
+(Web Admin va Mobile App Expo.) Tj
+0 -28 Td
+() Tj
+0 -28 Td
+(Giao tiep: Station <-> Gateway bang Modbus RTU/RS485; Gateway <->) Tj
+0 -28 Td
+(Backend bang MQTT; Web/App <-> Backend bang REST API.) Tj
+0 -28 Td
+() Tj
+0 -28 Td
+(Tinh nang: do V/A/W, nhiet do, do am; hien thi QR tren TFT; dieu) Tj
+0 -28 Td
+(khien relay 2 cong sac; quan ly user, vi tien, phien sac va nap tien.) Tj
+0 -28 Td
+() Tj
+0 -28 Td
+(Ket qua: he thong hoat dong duoc theo luong IoT hai chieu, co dashboard) Tj
+0 -28 Td
+(quan tri, app nguoi dung, co che bao ve qua dong/qua nhiet/mat ket noi.) Tj
+0 -28 Td
+() Tj
+0 -28 Td
+(Xem them: README.md, docs/phu-luc.md va cac hinh trong docs/ket-qua-demo.) Tj
+ET
+
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1354
+%%EOF

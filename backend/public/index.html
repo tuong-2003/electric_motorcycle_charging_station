@@ -1765,23 +1765,14 @@
             localStorage.removeItem('ev_balance');
         }
 
-        if (authToken) {
-            showAdminApp();
-            // Hiển thị khung ví tiền ngay lập tức với số dư đệm để tránh giật/nhảy giao diện khi tải trang
-            const walletInfo = document.getElementById('wallet_info');
-            if (walletInfo) {
-                walletInfo.classList.remove('d-none');
-                const cachedBalance = localStorage.getItem('ev_balance') || '--';
-                const balanceEl = document.getElementById('wallet_balance');
-                if (balanceEl) balanceEl.innerText = cachedBalance;
-            }
-            fetchUserProfile();
-            syncStationsData();
-        } else {
+        if (!authToken) {
             showLoginGate();
+        } else {
+            // Xác thực token trước và chưa hiển thị Dashboard.
+            fetchUserProfile();
         }
 
-        // Hàm gọi API lấy số dư ví tiền hiện tại
+        // Hàm xác thực phiên đăng nhập và lấy thông tin người dùng
         function fetchUserProfile(loginMessage = null) {
             if (!authToken) return;
             const tokenAtRequest = authToken;
@@ -1826,10 +1817,10 @@
                         document.getElementById('sidebar_unauth').classList.add('d-none');
                         document.getElementById('sidebar_auth').classList.remove('d-none');
 
-                        // Ẩn Modal Đăng nhập đi tự động sau khi login thành công
+                        // Token hợp lệ -> chuyển sang Dashboard
                         showAdminApp();
 
-                        // [MỚI] Tải ngay Nhiệt độ/Độ ẩm để hiển thị tức thì khi vừa đăng nhập xong
+                        // Sau khi Dashboard xuất hiện thì mới bắt đầu tải dữ liệu
                         syncStationsData();
 
                         // Nếu có tin nhắn chào mừng lúc đăng nhập thì hiện ra sau khi đã vẽ xong ví tiền
@@ -1844,7 +1835,7 @@
                     }
                 })
                 .catch(err => {
-                    console.error("Lỗi lấy thông tin ví:", err);
+                    console.error("Lỗi xác thực phiên đăng nhập:", err);
                     if (err.message === 'AUTH_EXPIRED') {
                         showLoginGate();
                     }

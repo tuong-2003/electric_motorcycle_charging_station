@@ -115,24 +115,27 @@ void initDisplay() {
 }
 
 // [MỚI] Hàm vẽ màn hình bảo trì tĩnh
+void printCentered(const char *text, int y, uint16_t color, uint16_t bg = ST77XX_BLACK, uint8_t size = 1) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  tft.setTextSize(size);
+  tft.getTextBounds(text, 0, y, &x1, &y1, &w, &h);
+  tft.setCursor((160 - w) / 2, y);
+  tft.setTextColor(color, bg);
+  tft.print(text);
+}
+
 void drawMaintenanceScreen() {
   tft.fillScreen(ST77XX_BLACK);
-  tft.fillRect(0, 0, 160, 20, ST77XX_RED);
-  tft.setCursor(5, 6);
-  tft.setTextColor(ST77XX_WHITE, ST77XX_RED);
-  tft.print("MODBUS - SYSTEM LOCK");
-  
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.setTextSize(2);
-  tft.setCursor(35, 45);
-  tft.print("BAO TRI");
-  
-  tft.setTextSize(1);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setCursor(15, 80);
-  tft.print("TRAM TAM NGHEN DE");
-  tft.setCursor(15, 95);
-  tft.print("BAO DUONG THIET BI");
+
+  printCentered("BAO TRI", 20, ST77XX_ORANGE, ST77XX_BLACK, 2);
+
+  printCentered("Tu sac tam ngung phuc vu", 68, ST77XX_WHITE);
+  printCentered("Vui long quay lai sau.", 86, ST77XX_WHITE);
+
+  char stationText[16];
+  snprintf(stationText, sizeof(stationText), "Ma tu: %03d", STATION_ID);
+  printCentered(stationText, 112, ST77XX_CYAN);
 }
 
 // Hàm cập nhật giao diện màn hình TFT (Chỉ cập nhật phần động, KHÔNG xóa toàn bộ nền)
@@ -146,11 +149,6 @@ void updateDisplay() {
       drawMaintenanceScreen();
     }
     
-    // Cập nhật nhiệt độ/độ ẩm trên thanh trạng thái đỏ của màn hình bảo trì
-    tft.setTextSize(1);
-    tft.setTextColor(ST77XX_WHITE, ST77XX_RED);
-    tft.setCursor(105, 6);
-    tft.printf("%2.0fC %2.0f%%", current_temp, current_hum);
     return;
   }
   
@@ -165,7 +163,7 @@ void updateDisplay() {
   // 1. Cập nhật thanh trạng thái (Top Bar)
   tft.setTextColor(ST77XX_WHITE, ST77XX_BLUE); // Ghi đè nền xanh
   tft.setCursor(5, 6);
-  tft.print("MODBUS  ");
+  tft.printf("TU SAC %d  ", STATION_ID);
   
   tft.setCursor(90, 6);
   tft.printf("%2.0fC %2.0f%%   ", current_temp, current_hum); // Padding khoảng trắng ở đuôi
@@ -185,7 +183,7 @@ void updateDisplay() {
       tft.print("ERR_OVR_T");
     } else {
       tft.setTextColor(is_charging[i] ? ST77XX_GREEN : ST77XX_CYAN, ST77XX_BLACK);
-      tft.print(is_charging[i] ? "CHARGING " : "AVAILABLE");
+      tft.print(is_charging[i] ? "DANG SAC " : "SAN SANG");
     }
 
     tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Nền đen ghi đè lên số cũ
