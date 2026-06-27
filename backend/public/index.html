@@ -45,21 +45,33 @@
             border-radius: 4px;
         }
 
+        /* Chuẩn hóa thẻ a để không bị giật layout khi đóng/mở */
         .sidebar a {
             color: #ecf0f1;
             text-decoration: none;
-            padding: 12px 20px;
-            display: block;
-            transition: 0.3s;
+            padding: 12px 22px; /* Cố định padding: 22px*2 + 24px icon = 68px (vừa khít sidebar khi đóng) */
+            display: flex; /* BẮT BUỘC dùng flex ở cả 2 trạng thái */
+            align-items: center;
+            transition: all 0.25s ease;
             border-left: 4px solid transparent;
-            /* Luôn có viền trái ẩn để tránh giật/xê dịch menu */
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         .sidebar a:hover,
         .sidebar a.active {
             background-color: #1f2937;
             border-left-color: #10b981;
-            /* Chỉ cập nhật màu viền */
+        }
+
+        /* Cố định kích thước icon để không xô đẩy chữ */
+        .sidebar a i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            margin-right: 12px;
+            transition: margin 0.25s ease;
         }
 
         .card-stat {
@@ -514,17 +526,13 @@
             visibility: hidden; /* Ẩn đi để không vô tình trỏ chuột trúng */
         }
 
+        /* Khi thu gọn: KHÔNG đổi display, giữ nguyên padding để tránh giật */
         .sidebar.collapsed a {
-            padding: 12px 0 !important;
-            text-align: center;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            padding: 12px 22px !important;
         }
 
         .sidebar.collapsed a i {
-            margin-right: 0 !important;
-            font-size: 1.25rem;
+            margin-right: 0 !important; /* Bỏ margin do chữ đã bị thu nhỏ (width: 0) */
         }
 
         /* Ẩn phần chữ của Footer Admin khi đóng */
