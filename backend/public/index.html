@@ -1647,6 +1647,32 @@
 
                 lastSeenTime[uniqueId] = Date.now(); // Cập nhật nhịp tim
 
+                // Khôi phục trạng thái hoạt động bình thường trên UI khi nhận lại tín hiệu
+                if (!stationLimits[stationId]) stationLimits[stationId] = {};
+                if (stationLimits[stationId].status === 'offline') {
+                    stationLimits[stationId].status = 'online';
+                }
+                const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16, status: 'online' };
+                
+                const sw = document.getElementById('switch_' + uniqueId);
+                if (sw && limits.status !== 'maintenance') {
+                    sw.disabled = false;
+                }
+
+                const statusCol = document.getElementById('cabinet_status_' + stationId);
+                if (statusCol) {
+                    if (limits.status === 'online') {
+                        statusCol.innerHTML = '<span style="color: #059669; font-weight: 600;">Hoạt động</span>';
+                    } else if (limits.status === 'maintenance') {
+                        statusCol.innerHTML = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
+                    }
+                }
+
+                const cogBtn = document.getElementById('btn_cog_' + stationId);
+                if (cogBtn) {
+                    cogBtn.setAttribute('data-status', limits.status);
+                }
+
                 // Xóa cảnh báo mất kết nối nếu có
                 removeSystemAlert('offline_' + uniqueId);
 
@@ -2661,7 +2687,7 @@
                         </td>
                         <td class="text-center"><strong>${st.station_id}</strong></td>
                         <td class="text-center">${st.name}</td>
-                        <td>${cabinetStatus}</td>
+                        <td id="cabinet_status_${st.station_id}">${cabinetStatus}</td>
                         <td id="table_th_${st.station_id}">
                             <div class="text-start d-inline-block" style="font-size: 0.85rem; line-height: 1.6;">
                                 <div class="text-muted"><i class="fas fa-temperature-half me-2" style="color: #f97316; width: 12px; text-align: center;"></i>Nhiệt độ: <span id="temp_${st.station_id}" class="fw-bold text-dark">${st.temperature != null ? st.temperature : '--'}</span>°C</div>
@@ -2671,7 +2697,7 @@
                         <td id="table_kwh_${st.station_id}">${kwh} kWh</td>
                         <td>${price}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-secondary" title="Cài đặt & Chỉnh sửa" 
+                            <button id="btn_cog_${st.station_id}" class="btn btn-sm btn-outline-secondary" title="Cài đặt & Chỉnh sửa" 
                                 data-id="${st.station_id}" 
                                 data-name="${st.name}" 
                                 data-location="${st.location}" 
@@ -2945,6 +2971,18 @@
                 return;
             }
 
+            // Kiểm tra trạng thái kết nối hệ thống nhúng
+            const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16, status: 'online' };
+            const isOffline = (limits.status === 'offline') || (Date.now() - (lastSeenTime[uniqueId] || 0) > 30000);
+            if (isOffline) {
+                showAlert("⛔ Không thể gửi lệnh: Tủ sạc hiện đang mất kết nối!", "danger");
+                if (chk) {
+                    chk.checked = (command !== 'START_CHARGE');
+                    chk.disabled = true;
+                }
+                return;
+            }
+
             // Đặt trạng thái đang xác nhận để chặn MQTT ghi đè giao diện
             underConfirm[uniqueId] = true;
             lastSeenTime[uniqueId] = Date.now(); // Tránh watchdog báo mất kết nối giả trong lúc gửi lệnh sạc
@@ -3021,6 +3059,30 @@
             for (let uniqueId in lastSeenTime) {
                 if (now - lastSeenTime[uniqueId] > 30000) { // Quá 30 giây không có dữ liệu (Mất mạng)
                     const badgeElem = document.getElementById('stat_badge_' + uniqueId);
+                    const parts = uniqueId.split('_');
+                    const stationId = parts[0];
+                    const outletId = parts[1];
+
+                    // Vô hiệu hóa công tắc khi mất kết nối
+                    const sw = document.getElementById('switch_' + uniqueId);
+                    if (sw) sw.disabled = true;
+
+                    // Đặt trạng thái trong cache client thành offline
+                    if (!stationLimits[stationId]) stationLimits[stationId] = {};
+                    stationLimits[stationId].status = 'offline';
+
+                    // Cập nhật trạng thái tủ sạc thành "Mất kết nối" ở bảng hiển thị
+                    const statusCol = document.getElementById('cabinet_status_' + stationId);
+                    if (statusCol && !statusCol.innerHTML.includes('Mất kết nối')) {
+                        statusCol.innerHTML = '<span style="color: #dc2626; font-weight: 600;">Mất kết nối</span>';
+                    }
+
+                    // Cập nhật nút cấu hình để khi mở lên biết là offline
+                    const cogBtn = document.getElementById('btn_cog_' + stationId);
+                    if (cogBtn) {
+                        cogBtn.setAttribute('data-status', 'offline');
+                    }
+
                     if (badgeElem && badgeElem.innerText !== 'Mất kết nối') {
                         badgeElem.className = "badge bg-danger rounded-pill fw-normal";
                         badgeElem.innerText = 'Mất kết nối';

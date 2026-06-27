@@ -54,9 +54,10 @@ float current_w[2] = {0.0, 0.0};
 float current_temp = 0.0;
 float current_hum = 0.0;
 
-// [MỚI] Biến theo dõi lỗi cục bộ và trạng thái màn hình bảo trì
+// [MỚI] Biến theo dõi lỗi cục bộ và trạng thái màn hình bảo trì/mất kết nối
 int outlet_error[2] = {0, 0}; // 0: OK, 1: Quá dòng, 2: Quá nhiệt
 bool was_maintenance = false;
+bool was_offline = false;
 
 // --- Nút nhấn (BOOT button) và Trạng thái WiFi AP ---
 #define BUTTON_PIN 0
@@ -138,10 +139,39 @@ void drawMaintenanceScreen() {
   printCentered(stationText, 112, ST77XX_CYAN);
 }
 
+void drawOfflineScreen() {
+  tft.fillScreen(ST77XX_BLACK);
+
+  printCentered("MAT KET NOI", 20, ST77XX_RED, ST77XX_BLACK, 2);
+
+  printCentered("Tu sac tam ngung phuc vu", 68, ST77XX_WHITE);
+  printCentered("Vui long lien he Admin.", 86, ST77XX_WHITE);
+
+  char stationText[16];
+  snprintf(stationText, sizeof(stationText), "Ma tu: %03d", STATION_ID);
+  printCentered(stationText, 112, ST77XX_CYAN);
+}
+
 // Hàm cập nhật giao diện màn hình TFT (Chỉ cập nhật phần động, KHÔNG xóa toàn bộ nền)
 void updateDisplay() {
-  bool is_maintenance = (modbus.getStationStatus() == 1);
+  uint16_t station_status_val = modbus.getStationStatus();
+  bool is_maintenance = (station_status_val == 1);
+  bool is_offline = (station_status_val == 2);
   
+  // Quản lý hiển thị màn hình mất kết nối
+  if (is_offline) {
+    if (!was_offline) {
+      was_offline = true;
+      drawOfflineScreen();
+    }
+    return;
+  }
+  
+  if (was_offline) {
+    was_offline = false;
+    initDisplay();
+  }
+
   // Quản lý chuyển đổi màn hình bảo trì để chống Flicker
   if (is_maintenance) {
     if (!was_maintenance) {
@@ -305,16 +335,17 @@ void loop() {
 
   int station_status_val = modbus.getStationStatus();
   bool is_maintenance = (station_status_val == 1);
+  bool is_offline = (station_status_val == 2);
 
-  // Phát hiện sự thay đổi trạng thái bảo trì để cập nhật màn hình lập tức
-  static bool prev_maintenance = false;
-  if (is_maintenance != prev_maintenance) {
-    prev_maintenance = is_maintenance;
+  // Phát hiện sự thay đổi trạng thái bảo trì hoặc mất kết nối để cập nhật màn hình lập tức
+  static int prev_status = -1;
+  if (station_status_val != prev_status) {
+    prev_status = station_status_val;
     updateDisplay();
   }
 
-  // --- BẢO VỆ CHỦ ĐỘNG KHI ĐANG BẢO TRÌ ---
-  if (is_maintenance) {
+  // --- BẢO VỆ CHỦ ĐỘNG KHI ĐANG BẢO TRÌ HOẶC MẤT KẾT NỐI ---
+  if (is_maintenance || is_offline) {
     bool state_changed = false;
     for (int i = 0; i < 2; i++) {
       if (is_charging[i]) {
@@ -333,7 +364,7 @@ void loop() {
   // --- NHẬN LỆNH ĐIỀU KHIỂN TỪ MODBUS ---
   int cmd1 = modbus.getCommandOutlet1();
   if (cmd1 == 1) {
-    if (!is_maintenance && current_temp <= temp_limit_val) {
+    if (!is_maintenance && !is_offline && current_temp <= temp_limit_val) {
       is_charging[0] = true;
       outlet_error[0] = 0; // Xóa lỗi cũ
       digitalWrite(RELAY1_PIN, LOW);
@@ -356,7 +387,7 @@ void loop() {
 
   int cmd2 = modbus.getCommandOutlet2();
   if (cmd2 == 1) {
-    if (!is_maintenance && current_temp <= temp_limit_val) {
+    if (!is_maintenance && !is_offline && current_temp <= temp_limit_val) {
       is_charging[1] = true;
       outlet_error[1] = 0; // Xóa lỗi cũ
       digitalWrite(RELAY2_PIN, LOW);

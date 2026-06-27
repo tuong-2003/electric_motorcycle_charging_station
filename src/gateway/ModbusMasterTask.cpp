@@ -145,6 +145,42 @@ bool ModbusMasterTask::sendConfig(uint8_t slaveId, uint16_t maxCurrent, uint16_t
     return isSuccess;
 }
 
+bool ModbusMasterTask::sendStationStatus(uint8_t slaveId, uint16_t status) {
+    if (isWaiting) {
+        Serial.println("Modbus dang ban, khong the gui trang thai!");
+        return false;
+    }
+
+    isWaiting = true;
+    isSuccess = false;
+    lastError = 0;
+
+    mb.writeHreg(slaveId, 14, status, [this, slaveId, status](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
+        this->isWaiting = false;
+        this->lastError = event;
+        if (event == Modbus::EX_SUCCESS) {
+            this->isSuccess = true;
+            Serial.printf("Gui trang thai %d cho TRAM %d THANH CONG\n", status, slaveId);
+        } else {
+            Serial.printf("Gui trang thai cho TRAM %d THAT BAI: Ma loi = 0x%02X\n", slaveId, event);
+        }
+        return true;
+    });
+
+    uint32_t startWait = millis();
+    while (isWaiting && (millis() - startWait < 1000)) {
+        mb.task();
+        delay(1);
+    }
+
+    if (isWaiting) {
+        isWaiting = false;
+        Serial.printf("Loi: Gui trang thai TRAM %d TIMEOUT\n", slaveId);
+    }
+    
+    return isSuccess;
+}
+
 bool ModbusMasterTask::sendReboot(uint8_t slaveId) {
     if (isWaiting) {
         Serial.println("Modbus dang ban, khong the gui lenh reboot!");

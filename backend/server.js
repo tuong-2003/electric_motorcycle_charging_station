@@ -1075,7 +1075,7 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
     const { name, max_current, temp_limit, status } = req.body;
 
     if (!isStationOnline(stationId)) {
-        return res.status(400).json({ success: false, message: '⛔ Tủ sạc hiện đang mất kết nối, không thể cập nhật cấu hình!' });
+        return res.status(400).json({ success: false, message: 'Tủ sạc hiện đang mất kết nối, không thể cập nhật cấu hình!' });
     }
 
     if (!name) return res.status(400).json({ success: false, message: 'Vui lòng nhập Tên tủ sạc!' });

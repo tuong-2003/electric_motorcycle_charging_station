@@ -148,6 +148,8 @@ void loop() {
                     delay(150);
                     modbus.sendCommand(stId, 2, false);
                     delay(150);
+                    modbus.sendStationStatus(stId, 2); // [MỚI] Gửi mã Offline xuống màn hình TFT
+                    delay(150);
                 }
                 wasDisconnectedTriggered = true;
             }

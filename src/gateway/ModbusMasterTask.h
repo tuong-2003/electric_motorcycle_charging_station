@@ -31,6 +31,9 @@ public:
     // Hàm ghi cấu hình xuống Tủ sạc (maxCurrent x100, tempLimit, status)
     bool sendConfig(uint8_t slaveId, uint16_t maxCurrent, uint16_t tempLimit, uint16_t status);
 
+    // Hàm ghi trạng thái ngoại tuyến hoặc bình thường xuống Tủ sạc
+    bool sendStationStatus(uint8_t slaveId, uint16_t status);
+
     // Hàm gửi lệnh khởi động lại xuống Tủ sạc
     bool sendReboot(uint8_t slaveId);
 
