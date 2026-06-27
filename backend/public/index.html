@@ -49,8 +49,10 @@
         .sidebar a {
             color: #ecf0f1;
             text-decoration: none;
-            padding: 12px 22px; /* Cố định padding: 22px*2 + 24px icon = 68px (vừa khít sidebar khi đóng) */
-            display: flex; /* BẮT BUỘC dùng flex ở cả 2 trạng thái */
+            padding: 12px 22px;
+            /* Cố định padding: 22px*2 + 24px icon = 68px (vừa khít sidebar khi đóng) */
+            display: flex;
+            /* BẮT BUỘC dùng flex ở cả 2 trạng thái */
             align-items: center;
             transition: all 0.25s ease;
             border-left: 4px solid transparent;
@@ -323,23 +325,23 @@
 
         /* Nút gạt chế độ bảo trì màu đỏ */
         .form-switch-danger .form-check-input {
-            border-color: #dc3545;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
+            border-color: #dc3545 !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e") !important;
         }
 
         .form-switch-danger .form-check-input:checked {
-            background-color: #dc3545;
-            border-color: #dc3545;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+            background-color: #dc3545 !important;
+            border-color: #dc3545 !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e") !important;
         }
 
         .form-switch-danger .form-check-input:focus {
-            border-color: #dc3545;
-            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
         }
 
         .form-switch-danger .form-check-input:not(:checked):focus {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23dc3545'/%3e%3c/svg%3e") !important;
         }
 
         /* Nút gạt cổng sạc màu xanh lá */
@@ -475,7 +477,8 @@
             margin: 0;
             background: transparent !important;
             border: none !important;
-            color: #ffffff !important; /* Ép cứng màu trắng */
+            color: #ffffff !important;
+            /* Ép cứng màu trắng */
             cursor: pointer;
             transition: color .2s ease;
             outline: none !important;
@@ -486,9 +489,11 @@
         .btn-sidebar-toggle-sidebar:focus,
         .btn-sidebar-toggle-sidebar:focus-visible,
         .btn-sidebar-toggle-sidebar:active {
-            background: transparent !important; /* Bỏ hoàn toàn khung nền */
+            background: transparent !important;
+            /* Bỏ hoàn toàn khung nền */
             background-color: transparent !important;
-            color: #ffffff !important; /* Không cho phép đổi sang màu tối */
+            color: #ffffff !important;
+            /* Không cho phép đổi sang màu tối */
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
@@ -512,18 +517,23 @@
             transform: translateX(0);
             transition: opacity 0.25s ease, transform 0.25s ease, width 0.25s ease, margin 0.25s ease;
             display: inline-block;
-            white-space: nowrap; /* Bắt buộc để chữ không bị rớt dòng nhảy lung tung */
+            white-space: nowrap;
+            /* Bắt buộc để chữ không bị rớt dòng nhảy lung tung */
             overflow: hidden;
-            margin-left: 8px; /* Tạo khoảng cách êm ái giữa icon và chữ */
+            margin-left: 8px;
+            /* Tạo khoảng cách êm ái giữa icon và chữ */
             vertical-align: middle;
         }
 
         .sidebar.collapsed .nav-text {
             opacity: 0;
-            transform: translateX(-15px); /* Lùi về trái 15px khi đóng */
-            width: 0; /* Ép kích thước về 0 để không xô lệch icon */
+            transform: translateX(-15px);
+            /* Lùi về trái 15px khi đóng */
+            width: 0;
+            /* Ép kích thước về 0 để không xô lệch icon */
             margin-left: 0;
-            visibility: hidden; /* Ẩn đi để không vô tình trỏ chuột trúng */
+            visibility: hidden;
+            /* Ẩn đi để không vô tình trỏ chuột trúng */
         }
 
         /* Khi thu gọn: KHÔNG đổi display, giữ nguyên padding để tránh giật */
@@ -532,7 +542,8 @@
         }
 
         .sidebar.collapsed a i {
-            margin-right: 0 !important; /* Bỏ margin do chữ đã bị thu nhỏ (width: 0) */
+            margin-right: 0 !important;
+            /* Bỏ margin do chữ đã bị thu nhỏ (width: 0) */
         }
 
         /* Ẩn phần chữ của Footer Admin khi đóng */
@@ -748,17 +759,10 @@
             <div class="mb-3">
                 <label class="form-label small text-muted fw-semibold">Mật khẩu</label>
                 <div class="password-wrapper">
-                    <input
-                        type="password"
-                        id="login_pass"
-                        class="form-control form-control-lg bg-light"
-                        placeholder="Mật khẩu"
-                        onkeypress="if(event.key === 'Enter') doLogin()">
+                    <input type="password" id="login_pass" class="form-control form-control-lg bg-light"
+                        placeholder="Mật khẩu" onkeypress="if(event.key === 'Enter') doLogin()">
 
-                    <span
-                        id="togglePasswordBtn"
-                        class="password-toggle"
-                        onclick="togglePasswordVisibility()"
+                    <span id="togglePasswordBtn" class="password-toggle" onclick="togglePasswordVisibility()"
                         title="Hiện mật khẩu">
 
                         <i class="fas fa-eye"></i>
@@ -792,10 +796,8 @@
                         <i class="fas fa-bolt me-2 brand-icon" style="color: #10b981;"></i>
                         <span class="brand-name">Trạm Sạc HVT</span>
                     </div>
-                    <button class="btn-sidebar-toggle-sidebar"
-                            id="sidebarToggleBtn"
-                            onclick="toggleSidebar()"
-                            data-tooltip="Đóng thanh bên">
+                    <button class="btn-sidebar-toggle-sidebar" id="sidebarToggleBtn" onclick="toggleSidebar()"
+                        data-tooltip="Đóng thanh bên">
                         <svg id="sidebarToggleIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18"
                             height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round">
