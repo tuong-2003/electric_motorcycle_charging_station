@@ -460,42 +460,25 @@
             flex-shrink: 0;
             padding: 0;
             margin: 0;
-            background: transparent;
-            border: none;
-            color: #ecf0f1; /* Đồng bộ màu trắng của icon tab */
-            font-size: 1.25rem; /* Kích thước bằng với icon tab */
+            background: transparent !important; /* Bắt buộc trong suốt */
+            border: none !important;
+            color: #ecf0f1; /* Đồng màu với icon tab */
             cursor: pointer;
             transition: color .2s ease;
-            outline: none;
-            box-shadow: none;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
-        .btn-sidebar-toggle-sidebar:hover {
-            background: transparent; /* Xóa viền/nền khi hover */
-            color: #10b981; /* Đổi sang màu xanh lá khi hover cho đồng bộ */
-        }
-
+        /* Bỏ hoàn toàn viền và nền ở mọi trạng thái tương tác (Hover, Click, Focus) */
+        .btn-sidebar-toggle-sidebar:hover,
         .btn-sidebar-toggle-sidebar:focus,
         .btn-sidebar-toggle-sidebar:focus-visible,
         .btn-sidebar-toggle-sidebar:active {
-            background: transparent;
-            border: none;
-            outline: none;
-            box-shadow: none;
-        }
-
-        .btn-sidebar-toggle-sidebar:hover {
-            background: rgba(255,255,255,.08);
-            color: #ffffff;
-        }
-
-        .btn-sidebar-toggle-sidebar:focus,
-        .btn-sidebar-toggle-sidebar:focus-visible,
-        .btn-sidebar-toggle-sidebar:active {
-            background: rgba(255,255,255,.08);
-            border: none;
-            outline: none;
-            box-shadow: none;
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         .btn-sidebar-toggle-sidebar svg {
