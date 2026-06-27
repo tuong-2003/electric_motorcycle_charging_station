@@ -27,6 +27,9 @@ public:
     
     // Hàm ghi lệnh xuống Tủ sạc
     bool sendCommand(uint8_t slaveId, uint8_t outletId, bool start);
+    
+    // Hàm xóa chốt lỗi quá dòng/quá nhiệt cho ổ sạc
+    bool sendResetError(uint8_t slaveId, uint8_t outletId);
 
     // Hàm ghi cấu hình xuống Tủ sạc (maxCurrent x100, tempLimit, status)
     bool sendConfig(uint8_t slaveId, uint16_t maxCurrent, uint16_t tempLimit, uint16_t status);

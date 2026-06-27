@@ -92,6 +92,11 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
             modbus.sendCommand(stId, outId, false);
             delay(150); // Chờ 150ms để tủ sạc xử lý
             pollAndPublishStation(stId);
+        } else if (command && strcmp(command, "RESET_ERROR") == 0) {
+            Serial.printf("Gateway gui lenh XOA LOI cho TRAM %d - O %d\n", stId, outId);
+            modbus.sendResetError(stId, outId);
+            delay(150); // Chờ 150ms
+            pollAndPublishStation(stId);
         }
     }
     // 2. Lắng nghe lệnh điều khiển trạm (VD: ev_station/001/cmd) hoặc cấu hình (VD: ev_station/001/config)

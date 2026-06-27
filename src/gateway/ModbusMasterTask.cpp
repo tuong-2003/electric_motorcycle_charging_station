@@ -103,6 +103,45 @@ bool ModbusMasterTask::sendCommand(uint8_t slaveId, uint8_t outletId, bool start
     return isSuccess;
 }
 
+bool ModbusMasterTask::sendResetError(uint8_t slaveId, uint8_t outletId) {
+    if (isWaiting) {
+        Serial.println("Modbus dang ban, khong the gui lenh xoa loi!");
+        return false;
+    }
+
+    isWaiting = true;
+    isSuccess = false;
+    lastError = 0;
+
+    uint16_t reg = (outletId == 1) ? 10 : 11;
+    uint16_t val = 2; // Lệnh 2 = Khôi phục lỗi
+
+    mb.writeHreg(slaveId, reg, val, [this, slaveId, outletId](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
+        this->isWaiting = false;
+        this->lastError = event;
+        if (event == Modbus::EX_SUCCESS) {
+            this->isSuccess = true;
+            Serial.printf("Gui lenh XOA LOI cho TRAM %d - O %d THANH CONG\n", slaveId, outletId);
+        } else {
+            Serial.printf("Gui lenh XOA LOI cho TRAM %d THAT BAI: Ma loi = 0x%02X\n", slaveId, event);
+        }
+        return true;
+    });
+
+    uint32_t startWait = millis();
+    while (isWaiting && (millis() - startWait < 1000)) {
+        mb.task();
+        delay(1);
+    }
+
+    if (isWaiting) {
+        isWaiting = false;
+        Serial.printf("Loi: Gui lenh XOA LOI TRAM %d TIMEOUT\n", slaveId);
+    }
+    
+    return isSuccess;
+}
+
 bool ModbusMasterTask::sendConfig(uint8_t slaveId, uint16_t maxCurrent, uint16_t tempLimit, uint16_t status) {
     if (isWaiting) {
         Serial.println("Modbus dang ban, khong the gui cau hinh!");

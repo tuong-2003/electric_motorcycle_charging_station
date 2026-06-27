@@ -1271,6 +1271,35 @@ app.post('/api/system/factory-reset', verifyToken, (req, res) => {
     });
 });
 
+// API Xóa lỗi quá dòng/quá nhiệt cho từng ổ sạc (Chỉ Admin)
+app.post('/api/stations/:id/outlets/:outletId/reset-error', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền khôi phục lỗi cổng sạc!' });
+
+    const stationId = req.params.id;
+    const outletId = req.params.outletId;
+
+    if (!isStationOnline(stationId)) {
+        return res.status(400).json({ success: false, message: '⛔ Tủ sạc hiện đang mất kết nối, không thể gửi lệnh!' });
+    }
+
+    // Đẩy lệnh RESET_ERROR qua MQTT
+    const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
+    client.publish(topicCmd, JSON.stringify({ command: 'RESET_ERROR' }), (err) => {
+        if (err) {
+            console.error(`⚠️ [MQTT] Lỗi gửi lệnh RESET_ERROR tới tủ ${stationId} ổ ${outletId}:`, err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi gửi lệnh điều khiển!' });
+        }
+        
+        // Cập nhật ngay trạng thái trong cache tạm thời để phản hồi UI nhanh
+        const cacheData = liveDataCache[stationId];
+        if (cacheData && cacheData.outletsData && cacheData.outletsData[outletId]) {
+            cacheData.outletsData[outletId].status = 'AVAILABLE';
+        }
+
+        res.json({ success: true, message: `Đã gửi lệnh xóa lỗi cho Cổng ${outletId} - Tủ sạc ${stationId}!` });
+    });
+});
+
 // API Xóa Tủ sạc (Chỉ Admin)
 app.delete('/api/stations/:id', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xóa tủ sạc!' });

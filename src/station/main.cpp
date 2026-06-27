@@ -566,6 +566,14 @@ void loop() {
                            current_a[0], current_w[0], getOutletStatus(0),
                            current_v[1], current_a[1], current_w[1],
                            getOutletStatus(1));
+  } else if (cmd1 == 2) {
+    outlet_error[0] = 0; // Khôi phục lỗi của cổng 1
+    modbus.clearCommandOutlet1();
+    updateDisplay();
+    modbus.updateTelemetry(current_temp, current_hum, current_v[0],
+                           current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1],
+                           getOutletStatus(1));
   }
 
   int cmd2 = modbus.getCommandOutlet2();
@@ -584,6 +592,14 @@ void loop() {
   } else if (cmd2 == 0) {
     is_charging[1] = false;
     digitalWrite(RELAY2_PIN, HIGH);
+    modbus.clearCommandOutlet2();
+    updateDisplay();
+    modbus.updateTelemetry(current_temp, current_hum, current_v[0],
+                           current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1],
+                           getOutletStatus(1));
+  } else if (cmd2 == 2) {
+    outlet_error[1] = 0; // Khôi phục lỗi của cổng 2
     modbus.clearCommandOutlet2();
     updateDisplay();
     modbus.updateTelemetry(current_temp, current_hum, current_v[0],
