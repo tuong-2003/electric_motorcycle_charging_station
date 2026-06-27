@@ -1695,10 +1695,15 @@
 
                 const statusCol = document.getElementById('cabinet_status_' + stationId);
                 if (statusCol) {
-                    if (limits.status === 'online') {
-                        statusCol.innerHTML = '<span style="color: #059669; font-weight: 600;">Hoạt động</span>';
-                    } else if (limits.status === 'maintenance') {
+                    const tempLimit = limits ? (limits.temp_limit || 65) : 65;
+                    const isOverTemp = (data.temperature !== undefined && data.temperature > tempLimit) || (data.status === 'OVERTEMPERATURE');
+                    
+                    if (limits.status === 'maintenance') {
                         statusCol.innerHTML = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
+                    } else if (isOverTemp) {
+                        statusCol.innerHTML = '<span style="color: #dc2626; font-weight: 600;">Quá nhiệt</span>';
+                    } else if (limits.status === 'online') {
+                        statusCol.innerHTML = '<span style="color: #059669; font-weight: 600;">Hoạt động</span>';
                     }
                 }
 
@@ -2772,12 +2777,17 @@
 
                             // Trạng thái tủ sạc (cabinet level)
                             let cabinetStatus;
-                            if (st.status === 'online') {
-                                cabinetStatus = '<span style="color: #059669; font-weight: 600;">Hoạt động</span>';
+                            const isOverTemp = (st.temperature != null && st.temp_limit != null && st.temperature > st.temp_limit) ||
+                                               (st.outlets && st.outlets.some(o => o.status === 'OVERTEMPERATURE' || o.status === 'overtemperature'));
+                            
+                            if (st.status === 'offline') {
+                                cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Mất kết nối</span>';
                             } else if (st.status === 'maintenance') {
                                 cabinetStatus = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
+                            } else if (isOverTemp) {
+                                cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Quá nhiệt</span>';
                             } else {
-                                cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Mất kết nối</span>';
+                                cabinetStatus = '<span style="color: #059669; font-weight: 600;">Hoạt động</span>';
                             }
                             let kwh = formatNumber(st.total_kwh).toFixed(2);
                             let price = Math.round(formatNumber(st.unit_price, 3500)).toLocaleString('vi-VN') + ' đ';

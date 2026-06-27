@@ -60,6 +60,7 @@ float current_hum = 0.0;
 int outlet_error[2] = {0, 0}; // 0: OK, 1: Quá dòng, 2: Quá nhiệt
 bool was_maintenance = false;
 bool was_offline = false;
+bool was_overtemp = false;
 
 // Hàm phụ để ánh xạ trạng thái ổ sạc sang mã số nguyên Modbus
 uint16_t getOutletStatus(int index) {
@@ -168,6 +169,16 @@ void drawOfflineScreen() {
   printCentered(stationText, 112, ST77XX_CYAN);
 }
 
+void drawOvertemperatureScreen() {
+  tft.fillRect(0, 20, 160, 108, ST77XX_BLACK);
+  tft.drawRect(0, 20, 160, 108, ST77XX_RED);
+  
+  printCentered("CANH BAO QUA NHIET", 38, ST77XX_RED, ST77XX_BLACK, 1);
+  printCentered("Tu sac tam ngung", 64, ST77XX_WHITE, ST77XX_BLACK, 1);
+  printCentered("phuc vu de lam mat.", 78, ST77XX_WHITE, ST77XX_BLACK, 1);
+  printCentered("Vui long quay lai sau", 102, ST77XX_YELLOW, ST77XX_BLACK, 1);
+}
+
 void factoryResetStation() {
   // 1. Ngắt sạc khẩn cấp cả 2 cổng để bảo đảm an toàn điện
   digitalWrite(RELAY1_PIN, HIGH);
@@ -219,7 +230,6 @@ void updateDisplay() {
       was_maintenance = true;
       drawMaintenanceScreen();
     }
-    
     return;
   }
   
@@ -229,19 +239,61 @@ void updateDisplay() {
     initDisplay();
   }
 
+  // Quản lý chuyển đổi màn hình quá nhiệt toàn tủ để chống Flicker
+  bool is_overtemp = (outlet_error[0] == 2 || outlet_error[1] == 2);
+  if (is_overtemp) {
+    if (!was_overtemp) {
+      was_overtemp = true;
+      drawOvertemperatureScreen();
+    }
+    
+    // Cập nhật thanh trạng thái (Top Bar) để hiển thị nhiệt độ liên tục
+    tft.setTextColor(ST77XX_WHITE, ST77XX_BLUE);
+    tft.setCursor(5, 6);
+    tft.printf("TU SAC %03d  ", STATION_ID);
+    tft.setCursor(90, 6);
+    tft.printf("%2.0fC %2.0f%%   ", current_temp, current_hum);
+    return;
+  }
+
+  // Nếu thoát chế độ quá nhiệt, vẽ lại nền bình thường
+  if (was_overtemp) {
+    was_overtemp = false;
+    initDisplay();
+  }
+
   tft.setTextSize(1);
   
   // 1. Cập nhật thanh trạng thái (Top Bar)
   tft.setTextColor(ST77XX_WHITE, ST77XX_BLUE); // Ghi đè nền xanh
   tft.setCursor(5, 6);
   tft.printf("TU SAC %03d  ", STATION_ID);
-  
   tft.setCursor(90, 6);
-  tft.printf("%2.0fC %2.0f%%   ", current_temp, current_hum); // Padding khoảng trắng ở đuôi
+  tft.printf("%2.0fC %2.0f%%   ", current_temp, current_hum);
 
   // 2. Cập nhật thông số 2 ổ cắm
+  static int prev_outlet_error[2] = {0, 0};
+
   for (int i = 0; i < 2; i++) {
     int x_offset = i * 80; // Cột trái cho ổ 1, Cột phải cho ổ 2
+    
+    // Quản lý ẩn hiện QR Code theo trạng thái lỗi quá dòng cục bộ
+    if (outlet_error[i] != prev_outlet_error[i]) {
+      if (outlet_error[i] == 1) { // Mới bị lỗi quá dòng
+        tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa QR
+        tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
+        tft.setCursor(x_offset + 12, 45);
+        tft.print("BI QUA");
+        tft.setCursor(x_offset + 12, 59);
+        tft.print("DONG!");
+      } else if (prev_outlet_error[i] == 1 && outlet_error[i] == 0) { // Hết lỗi quá dòng
+        tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa chữ báo lỗi
+        char qrText[10];
+        snprintf(qrText, sizeof(qrText), "%03d.%d", STATION_ID, i + 1);
+        drawQRCode(qrText, x_offset + 19, 35); // Vẽ lại QR
+      }
+      prev_outlet_error[i] = outlet_error[i];
+    }
     
     tft.setCursor(x_offset + 5, 83);
     
@@ -249,9 +301,6 @@ void updateDisplay() {
     if (outlet_error[i] == 1) {
       tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
       tft.print("ERR_OVR_I");
-    } else if (outlet_error[i] == 2) {
-      tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-      tft.print("ERR_OVR_T");
     } else {
       tft.setTextColor(is_charging[i] ? ST77XX_GREEN : ST77XX_CYAN, ST77XX_BLACK);
       tft.print(is_charging[i] ? "DANG SAC " : "SAN SANG");
@@ -259,11 +308,11 @@ void updateDisplay() {
 
     tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Nền đen ghi đè lên số cũ
     tft.setCursor(x_offset + 5, 96); 
-    tft.printf("%3.0fV %5.2fA ", current_v[i], current_a[i]); // Nâng độ chuẩn xác: 2 chữ số thập phân (VD: 5.50A)
+    tft.printf("%3.0fV %5.2fA ", current_v[i], current_a[i]); // Nâng độ chuẩn xác: 2 chữ số thập phân
     
     tft.setCursor(x_offset + 5, 110); 
     tft.setTextColor(is_charging[i] ? ST77XX_RED : ST77XX_WHITE, ST77XX_BLACK);
-    tft.printf("%-6.1f W  ", current_w[i]); // Nâng độ chuẩn xác: 1 chữ số thập phân (VD: 2200.5 W)
+    tft.printf("%-6.1f W  ", current_w[i]); // Nâng độ chuẩn xác: 1 chữ số thập phân
   }
 }
 
@@ -461,7 +510,7 @@ void loop() {
   if (cmd1 == 1) {
     if (!is_maintenance && !is_offline && current_temp <= temp_limit_val) {
       is_charging[0] = true;
-      outlet_error[0] = 0; // Xóa lỗi cũ
+      outlet_error[0] = 0; // Xóa lỗi cũ khi có phiên sạc mới
       digitalWrite(RELAY1_PIN, LOW);
     }
     modbus.clearCommandOutlet1();
@@ -471,7 +520,6 @@ void loop() {
                            current_v[1], current_a[1], current_w[1], getOutletStatus(1));
   } else if (cmd1 == 0) {
     is_charging[0] = false;
-    outlet_error[0] = 0; // Xóa lỗi cũ
     digitalWrite(RELAY1_PIN, HIGH);
     modbus.clearCommandOutlet1();
     updateDisplay();
@@ -484,7 +532,7 @@ void loop() {
   if (cmd2 == 1) {
     if (!is_maintenance && !is_offline && current_temp <= temp_limit_val) {
       is_charging[1] = true;
-      outlet_error[1] = 0; // Xóa lỗi cũ
+      outlet_error[1] = 0; // Xóa lỗi cũ khi có phiên sạc mới
       digitalWrite(RELAY2_PIN, LOW);
     }
     modbus.clearCommandOutlet2();
@@ -494,7 +542,6 @@ void loop() {
                            current_v[1], current_a[1], current_w[1], getOutletStatus(1));
   } else if (cmd2 == 0) {
     is_charging[1] = false;
-    outlet_error[1] = 0; // Xóa lỗi cũ
     digitalWrite(RELAY2_PIN, HIGH);
     modbus.clearCommandOutlet2();
     updateDisplay();
@@ -548,6 +595,13 @@ void loop() {
       } 
       // 2. Kiểm tra quá dòng sạc từng cổng sạc
       else {
+        // Tự động xóa lỗi quá nhiệt khi nhiệt độ đã về ngưỡng an toàn
+        for (int i = 0; i < 2; i++) {
+          if (outlet_error[i] == 2) {
+            outlet_error[i] = 0;
+          }
+        }
+
         if (is_charging[0] && current_a[0] > max_current_limit) {
           is_charging[0] = false;
           outlet_error[0] = 1; // Lỗi quá dòng (1)

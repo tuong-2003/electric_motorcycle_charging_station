@@ -737,6 +737,15 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
             return res.status(400).json({ success: false, message: '⛔ Tủ sạc này đang ở chế độ bảo trì, không thể bắt đầu sạc!' });
         }
 
+        // [MỚI] Kiểm tra xem ổ cắm có đang bị lỗi quá dòng hay quá nhiệt hay không
+        const cacheData = liveDataCache[stationId];
+        const outData = cacheData && cacheData.outletsData && cacheData.outletsData[outletId];
+        if (outData && (outData.status === 'OVERCURRENT' || outData.status === 'OVERTEMPERATURE')) {
+            releaseLock();
+            const errMsg = outData.status === 'OVERCURRENT' ? '⛔ Cổng sạc này đang bị lỗi quá dòng, vui lòng kiểm tra thiết bị!' : '⛔ Cổng sạc này đang bị lỗi quá nhiệt, vui lòng đợi thiết bị hạ nhiệt!';
+            return res.status(400).json({ success: false, message: errMsg });
+        }
+
         // 2. Kiểm tra xem trụ sạc có đang rảnh không
         db.query('SELECT id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [`${stationId}.${outletId}`], (err, sessions) => {
             if (sessions.length > 0) {
