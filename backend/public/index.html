@@ -1351,25 +1351,25 @@
                     </div>
 
                     <details class="mb-4 mt-2">
-                        <summary class="text-danger small fw-semibold cursor-pointer user-select-none" style="outline: none;">
-                            <i class="fas fa-exclamation-triangle me-1"></i> Tùy chọn nâng cao (Vùng nguy hiểm)
+                        <summary class="text-secondary small fw-semibold cursor-pointer user-select-none" style="outline: none;">
+                            Tùy chọn nâng cao (Vùng nguy hiểm)
                         </summary>
-                        <div class="border border-danger border-opacity-25 rounded p-3 mt-2 bg-danger bg-opacity-5">
+                        <div class="border border-danger-subtle rounded p-3 mt-2 bg-light bg-opacity-50">
                             <span class="text-muted d-block mb-3" style="font-size: 0.75rem; line-height: 1.4;">
-                                Hành động này sẽ khôi phục cấu hình hoạt động của tủ sạc này về giá trị mặc định của hệ thống (16A, 65°C) và xóa các lỗi cục bộ.
+                                Các hành động dưới đây có thể ảnh hưởng trực tiếp đến trạng thái hoạt động và cấu hình lưu trữ của tủ sạc.
                             </span>
-                            <button id="btn_factory_reset_station" class="btn btn-sm btn-danger w-100 fw-semibold"
-                                onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục cài đặt gốc tủ sạc</button>
+                            <div class="d-flex gap-2">
+                                <button id="btn_factory_reset_station" class="btn btn-sm btn-outline-danger w-50 fw-semibold"
+                                    onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục gốc</button>
+                                <button class="btn btn-sm btn-danger w-50 fw-semibold" onclick="deleteStation()">
+                                    <i class="fas fa-trash me-1"></i>Xóa tủ sạc</button>
+                            </div>
                         </div>
                     </details>
 
                     <div class="d-flex justify-content-between align-items-center mb-0">
-                        <div class="d-flex gap-2">
-                            <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold"
-                                onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại</button>
-                            <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="deleteStation()"><i
-                                    class="fas fa-trash me-1"></i>Xóa tủ</button>
-                        </div>
+                        <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold"
+                            onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại</button>
                         <button id="btn_save_config" class="btn btn-sm btn-success fw-semibold px-3"
                             onclick="saveHardwareConfig()"><i class="fas fa-check me-1"></i>Lưu cấu hình</button>
                     </div>
