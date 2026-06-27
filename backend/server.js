@@ -904,6 +904,36 @@ app.post('/api/stations/:id/reboot', verifyToken, (req, res) => {
     });
 });
 
+// API Xóa Tủ sạc (Chỉ Admin)
+app.delete('/api/stations/:id', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xóa tủ sạc!' });
+
+    const stationId = req.params.id;
+
+    // 1. Thực hiện xóa tủ sạc trong DB
+    db.query('DELETE FROM stations WHERE station_id = ?', [stationId], (err, result) => {
+        if (err) {
+            console.error(`⚠️ [MySQL] Lỗi xóa tủ sạc ${stationId}:`, err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi Database khi xóa tủ sạc!' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tủ sạc để xóa!' });
+        }
+
+        // 2. Xóa khỏi cấu hình RAM Cache
+        delete stationConfigCache[stationId];
+        delete liveDataCache[stationId];
+
+        // 3. Xóa cấu hình retained trên MQTT Broker bằng cách gửi payload rỗng
+        const configTopic = `ev_station/${stationId}/config`;
+        client.publish(configTopic, '', { retain: true });
+
+        console.log(`🗑️ [Admin] Đã xóa tủ sạc ${stationId}`);
+        res.json({ success: true, message: `Đã xóa tủ sạc ${stationId} thành công!` });
+    });
+});
+
 // API Lấy thông tin ví tiền của User đang đăng nhập
 app.get('/api/user/me', verifyToken, (req, res) => {
     db.query('SELECT username, role, balance FROM users WHERE id = ?', [req.user.id], (err, results) => {
