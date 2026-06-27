@@ -1242,7 +1242,7 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
                         fetch(GAS_MAIL_URL, {
                             method: 'POST',
                             body: JSON.stringify(payload)
-                        }).catch(() => {});
+                        }).catch(() => { });
                     }
 
                     return res.json({ success: true, message: 'Đã gửi lại email kích hoạt mới thành công!' });
@@ -1336,15 +1336,15 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
                                 method: 'POST',
                                 body: JSON.stringify(payload)
                             })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.status !== 'success') {
-                                    console.error('⚠️ [Google API] Lỗi từ Webhook khi gửi link kích hoạt:', data.message);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('⚠️ [Google API] Gửi link kích hoạt thất bại:', error.message);
-                            });
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.status !== 'success') {
+                                        console.error('⚠️ [Google API] Lỗi từ Webhook khi gửi link kích hoạt:', data.message);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('⚠️ [Google API] Gửi link kích hoạt thất bại:', error.message);
+                                });
                         }
 
                         res.json({ success: true, message: 'Tạo tài khoản thành công! Đang chờ xác nhận từ chủ email để kích hoạt.' });
@@ -1437,7 +1437,7 @@ app.delete('/api/users/:id', verifyToken, (req, res) => {
         db.query('DELETE FROM users WHERE id = ?', [safeUserId], (err, result) => {
             if (err) return res.status(500).json({ success: false, message: 'Lỗi DB khi xóa User: ' + err.message });
             if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy User!' });
-            res.json({ success: true, message: 'Đã xóa User và toàn bộ lịch sử sạc liên quan thành công!' });
+            res.json({ success: true, message: 'Xóa User thành công!' });
         });
     });
 });

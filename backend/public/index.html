@@ -1226,10 +1226,10 @@
                                     <div class="mb-4">
                                         <label class="form-label text-muted small fw-semibold">Mật khẩu</label>
                                         <div class="password-wrapper">
-                                            <input type="password" id="new_user_pass" class="form-control form-control-sm"
-                                                placeholder="Nhập mật khẩu...">
-                                            <span id="toggleNewUserPasswordBtn" class="password-toggle" onclick="toggleNewUserPasswordVisibility()"
-                                                title="Hiện mật khẩu">
+                                            <input type="password" id="new_user_pass"
+                                                class="form-control form-control-sm" placeholder="Nhập mật khẩu...">
+                                            <span id="toggleNewUserPasswordBtn" class="password-toggle"
+                                                onclick="toggleNewUserPasswordVisibility()" title="Hiện mật khẩu">
                                                 <i class="fas fa-eye" style="font-size: 14px;"></i>
                                             </span>
                                         </div>
@@ -2547,7 +2547,7 @@
         // Xóa Tủ sạc
         function deleteStation() {
             const stationId = document.getElementById('settings_station_id').value;
-            showConfirm('CẢNH BÁO NGUY HIỂM: Hành động này sẽ XÓA HOÀN TOÀN Tủ sạc ' + stationId + ' khỏi hệ thống.\n\nMọi dữ liệu liên quan sẽ bị ảnh hưởng. Bạn có chắc chắn muốn xóa?', (confirmed) => {
+            showConfirm('CẢNH BÁO: Hành động này sẽ xóa hoàn toàn tủ sạc ' + stationId + ' khỏi hệ thống.\n\nMọi dữ liệu liên quan sẽ bị ảnh hưởng. Bạn có chắc chắn muốn xóa?', (confirmed) => {
                 if (confirmed) {
                     fetch('/api/stations/' + stationId, {
                         method: 'DELETE',
@@ -2798,7 +2798,7 @@
         }
 
         function deleteUser(userId, username) {
-            showConfirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ XÓA TOÀN BỘ lịch sử sạc và thông tin của người này, không thể khôi phục!`, (confirmed) => {
+            showConfirm(`⚠️ CẢNH BÁO:\n\nBạn có chắc chắn muốn xóa người dùng '${username}'?\nHành động này sẽ xóa toàn bộ thông tin của người này, không thể khôi phục!`, (confirmed) => {
                 if (!confirmed) return;
 
                 fetch(`/api/users/${userId}`, {
@@ -2862,19 +2862,19 @@
                                         },
                                         body: JSON.stringify({ username: u, email: e, password: p, role: r, resend: true })
                                     })
-                                    .then(res => res.json())
-                                    .then(resendData => {
-                                        if (resendData.success) {
-                                            showAlert(resendData.message, "success");
-                                            document.getElementById('new_user_name').value = '';
-                                            if (document.getElementById('new_user_email')) document.getElementById('new_user_email').value = '';
-                                            document.getElementById('new_user_pass').value = '';
-                                            loadUsers();
-                                        } else {
-                                            showAlert(resendData.message, "danger");
-                                        }
-                                    })
-                                    .catch(err => showAlert("Lỗi kết nối máy chủ", "danger"));
+                                        .then(res => res.json())
+                                        .then(resendData => {
+                                            if (resendData.success) {
+                                                showAlert(resendData.message, "success");
+                                                document.getElementById('new_user_name').value = '';
+                                                if (document.getElementById('new_user_email')) document.getElementById('new_user_email').value = '';
+                                                document.getElementById('new_user_pass').value = '';
+                                                loadUsers();
+                                            } else {
+                                                showAlert(resendData.message, "danger");
+                                            }
+                                        })
+                                        .catch(err => showAlert("Lỗi kết nối máy chủ", "danger"));
                                 }
                             });
                         } else {
