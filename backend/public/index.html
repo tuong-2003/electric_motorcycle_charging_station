@@ -2819,7 +2819,7 @@
                 return;
             }
 
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailRegex.test(e)) {
                 showAlert("Địa chỉ Email không hợp lệ!", "warning");
                 return;
@@ -2836,7 +2836,7 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        showAlert("Tạo tài khoản thành công!", "success");
+                        showAlert(data.message, "success");
                         document.getElementById('new_user_name').value = '';
                         if (document.getElementById('new_user_email')) document.getElementById('new_user_email').value = '';
                         document.getElementById('new_user_pass').value = '';

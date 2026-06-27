@@ -454,7 +454,7 @@ export default function App() {
     }
 
     // Kiểm tra định dạng Email chuẩn
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(fpEmail)) {
       setFpEmailError(true);
       return Alert.alert('Thông báo', 'Địa chỉ Email không đúng định dạng!');
@@ -523,7 +523,7 @@ export default function App() {
     }
 
     // Kiểm tra định dạng Email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(regEmail)) {
       setRegEmailError(true);
       return Alert.alert('Thông báo', 'Địa chỉ Email không hợp lệ!');

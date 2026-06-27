@@ -1,5 +1,6 @@
 require('dotenv').config(); // [MỚI] Load cấu hình từ file .env
-require('dns').setDefaultResultOrder('ipv4first'); // [FIX IPv6] Ép Node.js sử dụng IPv4, khắc phục triệt để lỗi ENETUNREACH của Gmail
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first'); // [FIX IPv6] Ép Node.js sử dụng IPv4, khắc phục triệt để lỗi ENETUNREACH của Gmail
 const express = require('express');
 const mqtt = require('mqtt');
 const cors = require('cors');
@@ -90,6 +91,23 @@ db.getConnection((err, connection) => {
             }
         });
 
+        // Tự động kiểm tra và cập nhật cột status và activation_token cho bảng users
+        db.query("SHOW COLUMNS FROM users LIKE 'status'", (err, results) => {
+            if (!err && results.length === 0) {
+                db.query("ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active'", (err) => {
+                    if (err) console.error("⚠️ [MySQL] Lỗi thêm cột status vào users:", err.message);
+                });
+            }
+        });
+
+        db.query("SHOW COLUMNS FROM users LIKE 'activation_token'", (err, results) => {
+            if (!err && results.length === 0) {
+                db.query("ALTER TABLE users ADD COLUMN activation_token VARCHAR(255) DEFAULT NULL", (err) => {
+                    if (err) console.error("⚠️ [MySQL] Lỗi thêm cột activation_token vào users:", err.message);
+                });
+            }
+        });
+
         // [MỚI] Tự động cập nhật thêm cột cấu hình cho bảng stations nếu chưa có
         db.query(`
             SELECT COLUMN_NAME 
@@ -151,6 +169,65 @@ setInterval(() => {
         if (now > record.expires) otpStorage.delete(user);
     }
 }, 600000);
+
+// Hàm kiểm tra MX record của tên miền email để xác minh sự tồn tại của hòm thư
+function verifyEmailDomain(email, callback) {
+    const parts = email.split('@');
+    if (parts.length !== 2) return callback(false);
+    const domain = parts[1].toLowerCase();
+
+    dns.resolveMx(domain, (err, addresses) => {
+        if (err) {
+            // ENOTFOUND: Tên miền không tồn tại
+            // ENODATA: Tên miền tồn tại nhưng không cấu hình nhận mail (MX records)
+            if (err.code === 'ENOTFOUND' || err.code === 'ENODATA') {
+                return callback(false);
+            }
+            // Các lỗi DNS khác (như timeout) thì tạm cho qua để tránh nghẽn hệ thống
+            return callback(true);
+        }
+
+        if (!addresses || addresses.length === 0) {
+            return callback(false);
+        }
+
+        // Kiểm tra xem có bản ghi MX hợp lệ nào không (Null MX RFC 7505 trả về exchange rỗng)
+        const hasValidExchange = addresses.some(addr => addr.exchange && addr.exchange.trim() !== '');
+        if (!hasValidExchange) {
+            return callback(false);
+        }
+
+        callback(true);
+    });
+}
+
+// Hàm xác thực email có tồn tại hay không bằng Abstract API (Fallback về DNS MX nếu hết quota hoặc không cấu hình key)
+function verifyEmailExistence(email, callback) {
+    const apiKey = process.env.ABSTRACT_API_KEY || '';
+    if (!apiKey) {
+        return verifyEmailDomain(email, callback);
+    }
+
+    const url = `https://emailvalidation.abstractapi.com/v1/?api_key=${apiKey}&email=${encodeURIComponent(email)}`;
+    fetch(url)
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.deliverability === 'UNDELIVERABLE' || (data.is_smtp_valid && data.is_smtp_valid.value === false)) {
+                callback(false);
+            } else {
+                callback(true);
+            }
+        })
+        .catch(err => {
+            console.error('⚠️ [Abstract API] Lỗi hoặc hết quota, chuyển sang kiểm tra DNS MX:', err.message);
+            verifyEmailDomain(email, callback);
+        });
+}
 
 // ==========================================
 // 2. CẤU HÌNH MQTT KẾT NỐI VỚI ESP32
@@ -294,6 +371,10 @@ app.post('/api/login', (req, res) => {
 
         const user = results[0]; // Lấy thông tin user tìm được
 
+        if (user.status === 'pending') {
+            return res.status(403).json({ success: false, message: 'Tài khoản chưa được kích hoạt! Vui lòng kiểm tra email để kích hoạt.' });
+        }
+
         let isMatch = false;
         // Kiểm tra xem mật khẩu trong DB đã được mã hóa chưa (bcrypt hash thường bắt đầu bằng $2)
         if (user.password.startsWith('$2')) {
@@ -424,78 +505,84 @@ app.post('/api/register/send-otp', (req, res) => {
         return res.status(400).json({ success: false, message: 'Vui lòng cung cấp cả Tài khoản và Email!' });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
     }
 
     // Kiểm tra xem Username hoặc Email đã tồn tại chưa
-    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], (err, results) => {
-        if (err) {
-            console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
-            return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+    verifyEmailExistence(email, (isValidDomain) => {
+        if (!isValidDomain) {
+            return res.status(400).json({ success: false, message: 'Tên miền Email không tồn tại hoặc không thể nhận thư!' });
         }
 
-        if (results.length > 0) {
-            for (const user of results) {
-                if (user.username === username) {
-                    return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại!' });
-                }
-                if (user.email === email) {
-                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
+        db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], (err, results) => {
+            if (err) {
+                console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
+                return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+            }
+
+            if (results.length > 0) {
+                for (const user of results) {
+                    if (user.username === username) {
+                        return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại!' });
+                    }
+                    if (user.email === email) {
+                        return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
+                    }
                 }
             }
-        }
 
-        const otpKey = `reg_otp:${email.toLowerCase()}`;
+            const otpKey = `reg_otp:${email.toLowerCase()}`;
 
-        // [CHỐNG SPAM] Cooldown 60s
-        const existingRecord = otpStorage.get(otpKey);
-        if (existingRecord && existingRecord.nextRequestAvailable > Date.now()) {
-            const waitTime = Math.ceil((existingRecord.nextRequestAvailable - Date.now()) / 1000);
-            return res.status(429).json({ success: false, message: `Hệ thống vừa gửi OTP xong. Vui lòng chờ ${waitTime} giây nữa trước khi yêu cầu gửi lại!` });
-        }
+            // [CHỐNG SPAM] Cooldown 60s
+            const existingRecord = otpStorage.get(otpKey);
+            if (existingRecord && existingRecord.nextRequestAvailable > Date.now()) {
+                const waitTime = Math.ceil((existingRecord.nextRequestAvailable - Date.now()) / 1000);
+                return res.status(429).json({ success: false, message: `Hệ thống vừa gửi OTP xong. Vui lòng chờ ${waitTime} giây nữa trước khi yêu cầu gửi lại!` });
+            }
 
-        // Tạo mã OTP ngẫu nhiên (6 chữ số)
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Lưu tạm vào RAM (Hiệu lực 5 phút)
-        otpStorage.set(otpKey, {
-            otp,
-            expires: Date.now() + 5 * 60 * 1000,
-            nextRequestAvailable: Date.now() + 60 * 1000
-        });
+            // Tạo mã OTP ngẫu nhiên (6 chữ số)
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const maskEmailStr = email.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
-
-        if (!GAS_MAIL_URL) {
-            console.error('⚠️ Cảnh báo: Chưa cấu hình biến môi trường GAS_MAIL_URL!');
-            return res.status(500).json({ success: false, message: 'Lỗi: Hệ thống gửi mail chưa được cấu hình!' });
-        }
-
-        const payload = {
-            to: email,
-            subject: `Hệ thống Trạm Sạc - Mã OTP đăng ký của bạn là ${otp}`,
-            htmlBody: `<p>Chào ${username},</p><p>Mã OTP để đăng ký tài khoản của bạn là: <strong style="font-size:18px; color: #27ae60;">${otp}</strong></p><p>Lưu ý: Mã này chỉ có hiệu lực trong vòng 5 phút.</p>`
-        };
-
-        fetch(GAS_MAIL_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    res.json({ success: true, message: `Mã OTP đã được gửi về: ${maskEmailStr}` });
-                } else {
-                    console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
-                    res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });
-                }
-            })
-            .catch(error => {
-                console.error('⚠️ [Google API] Fetch thất bại:', error.message);
-                res.status(500).json({ success: false, message: 'Lỗi kết nối đến Google Server.' });
+            // Lưu tạm vào RAM (Hiệu lực 5 phút)
+            otpStorage.set(otpKey, {
+                otp,
+                expires: Date.now() + 5 * 60 * 1000,
+                nextRequestAvailable: Date.now() + 60 * 1000
             });
+
+            const maskEmailStr = email.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
+
+            if (!GAS_MAIL_URL) {
+                console.error('⚠️ Cảnh báo: Chưa cấu hình biến môi trường GAS_MAIL_URL!');
+                return res.status(500).json({ success: false, message: 'Lỗi: Hệ thống gửi mail chưa được cấu hình!' });
+            }
+
+            const payload = {
+                to: email,
+                subject: `Hệ thống Trạm Sạc - Mã OTP đăng ký của bạn là ${otp}`,
+                htmlBody: `<p>Chào ${username},</p><p>Mã OTP để đăng ký tài khoản của bạn là: <strong style="font-size:18px; color: #27ae60;">${otp}</strong></p><p>Lưu ý: Mã này chỉ có hiệu lực trong vòng 5 phút.</p>`
+            };
+
+            fetch(GAS_MAIL_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        res.json({ success: true, message: `Mã OTP đã được gửi về: ${maskEmailStr}` });
+                    } else {
+                        console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
+                        res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });
+                    }
+                })
+                .catch(error => {
+                    console.error('⚠️ [Google API] Fetch thất bại:', error.message);
+                    res.status(500).json({ success: false, message: 'Lỗi kết nối đến Google Server.' });
+                });
+        });
     });
 });
 
@@ -512,7 +599,7 @@ app.post('/api/register', async (req, res) => {
     }
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải từ 6 ký tự!' });
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
 
     // Xác thực mã OTP
@@ -1091,43 +1178,135 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
     const { username, email, password, role } = req.body;
     if (!username || !password || !email) return res.status(400).json({ success: false, message: 'Thiếu thông tin!' });
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
 
-    // [TỐI ƯU] Kiểm tra trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
-    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
-        if (err) {
-            console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
-            return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+    verifyEmailExistence(email, (isValidEmail) => {
+        if (!isValidEmail) {
+            return res.status(400).json({ success: false, message: 'Địa chỉ Email không tồn tại hoặc không thể nhận thư!' });
         }
 
-        if (results.length > 0) {
-            for (const user of results) {
-                if (user.username === username) {
-                    return res.status(400).json({ success: false, message: 'Tên tài khoản này đã tồn tại!' });
-                }
-                if (user.email === email) {
-                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã tồn tại!' });
+        // [TỐI ƯU] Kiểm tra trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
+        db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
+            if (err) {
+                console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
+                return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+            }
+
+            if (results.length > 0) {
+                for (const user of results) {
+                    if (user.username === username) {
+                        return res.status(400).json({ success: false, message: 'Tên tài khoản này đã tồn tại!' });
+                    }
+                    if (user.email === email) {
+                        return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã tồn tại!' });
+                    }
                 }
             }
+
+            try {
+                const hashed = await bcrypt.hash(password, 10);
+                const activationToken = require('crypto').randomBytes(32).toString('hex');
+                const activationLink = `${req.protocol}://${req.get('host')}/api/users/activate?token=${activationToken}`;
+
+                db.query(
+                    'INSERT INTO users (username, email, password, role, balance, status, activation_token) VALUES (?, ?, ?, ?, 0, "pending", ?)',
+                    [username, email, hashed, role || 'user', activationToken],
+                    (err) => {
+                        if (err) {
+                            console.error('⚠️ [MySQL] Lỗi Admin tạo User:', err.message);
+                            if (err.code === 'ER_DUP_ENTRY') {
+                                return res.status(400).json({ success: false, message: 'Thông tin đã tồn tại trong hệ thống!' });
+                            }
+                            return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+                        }
+
+                        // Gửi email kích hoạt tài khoản bằng GAS Webhook
+                        const payload = {
+                            to: email,
+                            subject: 'Hệ thống Trạm Sạc - Kích hoạt tài khoản của bạn',
+                            htmlBody: `
+                                <div style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
+                                    <h2 style="color: #2e7d32;">Chào mừng bạn đến với EV Charging Station!</h2>
+                                    <p>Tài khoản của bạn đã được quản trị viên khởi tạo trên hệ thống.</p>
+                                    <p>Vui lòng click vào liên kết dưới đây để kích hoạt tài khoản của bạn:</p>
+                                    <p style="margin: 25px 0;">
+                                        <a href="${activationLink}" style="background-color: #2e7d32; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                                            Kích hoạt tài khoản ngay
+                                        </a>
+                                    </p>
+                                    <p style="color: #666; font-size: 12px;">Nếu nút trên không hoạt động, bạn có thể copy link sau dán vào thanh địa chỉ trình duyệt: <br><a href="${activationLink}">${activationLink}</a></p>
+                                </div>
+                            `
+                        };
+
+                        if (GAS_MAIL_URL) {
+                            fetch(GAS_MAIL_URL, {
+                                method: 'POST',
+                                body: JSON.stringify(payload)
+                            })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.status !== 'success') {
+                                        console.error('⚠️ [Google API] Lỗi từ Webhook khi gửi link kích hoạt:', data.message);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('⚠️ [Google API] Gửi link kích hoạt thất bại:', error.message);
+                                });
+                        }
+
+                        res.json({ success: true, message: 'Tạo tài khoản thành công! Đang chờ xác nhận từ chủ email để kích hoạt.' });
+                    }
+                );
+            } catch (error) {
+                console.error('⚠️ [Bcrypt] Lỗi mã hóa mật khẩu:', error.message);
+                res.status(500).json({ success: false, message: 'Lỗi mã hóa dữ liệu!' });
+            }
+        });
+    });
+});
+
+// API Kích hoạt tài khoản qua Email Link
+app.get('/api/users/activate', (req, res) => {
+    const { token } = req.query;
+    if (!token) {
+        return res.status(400).send(`
+            <div style="font-family: sans-serif; text-align: center; margin-top: 100px; padding: 20px;">
+                <h1 style="color: #d32f2f;">Lỗi Kích Hoạt</h1>
+                <p>Mã kích hoạt không hợp lệ hoặc đã hết hạn.</p>
+            </div>
+        `);
+    }
+
+    db.query('SELECT username FROM users WHERE activation_token = ?', [token], (err, results) => {
+        if (err || !results || results.length === 0) {
+            return res.status(400).send(`
+                <div style="font-family: sans-serif; text-align: center; margin-top: 100px; padding: 20px;">
+                    <h1 style="color: #d32f2f;">Lỗi Kích Hoạt</h1>
+                    <p>Liên kết kích hoạt không hợp lệ hoặc tài khoản đã được kích hoạt trước đó.</p>
+                </div>
+            `);
         }
 
-        try {
-            const hashed = await bcrypt.hash(password, 10);
-            db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, ?, 0)', [username, email, hashed, role || 'user'], (err) => {
-                if (err) {
-                    console.error('⚠️ [MySQL] Lỗi Admin tạo User:', err.message);
-                    if (err.code === 'ER_DUP_ENTRY') {
-                        return res.status(400).json({ success: false, message: 'Thông tin đã tồn tại trong hệ thống!' });
-                    }
-                    return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
-                }
-                res.json({ success: true, message: 'Tạo tài khoản thành công!' });
-            });
-        } catch (error) {
-            console.error('⚠️ [Bcrypt] Lỗi mã hóa mật khẩu:', error.message);
-            res.status(500).json({ success: false, message: 'Lỗi mã hóa dữ liệu!' });
-        }
+        const username = results[0].username;
+        db.query('UPDATE users SET status = "active", activation_token = NULL WHERE activation_token = ?', [token], (err) => {
+            if (err) {
+                return res.status(500).send(`
+                    <div style="font-family: sans-serif; text-align: center; margin-top: 100px; padding: 20px;">
+                        <h1 style="color: #d32f2f;">Lỗi Kích Hoạt</h1>
+                        <p>Lỗi hệ thống khi cập nhật trạng thái kích hoạt.</p>
+                    </div>
+                `);
+            }
+            res.send(`
+                <div style="font-family: sans-serif; text-align: center; margin-top: 100px; padding: 20px;">
+                    <h1 style="color: #2e7d32;">Kích hoạt tài khoản thành công!</h1>
+                    <p>Tài khoản <strong>${username}</strong> của bạn đã được kích hoạt thành công.</p>
+                    <p>Bây giờ bạn đã có thể đăng nhập vào ứng dụng.</p>
+                </div>
+            `);
+        });
     });
 });
 
