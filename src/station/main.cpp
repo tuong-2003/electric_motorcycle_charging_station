@@ -45,6 +45,7 @@ PZEM004Tv30 pzem2(Serial, PZEM2_RX_PIN, PZEM2_TX_PIN);
 DHT dht(DHTPIN, DHTTYPE);
 
 ModbusSlaveTask modbus;
+uint32_t g_lastModbusPollTime = 0;
 
 // --- Biến trạng thái của riêng Tủ này (2 Ổ cắm) ---
 bool is_charging[2] = {false, false};
@@ -156,7 +157,7 @@ void drawOfflineScreen() {
 void updateDisplay() {
   uint16_t station_status_val = modbus.getStationStatus();
   bool is_maintenance = (station_status_val == 1);
-  bool is_offline = (station_status_val == 2);
+  bool is_offline = (station_status_val == 2) || (millis() - g_lastModbusPollTime > 30000);
   
   // Quản lý hiển thị màn hình mất kết nối
   if (is_offline) {
@@ -193,7 +194,7 @@ void updateDisplay() {
   // 1. Cập nhật thanh trạng thái (Top Bar)
   tft.setTextColor(ST77XX_WHITE, ST77XX_BLUE); // Ghi đè nền xanh
   tft.setCursor(5, 6);
-  tft.printf("TU SAC %d  ", STATION_ID);
+  tft.printf("TU SAC %03d  ", STATION_ID);
   
   tft.setCursor(90, 6);
   tft.printf("%2.0fC %2.0f%%   ", current_temp, current_hum); // Padding khoảng trắng ở đuôi
@@ -227,8 +228,9 @@ void updateDisplay() {
 }
 
 void setup() {
+  g_lastModbusPollTime = millis();
   
-  // Khởi tạo Relay (Mặc định tắt an toàn để không rò điện khi ESP32 vừa boot)
+  // Khởi động Relay (Mặc định tắt an toàn để không rò điện khi ESP32 vừa boot)
   pinMode(RELAY1_PIN, OUTPUT);
   pinMode(RELAY2_PIN, OUTPUT);
   digitalWrite(RELAY1_PIN, HIGH);
@@ -335,12 +337,14 @@ void loop() {
 
   int station_status_val = modbus.getStationStatus();
   bool is_maintenance = (station_status_val == 1);
-  bool is_offline = (station_status_val == 2);
+  bool is_offline = (station_status_val == 2) || (millis() - g_lastModbusPollTime > 30000);
 
   // Phát hiện sự thay đổi trạng thái bảo trì hoặc mất kết nối để cập nhật màn hình lập tức
   static int prev_status = -1;
-  if (station_status_val != prev_status) {
+  static bool prev_offline = false;
+  if (station_status_val != prev_status || is_offline != prev_offline) {
     prev_status = station_status_val;
+    prev_offline = is_offline;
     updateDisplay();
   }
 

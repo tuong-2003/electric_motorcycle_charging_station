@@ -1653,7 +1653,7 @@
                     stationLimits[stationId].status = 'online';
                 }
                 const limits = stationLimits[stationId] || { temp_limit: 65, max_current: 16, status: 'online' };
-                
+
                 const sw = document.getElementById('switch_' + uniqueId);
                 if (sw && limits.status !== 'maintenance') {
                     sw.disabled = false;
@@ -2559,7 +2559,7 @@
         // Khởi động lại Tủ sạc
         function rebootStation() {
             const stationId = document.getElementById('settings_station_id').value;
-            showConfirm('CẢNH BÁO: Hành động này sẽ khởi động lại Tủ sạc ' + stationId + 'và các phiên sạc đang chạy sẽ bị gián đoạn. Bạn có chắc chắn?', (confirmed) => {
+            showConfirm('CẢNH BÁO: Hành động này sẽ khởi động lại Tủ sạc ' + stationId + ' và các phiên sạc đang chạy sẽ bị gián đoạn. Bạn có chắc chắn?', (confirmed) => {
                 if (confirmed) {
                     fetch('/api/stations/' + stationId + '/reboot', {
                         method: 'POST',

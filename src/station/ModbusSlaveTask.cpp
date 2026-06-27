@@ -1,5 +1,7 @@
 #include "ModbusSlaveTask.h"
 
+extern uint32_t g_lastModbusPollTime;
+
 void ModbusSlaveTask::begin() {
     Serial1.begin(9600, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
     mb.begin(&Serial1);
@@ -10,6 +12,12 @@ void ModbusSlaveTask::begin() {
         mb.addHreg(i, 0);
     }
     
+    // Đăng ký callback khi Gateway đọc thanh ghi 0 (REG_TEMP) để nhận biết Gateway đang hoạt động
+    mb.onGetHreg(REG_TEMP, [](TRegister* reg, uint16_t val) -> uint16_t {
+        g_lastModbusPollTime = millis();
+        return val;
+    });
+
     // Đặt giá trị mặc định cho thanh ghi Lệnh là 0xFFFF (-1) để phân biệt với 0 và 1
     mb.Hreg(REG_CMD_OUTLET1, 0xFFFF);
     mb.Hreg(REG_CMD_OUTLET2, 0xFFFF);
