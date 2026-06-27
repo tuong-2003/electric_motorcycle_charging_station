@@ -1147,6 +1147,60 @@ app.post('/api/stations/:id/reboot', verifyToken, (req, res) => {
     });
 });
 
+// API Gửi lệnh khôi phục cài đặt gốc (Factory Reset) Tủ sạc (Chỉ Admin)
+app.post('/api/stations/:id/factory-reset', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền khôi phục cài đặt gốc!' });
+
+    const stationId = req.params.id;
+
+    if (!isStationOnline(stationId)) {
+        return res.status(400).json({ success: false, message: '⛔ Tủ sạc hiện đang mất kết nối, không thể khôi phục cài đặt gốc!' });
+    }
+
+    console.log(`⚙️ [Admin] Gửi lệnh khôi phục cài đặt gốc tới tủ sạc ${stationId}`);
+
+    // 1. Cập nhật cấu hình mặc định trong database MySQL
+    const resetQuery = `
+        UPDATE stations 
+        SET name = ?, location = ?, unit_price = 3500, max_current = 16, temp_limit = 65, status = 'online' 
+        WHERE station_id = ?`;
+
+    const defaultName = `Tủ sạc ${stationId}`;
+    db.query(resetQuery, [defaultName, 'Chưa thiết lập', stationId], (err, result) => {
+        if (err) {
+            console.error(`⚠️ [MySQL] Lỗi cập nhật mặc định khi reset tủ sạc ${stationId}:`, err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi Database khi cấu hình lại tủ sạc!' });
+        }
+
+        // 2. Cập nhật cấu hình RAM Cache của hệ thống
+        stationConfigCache[stationId] = {
+            max_current: 16,
+            temp_limit: 65,
+            status: 'online'
+        };
+
+        // 3. Gửi lệnh FACTORY_RESET qua MQTT
+        const cmdTopic = `ev_station/${stationId}/cmd`;
+        client.publish(cmdTopic, JSON.stringify({ command: 'FACTORY_RESET' }), (mqttErr) => {
+            if (mqttErr) {
+                console.error(`⚠️ [MQTT] Lỗi gửi lệnh reset tới tủ ${stationId}:`, mqttErr.message);
+                return res.status(500).json({ success: false, message: 'Đã cập nhật DB nhưng không thể gửi lệnh tới thiết bị!' });
+            }
+            
+            // 4. Đồng bộ cấu hình mặc định qua MQTT config topic (để Gateway cập nhật lại nếu cần)
+            const configTopic = `ev_station/${stationId}/config`;
+            const configPayload = JSON.stringify({
+                max_current: 16.0,
+                temp_limit: 65,
+                status: 'online'
+            });
+            client.publish(configTopic, configPayload, { retain: true });
+
+            res.json({ success: true, message: `Lệnh khôi phục cài đặt gốc đã được gửi tới tủ sạc ${stationId}!` });
+        });
+    });
+});
+
 // API Xóa Tủ sạc (Chỉ Admin)
 app.delete('/api/stations/:id', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xóa tủ sạc!' });

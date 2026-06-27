@@ -37,6 +37,9 @@ public:
     // Hàm gửi lệnh khởi động lại xuống Tủ sạc
     bool sendReboot(uint8_t slaveId);
 
+    // Hàm gửi lệnh khôi phục cài đặt gốc xuống Tủ sạc
+    bool sendFactoryReset(uint8_t slaveId);
+
     uint8_t getLastError() const { return lastError; }
 
 private:

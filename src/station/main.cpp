@@ -9,6 +9,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Update.h>
+#include <Preferences.h>
 
 // --- Cấu hình Màn hình TFT ST7735 ---
 #define TFT_CS    32
@@ -69,6 +70,12 @@ bool btn_long_pressed = false;
 
 // --- Cấu hình WebServer cho OTA ---
 WebServer server(80);
+
+// --- Cấu hình động & Persistence (NVS) ---
+Preferences preferences;
+uint16_t g_savedMaxCurrent = 1600;
+uint16_t g_savedTempLimit = 65;
+uint16_t g_savedStatus = 0;
 
 // Hàm vẽ QR Code lên màn hình TFT
 void drawQRCode(const char *text, int offset_x, int offset_y) {
@@ -151,6 +158,31 @@ void drawOfflineScreen() {
   char stationText[16];
   snprintf(stationText, sizeof(stationText), "Ma tu: %03d", STATION_ID);
   printCentered(stationText, 112, ST77XX_CYAN);
+}
+
+void factoryResetStation() {
+  // 1. Ngắt sạc khẩn cấp cả 2 cổng để bảo đảm an toàn điện
+  digitalWrite(RELAY1_PIN, HIGH);
+  digitalWrite(RELAY2_PIN, HIGH);
+  is_charging[0] = false;
+  is_charging[1] = false;
+  outlet_error[0] = 0;
+  outlet_error[1] = 0;
+
+  // 2. Hiển thị màn hình cảnh báo khôi phục cài đặt gốc màu đỏ
+  tft.fillScreen(ST77XX_RED);
+  printCentered("FACTORY RESET", 30, ST77XX_WHITE, ST77XX_RED, 2);
+  printCentered("Dang xoa cau hinh...", 70, ST77XX_WHITE, ST77XX_RED, 1);
+  printCentered("He thong se reboot", 90, ST77XX_WHITE, ST77XX_RED, 1);
+
+  // 3. Xóa sạch bộ nhớ Preferences lưu trên Flash (NVS)
+  preferences.begin("ev_station", false);
+  preferences.clear();
+  preferences.end();
+
+  // 4. Chờ người dùng thấy thông báo và restart thiết bị
+  delay(2000);
+  ESP.restart();
 }
 
 // Hàm cập nhật giao diện màn hình TFT (Chỉ cập nhật phần động, KHÔNG xóa toàn bộ nền)
@@ -285,6 +317,19 @@ void setup() {
 
   dht.begin();
   modbus.begin(); // Bật Modbus Slave
+
+  // Tải cấu hình đã lưu từ Preferences NVS
+  preferences.begin("ev_station", false);
+  g_savedMaxCurrent = preferences.getUShort("max_current", 1600); // Mặc định 16A (x100)
+  g_savedTempLimit = preferences.getUShort("temp_limit", 65);     // Mặc định 65°C
+  g_savedStatus = preferences.getUShort("status", 0);             // Mặc định 0 (online)
+  preferences.end();
+
+  // Đồng bộ cấu hình vào các thanh ghi Modbus Slave
+  modbus.setMaxCurrent(g_savedMaxCurrent);
+  modbus.setTempLimit(g_savedTempLimit);
+  modbus.setStationStatus(g_savedStatus);
+
   initDisplay(); // Vẽ các viền cố định và xóa chữ Booting
   updateDisplay();
 }
@@ -294,21 +339,33 @@ void loop() {
     server.handleClient(); // Lắng nghe và xử lý các yêu cầu Web OTA
   }
 
-  // --- Xử lý nút nhấn giữ 5s để bật/tắt WiFi AP ---
+  // --- Xử lý nút nhấn giữ 5s (AP) hoặc 10s (Factory Reset) ---
+  static bool ap_action_done = false;
+  static bool reset_action_done = false;
+
   if (digitalRead(BUTTON_PIN) == LOW) {
     if (!btn_active) {
       btn_active = true;
       btn_press_time = millis();
-      btn_long_pressed = false;
-    } else if (!btn_long_pressed && (millis() - btn_press_time >= 5000)) {
-      btn_long_pressed = true; // Đánh dấu đã xử lý để không bị lặp lại liên tục
-      is_ap_active = !is_ap_active;
-      if (is_ap_active) {
-        WiFi.mode(WIFI_AP);
-        WiFi.softAP("EV_Station_OTA", "12345678");
-      } else {
-        WiFi.softAPdisconnect(true);
-        WiFi.mode(WIFI_OFF);
+      ap_action_done = false;
+      reset_action_done = false;
+    } else {
+      uint32_t press_duration = millis() - btn_press_time;
+      if (press_duration >= 10000 && !reset_action_done) {
+        reset_action_done = true;
+        Serial.println("LOG: Nhan nut BOOT qua 10s -> Tien hanh Factory Reset!");
+        factoryResetStation();
+      } else if (press_duration >= 5000 && !ap_action_done && !reset_action_done) {
+        ap_action_done = true;
+        is_ap_active = !is_ap_active;
+        Serial.printf("LOG: Nhan nut BOOT qua 5s -> Chuyen che do WiFi AP: %s\n", is_ap_active ? "BAT" : "TAT");
+        if (is_ap_active) {
+          WiFi.mode(WIFI_AP);
+          WiFi.softAP("EV_Station_OTA", "12345678");
+        } else {
+          WiFi.softAPdisconnect(true);
+          WiFi.mode(WIFI_OFF);
+        }
       }
     }
   } else {
@@ -317,7 +374,7 @@ void loop() {
 
   modbus.loop();
 
-  // --- NHẬN LỆNH KHỞI ĐỘNG LẠI TỪ MODBUS ---
+  // --- NHẬN LỆNH KHỞI ĐỘNG LẠI / RESET TỪ MODBUS ---
   int reboot_cmd = modbus.getRebootCommand();
   if (reboot_cmd == 1) {
     Serial.println("LOG: Nhan lenh KHOI DONG LAI tu Gateway!");
@@ -326,16 +383,42 @@ void loop() {
     printCentered("REBOOTING...", 60, ST77XX_RED, ST77XX_BLACK, 2);
     delay(1000);
     ESP.restart();
+  } else if (reboot_cmd == 2) {
+    Serial.println("LOG: Nhan lenh FACTORY RESET tu Gateway!");
+    modbus.clearRebootCommand();
+    factoryResetStation();
   }
 
-  // --- ĐỌC CẤU HÌNH ĐỘNG TỪ MODBUS ---
-  float max_current_limit = modbus.getMaxCurrent() / 100.0;
+  // --- ĐỌC CẤU HÌNH ĐỘNG TỪ MODBUS VÀ PERSIST NVS ---
+  uint16_t modbus_max_current = modbus.getMaxCurrent();
+  uint16_t modbus_temp_limit = modbus.getTempLimit();
+  uint16_t modbus_status = modbus.getStationStatus();
+
+  // Nếu cấu hình từ Gateway (qua Modbus) khác với cấu hình đang lưu trong NVS
+  if (modbus_max_current != g_savedMaxCurrent || 
+      modbus_temp_limit != g_savedTempLimit || 
+      modbus_status != g_savedStatus) {
+      
+      preferences.begin("ev_station", false);
+      preferences.putUShort("max_current", modbus_max_current);
+      preferences.putUShort("temp_limit", modbus_temp_limit);
+      preferences.putUShort("status", modbus_status);
+      preferences.end();
+
+      g_savedMaxCurrent = modbus_max_current;
+      g_savedTempLimit = modbus_temp_limit;
+      g_savedStatus = modbus_status;
+      Serial.printf("LOG: Da luu cau hinh moi vao Flash NVS: MaxCurrent=%d, TempLimit=%d, Status=%d\n", 
+                    modbus_max_current, modbus_temp_limit, modbus_status);
+  }
+
+  float max_current_limit = modbus_max_current / 100.0;
   if (max_current_limit <= 0.1) max_current_limit = 16.0; // Fallback an toàn
 
-  float temp_limit_val = (float)modbus.getTempLimit();
+  float temp_limit_val = (float)modbus_temp_limit;
   if (temp_limit_val <= 1.0) temp_limit_val = 65.0; // Fallback
 
-  int station_status_val = modbus.getStationStatus();
+  int station_status_val = modbus_status;
   bool is_maintenance = (station_status_val == 1);
   bool is_offline = (station_status_val == 2) || (millis() - g_lastModbusPollTime > 30000);
 

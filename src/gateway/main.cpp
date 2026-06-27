@@ -91,6 +91,9 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
                 if (command && strcmp(command, "REBOOT") == 0) {
                     Serial.printf("Gateway nhan lenh REBOOT cho TRAM %d từ Cloud\n", stId);
                     modbus.sendReboot(stId);
+                } else if (command && strcmp(command, "FACTORY_RESET") == 0) {
+                    Serial.printf("Gateway nhan lenh FACTORY_RESET cho TRAM %d từ Cloud\n", stId);
+                    modbus.sendFactoryReset(stId);
                 }
             }
             else if (strcmp(action, "config") == 0) {

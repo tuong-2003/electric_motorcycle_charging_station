@@ -44,6 +44,10 @@ public:
     int getRebootCommand();       // Đọc lệnh reboot
     void clearRebootCommand();    // Xoá lệnh reboot
 
+    void setMaxCurrent(uint16_t maxCurrent);
+    void setTempLimit(uint16_t tempLimit);
+    void setStationStatus(uint16_t status);
+
 private:
     ModbusRTU mb;
 };

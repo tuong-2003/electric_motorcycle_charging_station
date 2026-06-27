@@ -1340,6 +1340,8 @@
                         <div class="d-flex gap-2">
                             <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold"
                                 onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại</button>
+                            <button id="btn_factory_reset_station" class="btn btn-sm btn-outline-danger fw-semibold"
+                                onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục gốc</button>
                             <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="deleteStation()"><i
                                     class="fas fa-trash me-1"></i>Xóa tủ</button>
                         </div>
@@ -2502,6 +2504,7 @@
             document.getElementById('edit_temp_limit').disabled = isOffline;
             document.getElementById('maintenanceSwitch').disabled = isOffline;
             document.getElementById('btn_reboot_station').disabled = isOffline;
+            document.getElementById('btn_factory_reset_station').disabled = isOffline;
             document.getElementById('btn_save_config').disabled = isOffline;
 
             const modalEl = document.getElementById('stationSettingsModal');
@@ -2575,6 +2578,38 @@
                                 var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                                 if (modalInstance) modalInstance.hide();
                                 showAlert('Đã gửi lệnh khởi động lại xuống Tủ sạc ' + stationId + ' thành công!', 'success');
+                            } else {
+                                showAlert(data.message, 'danger');
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showAlert("Lỗi kết nối máy chủ", "danger");
+                        });
+                }
+            });
+        }
+
+        // Khôi phục cài đặt gốc Tủ sạc
+        function factoryResetStation() {
+            const stationId = document.getElementById('settings_station_id').value;
+            showConfirm('CẢNH BÁO NGUY HIỂM: Hành động này sẽ khôi phục cấu hình mặc định (Dòng 16A, Nhiệt độ 65 độ C, tên mặc định) cho Tủ sạc ' + stationId + '. Tất cả các phiên sạc đang chạy sẽ bị ngắt lập tức. Bạn có chắc chắn?', (confirmed) => {
+                if (confirmed) {
+                    fetch('/api/stations/' + stationId + '/factory-reset', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + authToken
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                var modalEl = document.getElementById('stationSettingsModal');
+                                var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                                if (modalInstance) modalInstance.hide();
+                                showAlert('Đã gửi lệnh khôi phục cài đặt gốc xuống Tủ sạc ' + stationId + ' thành công!', 'success');
+                                if (typeof loadStations === 'function') loadStations();
                             } else {
                                 showAlert(data.message, 'danger');
                             }

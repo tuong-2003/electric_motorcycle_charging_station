@@ -76,3 +76,15 @@ int ModbusSlaveTask::getRebootCommand() {
 void ModbusSlaveTask::clearRebootCommand() {
     mb.Hreg(REG_REBOOT, 0);
 }
+
+void ModbusSlaveTask::setMaxCurrent(uint16_t maxCurrent) {
+    mb.Hreg(REG_MAX_CURRENT, maxCurrent);
+}
+
+void ModbusSlaveTask::setTempLimit(uint16_t tempLimit) {
+    mb.Hreg(REG_TEMP_LIMIT, tempLimit);
+}
+
+void ModbusSlaveTask::setStationStatus(uint16_t status) {
+    mb.Hreg(REG_STATION_STATUS, status);
+}

@@ -220,3 +220,42 @@ bool ModbusMasterTask::sendReboot(uint8_t slaveId) {
     return isSuccess;
 }
 
+bool ModbusMasterTask::sendFactoryReset(uint8_t slaveId) {
+    if (isWaiting) {
+        Serial.println("Modbus dang ban, khong the gui lenh factory reset!");
+        return false;
+    }
+
+    isWaiting = true;
+    isSuccess = false;
+    lastError = 0;
+
+    uint16_t reg = 15; // REG_REBOOT
+    uint16_t val = 2;  // 2 đại diện cho Factory Reset
+
+    mb.writeHreg(slaveId, reg, val, [this, slaveId](Modbus::ResultCode event, uint16_t transId, void* ctx) -> bool {
+        this->isWaiting = false;
+        this->lastError = event;
+        if (event == Modbus::EX_SUCCESS) {
+            this->isSuccess = true;
+            Serial.printf("Gui lenh FACTORY RESET cho TRAM %d THANH CONG\n", slaveId);
+        } else {
+            Serial.printf("Gui lenh FACTORY RESET cho TRAM %d THAT BAI: Ma loi = 0x%02X\n", slaveId, event);
+        }
+        return true;
+    });
+
+    uint32_t startWait = millis();
+    while (isWaiting && (millis() - startWait < 1000)) {
+        mb.task();
+        delay(1);
+    }
+
+    if (isWaiting) {
+        isWaiting = false;
+        Serial.printf("Loi: Gui lenh FACTORY RESET TRAM %d TIMEOUT\n", slaveId);
+    }
+    
+    return isSuccess;
+}
+
