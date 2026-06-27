@@ -516,7 +516,7 @@ app.post('/api/register/send-otp', (req, res) => {
             return res.status(400).json({ success: false, message: 'Tên miền Email không tồn tại hoặc không thể nhận thư!' });
         }
 
-        db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], (err, results) => {
+        db.query('SELECT username, email, status FROM users WHERE username = ? OR email = ?', [username, email], (err, results) => {
             if (err) {
                 console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
                 return res.status(500).json({ success: false, message: 'Lỗi Database!' });
@@ -524,10 +524,10 @@ app.post('/api/register/send-otp', (req, res) => {
 
             if (results.length > 0) {
                 for (const user of results) {
-                    if (user.username === username) {
+                    if (user.username === username && user.status !== 'pending') {
                         return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại!' });
                     }
-                    if (user.email === email) {
+                    if (user.email === email && user.status !== 'pending') {
                         return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
                     }
                 }
@@ -618,19 +618,24 @@ app.post('/api/register', async (req, res) => {
     }
 
     // Kiểm tra username và email tồn tại trước khi INSERT (chống race condition lần cuối)
-    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
+    db.query('SELECT id, username, email, status FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
         if (err) {
             console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
             return res.status(500).json({ success: false, message: 'Lỗi Database!' });
         }
 
+        let pendingUser = null;
         if (results.length > 0) {
             for (const user of results) {
-                if (user.username === username) {
+                if (user.username === username && user.status !== 'pending') {
                     return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại!' });
                 }
                 if (user.email === email) {
-                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
+                    if (user.status === 'pending') {
+                        pendingUser = user;
+                    } else {
+                        return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
+                    }
                 }
             }
         }
@@ -638,18 +643,36 @@ app.post('/api/register', async (req, res) => {
         // Tiến hành mã hóa mật khẩu và chèn dữ liệu
         try {
             const hashed = await bcrypt.hash(password, 10);
-            db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, "user", 0)', [username, email, hashed], (err) => {
-                if (err) {
-                    console.error('⚠️ [MySQL] Lỗi Đăng ký User:', err.message);
-                    if (err.code === 'ER_DUP_ENTRY') {
-                        return res.status(400).json({ success: false, message: 'Tên tài khoản hoặc Email đã tồn tại!' });
+            if (pendingUser) {
+                // Ghi đè mật khẩu mới và kích hoạt tài khoản đang chờ kích hoạt
+                db.query(
+                    'UPDATE users SET username = ?, password = ?, status = "active", activation_token = NULL WHERE id = ?',
+                    [username, hashed, pendingUser.id],
+                    (err) => {
+                        if (err) {
+                            console.error('⚠️ [MySQL] Lỗi kích hoạt đè tài khoản:', err.message);
+                            return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+                        }
+                        // Xóa OTP sau khi đăng ký thành công
+                        otpStorage.delete(otpKey);
+                        res.json({ success: true, message: 'Đăng ký thành công! Tài khoản của bạn đã được kích hoạt và sẵn sàng.' });
                     }
-                    return res.status(500).json({ success: false, message: 'Lỗi Database!' });
-                }
-                // Xóa OTP sau khi đăng ký thành công
-                otpStorage.delete(otpKey);
-                res.json({ success: true, message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.' });
-            });
+                );
+            } else {
+                // Tạo mới hoàn toàn
+                db.query('INSERT INTO users (username, email, password, role, balance, status) VALUES (?, ?, ?, "user", 0, "active")', [username, email, hashed], (err) => {
+                    if (err) {
+                        console.error('⚠️ [MySQL] Lỗi Đăng ký User:', err.message);
+                        if (err.code === 'ER_DUP_ENTRY') {
+                            return res.status(400).json({ success: false, message: 'Tên tài khoản hoặc Email đã tồn tại!' });
+                        }
+                        return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+                    }
+                    // Xóa OTP sau khi đăng ký thành công
+                    otpStorage.delete(otpKey);
+                    res.json({ success: true, message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.' });
+                });
+            }
         } catch (error) {
             res.status(500).json({ success: false, message: 'Lỗi mã hóa dữ liệu!' });
         }
@@ -1175,11 +1198,65 @@ app.get('/api/users', verifyToken, (req, res) => {
 // API Đăng ký User mới (Chỉ Admin)
 app.post('/api/users/register', verifyToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền tạo tài khoản!' });
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, resend } = req.body;
     if (!username || !password || !email) return res.status(400).json({ success: false, message: 'Thiếu thông tin!' });
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
+
+    // Định nghĩa hàm thực hiện gửi lại email kích hoạt
+    const performResend = () => {
+        try {
+            const newActivationToken = require('crypto').randomBytes(32).toString('hex');
+            const activationLink = `${req.protocol}://${req.get('host')}/api/users/activate?token=${newActivationToken}`;
+
+            db.query(
+                'UPDATE users SET activation_token = ? WHERE email = ?',
+                [newActivationToken, email],
+                (err) => {
+                    if (err) {
+                        console.error('⚠️ [MySQL] Lỗi cập nhật token kích hoạt:', err.message);
+                        return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+                    }
+
+                    // Gửi email kích hoạt tài khoản bằng GAS Webhook
+                    const payload = {
+                        to: email,
+                        subject: 'Hệ thống Trạm Sạc - Gửi lại liên kết kích hoạt tài khoản của bạn',
+                        htmlBody: `
+                            <div style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
+                                <h2 style="color: #2e7d32;">Kích hoạt tài khoản EV Charging Station</h2>
+                                <p>Tài khoản của bạn đang chờ kích hoạt.</p>
+                                <p>Vui lòng click vào liên kết dưới đây để kích hoạt tài khoản của bạn:</p>
+                                <p style="margin: 25px 0;">
+                                    <a href="${activationLink}" style="background-color: #2e7d32; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                                        Kích hoạt tài khoản ngay
+                                    </a>
+                                </p>
+                                <p style="color: #666; font-size: 12px;">Nếu nút trên không hoạt động, bạn có thể copy link sau dán vào thanh địa chỉ trình duyệt: <br><a href="${activationLink}">${activationLink}</a></p>
+                            </div>
+                        `
+                    };
+
+                    if (GAS_MAIL_URL) {
+                        fetch(GAS_MAIL_URL, {
+                            method: 'POST',
+                            body: JSON.stringify(payload)
+                        }).catch(() => {});
+                    }
+
+                    return res.json({ success: true, message: 'Đã gửi lại email kích hoạt mới thành công!' });
+                }
+            );
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Lỗi sinh mã kích hoạt!' });
+        }
+    };
+
+    // Nếu yêu cầu gửi lại (confirm từ Admin)
+    if (resend) {
+        return performResend();
+    }
 
     verifyEmailExistence(email, (isValidEmail) => {
         if (!isValidEmail) {
@@ -1187,20 +1264,34 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
         }
 
         // [TỐI ƯU] Kiểm tra trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
-        db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
+        db.query('SELECT username, email, status FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
             if (err) {
                 console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
                 return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
             }
 
             if (results.length > 0) {
+                let pendingUser = null;
                 for (const user of results) {
-                    if (user.username === username) {
+                    if (user.username === username && user.status !== 'pending') {
                         return res.status(400).json({ success: false, message: 'Tên tài khoản này đã tồn tại!' });
                     }
                     if (user.email === email) {
-                        return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã tồn tại!' });
+                        if (user.status === 'pending') {
+                            pendingUser = user;
+                        } else {
+                            return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã tồn tại!' });
+                        }
                     }
+                }
+
+                if (pendingUser) {
+                    // Trả về mã code PENDING_EXISTS để Frontend hiển thị hộp thoại xác nhận hỏi Admin
+                    return res.json({
+                        success: false,
+                        code: 'PENDING_EXISTS',
+                        message: 'Tài khoản này đã được tạo trước đó và đang chờ xác nhận. Bạn có muốn gửi lại email kích hoạt mới không?'
+                    });
                 }
             }
 
@@ -1245,15 +1336,15 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
                                 method: 'POST',
                                 body: JSON.stringify(payload)
                             })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.status !== 'success') {
-                                        console.error('⚠️ [Google API] Lỗi từ Webhook khi gửi link kích hoạt:', data.message);
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('⚠️ [Google API] Gửi link kích hoạt thất bại:', error.message);
-                                });
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status !== 'success') {
+                                    console.error('⚠️ [Google API] Lỗi từ Webhook khi gửi link kích hoạt:', data.message);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('⚠️ [Google API] Gửi link kích hoạt thất bại:', error.message);
+                            });
                         }
 
                         res.json({ success: true, message: 'Tạo tài khoản thành công! Đang chờ xác nhận từ chủ email để kích hoạt.' });

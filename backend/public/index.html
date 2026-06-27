@@ -2851,7 +2851,35 @@
                         document.getElementById('new_user_pass').value = '';
                         loadUsers();
                     } else {
-                        showAlert(data.message, "danger");
+                        if (data.code === 'PENDING_EXISTS') {
+                            showConfirm(data.message, (confirmed) => {
+                                if (confirmed) {
+                                    fetch('/api/users/register', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': 'Bearer ' + authToken
+                                        },
+                                        body: JSON.stringify({ username: u, email: e, password: p, role: r, resend: true })
+                                    })
+                                    .then(res => res.json())
+                                    .then(resendData => {
+                                        if (resendData.success) {
+                                            showAlert(resendData.message, "success");
+                                            document.getElementById('new_user_name').value = '';
+                                            if (document.getElementById('new_user_email')) document.getElementById('new_user_email').value = '';
+                                            document.getElementById('new_user_pass').value = '';
+                                            loadUsers();
+                                        } else {
+                                            showAlert(resendData.message, "danger");
+                                        }
+                                    })
+                                    .catch(err => showAlert("Lỗi kết nối máy chủ", "danger"));
+                                }
+                            });
+                        } else {
+                            showAlert(data.message, "danger");
+                        }
                     }
                 })
                 .catch(err => showAlert("Lỗi kết nối máy chủ", "danger"));
