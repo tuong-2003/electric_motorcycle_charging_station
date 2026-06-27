@@ -1287,12 +1287,16 @@
                         <!-- Bảo trì & Khôi phục hệ thống -->
                         <div class="col-md-6">
                             <div class="card card-stat h-100 p-4 border border-danger-subtle d-flex flex-column">
-                                <h6 class="mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Bảo trì & Khôi phục hệ thống</h6>
+                                <h6 class="mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Bảo trì &
+                                    Khôi phục hệ thống</h6>
                                 <p class="text-muted small mb-3">
-                                    Khôi phục cấu hình hoạt động của tất cả các tủ sạc trong hệ thống về mức mặc định (Dòng 16A, Nhiệt độ 65°C, Giá điện 3,500đ) và gửi lệnh reset phần cứng vật lý.
-                                    <br><strong>Lưu ý:</strong> Số dư ví và lịch sử phiên sạc hoàn toàn không bị ảnh hưởng.
+                                    Khôi phục cấu hình hoạt động của tất cả các tủ sạc trong hệ thống về mức mặc định
+                                    (Dòng 16A, Nhiệt độ 65°C, Giá điện 3,500đ) và gửi lệnh reset phần cứng vật lý.
+                                    <br><strong>Lưu ý:</strong> Số dư ví và lịch sử phiên sạc hoàn toàn không bị ảnh
+                                    hưởng.
                                 </p>
-                                <button class="btn btn-outline-danger btn-sm fw-semibold mt-auto" onclick="factoryResetSystem()">
+                                <button class="btn btn-outline-danger btn-sm fw-semibold mt-auto"
+                                    onclick="factoryResetSystem()">
                                     <i class="fas fa-undo me-1"></i>Khôi phục cài đặt gốc hệ thống
                                 </button>
                             </div>
@@ -1351,18 +1355,24 @@
                     </div>
 
                     <details class="mb-4 mt-2">
-                        <summary class="text-secondary small fw-semibold cursor-pointer user-select-none" style="outline: none;">
-                            Tùy chọn nâng cao (Vùng nguy hiểm)
+                        <summary class="text-secondary small fw-semibold cursor-pointer user-select-none"
+                            style="outline: none;">
+                            Tùy chọn nâng cao
                         </summary>
                         <div class="border border-danger-subtle rounded p-3 mt-2 bg-light bg-opacity-50">
                             <span class="text-muted d-block mb-3" style="font-size: 0.75rem; line-height: 1.4;">
-                                Các hành động dưới đây có thể ảnh hưởng trực tiếp đến trạng thái hoạt động và cấu hình lưu trữ của tủ sạc.
+                                Các hành động dưới đây có thể ảnh hưởng trực tiếp đến trạng thái hoạt động và cấu hình
+                                lưu trữ của tủ sạc.
                             </span>
-                            <div class="d-flex gap-2">
-                                <button id="btn_factory_reset_station" class="btn btn-sm btn-outline-danger w-50 fw-semibold"
-                                    onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục gốc</button>
-                                <button class="btn btn-sm btn-danger w-50 fw-semibold" onclick="deleteStation()">
-                                    <i class="fas fa-trash me-1"></i>Xóa tủ sạc</button>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button id="btn_factory_reset_station" class="btn btn-sm btn-outline-danger w-100 fw-semibold py-2" style="font-size: 0.75rem;"
+                                        onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục gốc</button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-sm btn-danger w-100 fw-semibold py-2" style="font-size: 0.75rem;"
+                                        onclick="deleteStation()"><i class="fas fa-trash me-1"></i>Xóa tủ sạc</button>
+                                </div>
                             </div>
                         </div>
                     </details>
