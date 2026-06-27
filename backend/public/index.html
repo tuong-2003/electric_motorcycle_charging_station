@@ -1027,7 +1027,7 @@
                                         background-color: #10b981;
                                         border-color: #10b981;
                                         border-radius: 6px;
-                                    " onclick="showAlert('Tính năng thêm tủ đang phát triển!', 'warning')">
+                                    " onclick="openAddStationModal()">
                                     <i class="fas fa-plus me-2"></i>Thêm tủ sạc
                                 </button>
                             </div>
@@ -1329,6 +1329,53 @@
                                 class="fas fa-power-off me-1"></i>Khởi động lại</button>
                         <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
                                 class="fas fa-check me-1"></i>Lưu cấu hình</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Tủ sạc mới -->
+    <div class="modal fade" id="addStationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Thêm Tủ Sạc Mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pb-3">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Mã tủ sạc (ID)</label>
+                        <input type="text" id="add_station_id" class="form-control bg-light border-0"
+                            placeholder="Ví dụ: 003">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Tên tủ sạc</label>
+                        <input type="text" id="add_station_name" class="form-control bg-light border-0"
+                            placeholder="Ví dụ: Tủ sạc 3">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Vị trí</label>
+                        <input type="text" id="add_station_location" class="form-control bg-light border-0"
+                            placeholder="Ví dụ: Khu C">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Giới hạn dòng sạc tối đa (Dòng bảo vệ)</label>
+                        <select id="add_max_current" class="form-select bg-light border-0">
+                            <option value="10">10A (Sạc chậm - An toàn)</option>
+                            <option value="16" selected>16A (Tiêu chuẩn)</option>
+                            <option value="32">32A (Sạc nhanh - Yêu cầu thiết bị đáp ứng)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Ngưỡng cảnh báo nhiệt độ (°C)</label>
+                        <input type="number" id="add_temp_limit" class="form-control bg-light border-0" value="65">
+                        <div class="form-text" style="font-size: 0.75rem;">Khi cảm biến vượt ngưỡng này, tủ sạc sẽ báo động đỏ.</div>
+                    </div>
+                    <div class="d-flex justify-content-end align-items-center mb-0">
+                        <button class="btn btn-sm btn-secondary me-2 fw-semibold px-3" data-bs-dismiss="modal">Hủy</button>
+                        <button class="btn btn-sm btn-success fw-semibold px-3" onclick="submitAddStation()"><i
+                                class="fas fa-plus me-1"></i>Thêm mới</button>
                     </div>
                 </div>
             </div>
@@ -2313,6 +2360,68 @@
 
         // --- QUẢN LÝ TRẠM SẠC ---
         const expandedStations = new Set();
+
+        // Mở Modal Thêm Tủ Sạc Mới
+        function openAddStationModal() {
+            document.getElementById('add_station_id').value = '';
+            document.getElementById('add_station_name').value = '';
+            document.getElementById('add_station_location').value = '';
+            document.getElementById('add_max_current').value = '16';
+            document.getElementById('add_temp_limit').value = '65';
+
+            const modalEl = document.getElementById('addStationModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        }
+
+        // Gửi thông tin thêm Tủ Sạc mới lên Server
+        function submitAddStation() {
+            const id = document.getElementById('add_station_id').value.trim();
+            const name = document.getElementById('add_station_name').value.trim();
+            const location = document.getElementById('add_station_location').value.trim();
+            const maxCurrent = document.getElementById('add_max_current').value;
+            const tempLimit = document.getElementById('add_temp_limit').value;
+
+            if (!id) {
+                showAlert("Vui lòng nhập Mã tủ sạc!", "warning");
+                return;
+            }
+            if (!name) {
+                showAlert("Vui lòng nhập Tên tủ sạc!", "warning");
+                return;
+            }
+
+            fetch('/api/stations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify({
+                    station_id: id,
+                    name: name,
+                    location: location,
+                    max_current: parseInt(maxCurrent),
+                    temp_limit: parseInt(tempLimit)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const modalEl = document.getElementById('addStationModal');
+                    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    if (modalInstance) modalInstance.hide();
+                    loadStations();
+                    showAlert('Thêm tủ sạc mới thành công!', 'success');
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAlert("Lỗi kết nối máy chủ", "danger");
+            });
+        }
 
         // Mở Modal Cài đặt Trạm Sạc (Gộp chức năng thông tin và cấu hình)
         function openStationSettings(btn) {

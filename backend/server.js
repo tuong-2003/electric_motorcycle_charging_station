@@ -773,6 +773,65 @@ app.put('/api/stations/price', verifyToken, (req, res) => {
     });
 });
 
+// API Thêm Tủ sạc mới (Chỉ Admin)
+app.post('/api/stations', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền thêm tủ sạc!' });
+
+    const { station_id, name, location, max_current, temp_limit } = req.body;
+
+    if (!station_id || !name) {
+        return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ Mã tủ và Tên tủ!' });
+    }
+
+    // Kiểm tra xem station_id đã tồn tại hay chưa
+    db.query('SELECT station_id FROM stations WHERE station_id = ?', [station_id], (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database kiểm tra tủ sạc' });
+        if (results.length > 0) {
+            return res.status(400).json({ success: false, message: 'Mã tủ sạc đã tồn tại!' });
+        }
+
+        // Lấy đơn giá điện hiện tại từ trạm khác để áp dụng đồng bộ, hoặc dùng mặc định 3500
+        db.query('SELECT unit_price FROM stations LIMIT 1', (err, priceResults) => {
+            let unitPrice = 3500;
+            if (!err && priceResults && priceResults.length > 0) {
+                unitPrice = priceResults[0].unit_price;
+            }
+
+            const query = 'INSERT INTO stations (station_id, name, location, unit_price, status, max_current, temp_limit) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            const params = [
+                station_id,
+                name,
+                location || 'Trạm sạc',
+                unitPrice,
+                'online',
+                max_current || 16,
+                temp_limit || 65
+            ];
+
+            db.query(query, params, (err) => {
+                if (err) return res.status(500).json({ success: false, message: 'Lỗi Database thêm tủ sạc mới' });
+
+                // Đồng bộ lại cấu hình trạm sạc vào RAM Cache
+                stationConfigCache[station_id] = {
+                    max_current: parseInt(max_current || 16),
+                    temp_limit: parseInt(temp_limit || 65),
+                    status: 'online'
+                };
+
+                // Phát hành cấu hình xuống MQTT
+                const configTopic = `ev_station/${station_id}/config`;
+                client.publish(configTopic, JSON.stringify({
+                    max_current: parseInt(max_current || 16),
+                    temp_limit: parseInt(temp_limit || 65),
+                    status: 'online'
+                }), { retain: true });
+
+                res.json({ success: true, message: 'Đã thêm tủ sạc mới thành công!' });
+            });
+        });
+    });
+});
+
 // API Chỉnh sửa Tên và Địa chỉ Trạm sạc (Chỉ Admin)
 app.put('/api/stations/:id', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền cấu hình trạm sạc!' });
