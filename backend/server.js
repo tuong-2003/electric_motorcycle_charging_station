@@ -1166,7 +1166,7 @@ app.post('/api/user/change-password', verifyToken, async (req, res) => {
 // API Lấy danh sách User (Chỉ Admin)
 app.get('/api/users', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xem danh sách!' });
-    db.query('SELECT id, username, email, role, balance, created_at FROM users WHERE LOWER(role) != "admin" AND LOWER(username) != "admin"', (err, results) => {
+    db.query('SELECT id, username, email, role, balance, status, created_at FROM users WHERE LOWER(role) != "admin" AND LOWER(username) != "admin"', (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi DB' });
         res.json({ success: true, data: results });
     });

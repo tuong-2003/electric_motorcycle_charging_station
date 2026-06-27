@@ -1189,13 +1189,14 @@
                                                     <th>Tên đăng nhập</th>
                                                     <th>Email</th>
                                                     <th>Số dư ví</th>
+                                                    <th>Trạng thái</th>
                                                     <th>Ngày đăng ký</th>
                                                     <th style="width: 80px;">Hành động</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="users_table_body">
                                                 <tr>
-                                                    <td colspan="6">Đang tải dữ liệu...</td>
+                                                    <td colspan="7">Đang tải dữ liệu...</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -2748,7 +2749,7 @@
         // --- QUẢN LÝ USER & VÍ TIỀN ---
         function loadUsers() {
             if (!authToken) {
-                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="6" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
+                document.getElementById('users_table_body').innerHTML = `<tr><td colspan="7" class="text-danger">Vui lòng đăng nhập bằng tài khoản Admin!</td></tr>`;
                 return;
             }
             fetch('/api/users', { headers: { 'Authorization': 'Bearer ' + authToken } })
@@ -2767,11 +2768,19 @@
                             let createdAtFormat = user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '-';
                             let emailFormat = user.email || '-';
 
+                            let statusBadge = '';
+                            if (user.status === 'pending') {
+                                statusBadge = `<span class="badge bg-warning text-dark rounded-pill fw-normal" style="font-size: 0.75rem;">Chờ xác nhận</span>`;
+                            } else {
+                                statusBadge = `<span class="badge bg-success rounded-pill fw-normal" style="font-size: 0.75rem;">Hoạt động</span>`;
+                            }
+
                             tbody.innerHTML += `<tr>
                                 <td>#${user.id}</td>
                                 <td>${user.username}</td>
                                 <td>${emailFormat}</td>
                                 <td><b>${balanceFormat}</b></td>
+                                <td>${statusBadge}</td>
                                 <td>${createdAtFormat}</td>
                                 <td>
                                     <button class="btn btn-sm btn-delete-user" onclick="deleteUser(${user.id}, '${user.username}')" title="Xóa User">
@@ -2782,7 +2791,7 @@
                         });
 
                         if (count === 0) {
-                            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">Không tìm thấy người dùng nào!</td></tr>`;
+                            tbody.innerHTML = `<tr><td colspan="7" class="text-muted py-3">Không tìm thấy người dùng nào!</td></tr>`;
                         }
                     }
                 });
