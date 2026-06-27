@@ -1300,6 +1300,10 @@
                 <div class="modal-body pb-3">
                     <input type="hidden" id="settings_station_id">
 
+                    <div id="offline_warning_alert" class="alert alert-danger d-none py-2 px-3 small mb-3">
+                        <i class="fas fa-exclamation-triangle me-1"></i> Tủ sạc đang mất kết nối, không thể cấu hình hoặc khởi động lại.
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-semibold">Tên tủ sạc</label>
                         <input type="text" id="edit_station_name" class="form-control bg-light border-0"
@@ -1333,12 +1337,12 @@
 
                     <div class="d-flex justify-content-between align-items-center mb-0">
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i
+                            <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i
                                     class="fas fa-power-off me-1"></i>Khởi động lại</button>
                             <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="deleteStation()"><i
                                     class="fas fa-trash me-1"></i>Xóa tủ</button>
                         </div>
-                        <button class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
+                        <button id="btn_save_config" class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
                                 class="fas fa-check me-1"></i>Lưu cấu hình</button>
                     </div>
                 </div>
@@ -2461,6 +2465,21 @@
             document.getElementById('edit_temp_limit').value = tempLimit;
             document.getElementById('maintenanceSwitch').checked = (status === 'maintenance');
 
+            const isOffline = (status === 'offline');
+            const alertEl = document.getElementById('offline_warning_alert');
+            if (isOffline) {
+                alertEl.classList.remove('d-none');
+            } else {
+                alertEl.classList.add('d-none');
+            }
+
+            document.getElementById('edit_station_name').disabled = isOffline;
+            document.getElementById('edit_max_current').disabled = isOffline;
+            document.getElementById('edit_temp_limit').disabled = isOffline;
+            document.getElementById('maintenanceSwitch').disabled = isOffline;
+            document.getElementById('btn_reboot_station').disabled = isOffline;
+            document.getElementById('btn_save_config').disabled = isOffline;
+
             const modalEl = document.getElementById('stationSettingsModal');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
@@ -2516,7 +2535,7 @@
         // Khởi động lại Tủ sạc
         function rebootStation() {
             const stationId = document.getElementById('settings_station_id').value;
-            showConfirm('CẢNH BÁO: Hành động này sẽ khởi động lại phần cứng ESP32 của Tủ sạc ' + stationId + '.\n\nCác phiên sạc đang chạy có thể bị gián đoạn. Bạn có chắc chắn?', (confirmed) => {
+            showConfirm('CẢNH BÁO: Hành động này sẽ khởi động lại Tủ sạc ' + stationId + 'và các phiên sạc đang chạy sẽ bị gián đoạn. Bạn có chắc chắn?', (confirmed) => {
                 if (confirmed) {
                     fetch('/api/stations/' + stationId + '/reboot', {
                         method: 'POST',
@@ -2547,7 +2566,7 @@
         // Xóa Tủ sạc
         function deleteStation() {
             const stationId = document.getElementById('settings_station_id').value;
-            showConfirm('CẢNH BÁO: Hành động này sẽ xóa hoàn toàn tủ sạc ' + stationId + ' khỏi hệ thống.\n\nMọi dữ liệu liên quan sẽ bị ảnh hưởng. Bạn có chắc chắn muốn xóa?', (confirmed) => {
+            showConfirm('CẢNH BÁO: Hành động này sẽ xóa hoàn toàn Tủ sạc ' + stationId + ' khỏi hệ thống. Bạn có chắc chắn muốn xóa?', (confirmed) => {
                 if (confirmed) {
                     fetch('/api/stations/' + stationId, {
                         method: 'DELETE',
@@ -2678,21 +2697,28 @@
                                         displayStatus = "Sẵn sàng";
                                     }
 
-                                    // Nếu trạm sạc đang ở chế độ bảo trì
+                                    // Nếu trạm sạc đang ở chế độ bảo trì hoặc mất kết nối
+                                    const isOffline = (st.status === 'offline');
                                     const isMaint = (st.status === 'maintenance');
-                                    if (isMaint) {
+                                    if (isOffline) {
+                                        badgeClass = "bg-danger text-white";
+                                        displayStatus = "Mất kết nối";
+                                    } else if (isMaint) {
                                         badgeClass = "badge-maint-orange";
                                         displayStatus = "Bảo trì";
                                     }
 
-                                    const disabledAttr = isMaint ? 'disabled' : '';
+                                    const disabledAttr = (isMaint || isOffline) ? 'disabled' : '';
 
-                                    // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam)
+                                    // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam, Mất kết nối = Đỏ)
                                     let iconBg = "rgba(107, 114, 128, 0.08)";
                                     let iconColor = "#6b7280";
                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
                                         iconBg = "rgba(16, 185, 129, 0.08)";
                                         iconColor = "#10b981";
+                                    } else if (isOffline) {
+                                        iconBg = "rgba(239, 68, 68, 0.08)";
+                                        iconColor = "#ef4444";
                                     } else if (outlet.status === 'maintenance' || isMaint) {
                                         iconBg = "rgba(217, 119, 6, 0.08)";
                                         iconColor = "#d97706";

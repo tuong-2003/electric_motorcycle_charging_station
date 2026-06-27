@@ -132,6 +132,31 @@ void setup() {
 }
 
 void loop() {
+    // Watchdog mất kết nối để tự động ngắt sạc bảo vệ hệ thống
+    static uint32_t disconnectStart = 0;
+    static bool wasDisconnectedTriggered = false;
+
+    if (WiFi.status() != WL_CONNECTED || !mqtt.connected()) {
+        if (disconnectStart == 0) {
+            disconnectStart = millis();
+        } else if (millis() - disconnectStart > 30000) { // Quá 30 giây mất kết nối
+            if (!wasDisconnectedTriggered) {
+                Serial.println("🚨 [BẢO VỆ] Mất kết nối MQTT/WiFi quá 30s! Tự động ngắt sạc toàn bộ các cổng.");
+                for (int i = 0; i < NUM_STATIONS; i++) {
+                    int stId = STATION_IDS[i];
+                    modbus.sendCommand(stId, 1, false);
+                    delay(150);
+                    modbus.sendCommand(stId, 2, false);
+                    delay(150);
+                }
+                wasDisconnectedTriggered = true;
+            }
+        }
+    } else {
+        disconnectStart = 0;
+        wasDisconnectedTriggered = false;
+    }
+
     if (!mqtt.connected()) reconnect_mqtt();
     else mqtt.loop();
     

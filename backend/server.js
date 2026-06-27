@@ -238,6 +238,13 @@ const client = mqtt.connect(MQTT_BROKER);
 // [TỐI ƯU] Bộ nhớ đệm (RAM Cache) lưu trạng thái mới nhất của trạm
 const liveDataCache = {};
 
+// Hàm kiểm tra trạng thái hoạt động của tủ sạc (trong vòng 30 giây)
+function isStationOnline(stationId) {
+    const cache = liveDataCache[stationId];
+    if (!cache || !cache.lastSeen) return false;
+    return (Date.now() - cache.lastSeen) <= 30000;
+};
+
 // [MỚI] Bộ nhớ đệm lưu cấu hình dòng sạc và nhiệt độ cảnh báo của các trạm
 const stationConfigCache = {};
 
@@ -293,6 +300,7 @@ client.on('message', (topic, message) => {
                 power: data.power || 0,
                 status: data.status || 'AVAILABLE'
             };
+            liveDataCache[stationId].lastSeen = Date.now(); // Cập nhật thời gian nhận dữ liệu gần nhất của tủ sạc
 
             const sql = 'INSERT INTO telemetry (station_id, status, voltage, current, power, temperature, humidity) VALUES (?, ?, ?, ?, ?, ?, ?)';
             db.query(sql, [`${stationId}.${outletId}`, data.status, data.voltage, data.current, data.power, tempVal, humVal], (err) => {
@@ -716,6 +724,12 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
             return res.status(400).json({ success: false, message: '⛔ Số dư ví không đủ để sạc!' });
         }
 
+        // [MỚI] Kiểm tra tủ sạc có online không
+        if (!isStationOnline(stationId)) {
+            releaseLock();
+            return res.status(400).json({ success: false, message: '⛔ Tủ sạc hiện đang mất kết nối, không thể bắt đầu sạc!' });
+        }
+
         // [MỚI] Kiểm tra xem tủ sạc có đang ở chế độ bảo trì hay không
         const config = stationConfigCache[stationId];
         if (config && config.status === 'maintenance') {
@@ -933,11 +947,15 @@ app.get('/api/stations', verifyToken, (req, res) => {
 
             // [TỐI ƯU] Ghép dữ liệu DB, Real-time RAM Cache và Trạng thái Ổ cắm
             const mappedData = results.map(st => {
+                const online = isStationOnline(st.station_id);
+                const originalStatus = st.status;
+                const status = (!online && originalStatus !== 'maintenance') ? 'offline' : originalStatus;
+
                 // Tự động quét 2 ổ cắm của mỗi trạm để ép cấu hình
                 const outlets = [1, 2].map(outletId => {
                     const fullId = `${st.station_id}.${outletId}`;
                     const sessionInfo = activeMap[fullId];
-                    const outData = (liveDataCache[st.station_id] && liveDataCache[st.station_id].outletsData && liveDataCache[st.station_id].outletsData[outletId]) || { voltage: 0, current: 0, power: 0, status: 'AVAILABLE' };
+                    const outData = (online && liveDataCache[st.station_id] && liveDataCache[st.station_id].outletsData && liveDataCache[st.station_id].outletsData[outletId]) || { voltage: 0, current: 0, power: 0, status: 'AVAILABLE' };
 
                     let baseOutlet = {
                         id: outletId,
@@ -945,6 +963,10 @@ app.get('/api/stations', verifyToken, (req, res) => {
                         current: outData.current,
                         power: outData.power
                     };
+
+                    if (!online) {
+                        return { ...baseOutlet, status: 'offline' };
+                    }
 
                     if (!sessionInfo) {
                         // Nếu không có phiên sạc đang chạy trong DB, nhưng thực tế phần cứng đang chạy sạc (dựa vào status 'CHARGING' hoặc dòng điện > 0.05A)
@@ -961,8 +983,9 @@ app.get('/api/stations', verifyToken, (req, res) => {
 
                 return {
                     ...st,
-                    temperature: liveDataCache[st.station_id]?.temperature || null,
-                    humidity: liveDataCache[st.station_id]?.humidity || null,
+                    status: status,
+                    temperature: online ? (liveDataCache[st.station_id]?.temperature || null) : null,
+                    humidity: online ? (liveDataCache[st.station_id]?.humidity || null) : null,
                     outlets: outlets
                 };
             });
@@ -1051,6 +1074,10 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
     const stationId = req.params.id;
     const { name, max_current, temp_limit, status } = req.body;
 
+    if (!isStationOnline(stationId)) {
+        return res.status(400).json({ success: false, message: '⛔ Tủ sạc hiện đang mất kết nối, không thể cập nhật cấu hình!' });
+    }
+
     if (!name) return res.status(400).json({ success: false, message: 'Vui lòng nhập Tên tủ sạc!' });
 
     db.query(
@@ -1102,6 +1129,10 @@ app.post('/api/stations/:id/reboot', verifyToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền khởi động lại tủ sạc!' });
 
     const stationId = req.params.id;
+
+    if (!isStationOnline(stationId)) {
+        return res.status(400).json({ success: false, message: '⛔ Tủ sạc hiện đang mất kết nối, không thể khởi động lại!' });
+    }
 
     console.log(`🔄 [Admin] Gửi lệnh khởi động lại tủ sạc ${stationId}`);
 
