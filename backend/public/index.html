@@ -1283,6 +1283,20 @@
                                     điện</button>
                             </div>
                         </div>
+
+                        <!-- Bảo trì & Khôi phục hệ thống -->
+                        <div class="col-md-12">
+                            <div class="card card-stat p-4 border border-danger-subtle">
+                                <h6 class="mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Bảo trì & Khôi phục hệ thống</h6>
+                                <p class="text-muted small mb-3">
+                                    Hành động này sẽ khôi phục cấu hình hoạt động của tất cả các tủ sạc trong hệ thống về cấu hình mặc định (Dòng sạc 16A, Ngưỡng nhiệt độ 65°C, Giá điện 3,500đ) và gửi lệnh reset tới các thiết bị vật lý đang hoạt động.
+                                    <br><strong>Lưu ý quan trọng:</strong> Số dư ví, thông tin tài khoản người dùng, lịch sử nạp tiền và lịch sử phiên sạc <strong>hoàn toàn không bị ảnh hưởng</strong>.
+                                </p>
+                                <button class="btn btn-outline-danger btn-sm fw-semibold" onclick="factoryResetSystem()">
+                                    <i class="fas fa-undo me-1"></i>Khôi phục cài đặt gốc thiết bị toàn hệ thống
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2199,6 +2213,34 @@
                     }
                 })
                 .catch(err => showAlert('Không kết nối được tới máy chủ!', 'danger'));
+        }
+
+        function factoryResetSystem() {
+            showConfirm('CẢNH BÁO ĐẶC BIỆT NGUY HIỂM: Hành động này sẽ khôi phục cấu hình mặc định (16A, 65°C, 3500đ) của TOÀN BỘ trạm sạc trong hệ thống và reset phần cứng vật lý của chúng. Lịch sử giao dịch và ví tiền của người dùng sẽ KHÔNG bị ảnh hưởng. Bạn có chắc chắn?', (confirmed) => {
+                if (confirmed) {
+                    fetch('/api/system/factory-reset', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + authToken
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                showAlert(data.message, 'success');
+                                loadSettings();
+                                if (typeof loadStations === 'function') loadStations();
+                            } else {
+                                showAlert(data.message, 'danger');
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showAlert("Lỗi kết nối máy chủ", "danger");
+                        });
+                }
+            });
         }
 
         function changePassword() {
