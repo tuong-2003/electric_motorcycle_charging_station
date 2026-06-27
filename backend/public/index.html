@@ -1336,12 +1336,16 @@
                         </div>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label text-danger small fw-semibold d-block">Khôi phục cài đặt gốc</label>
+                        <button id="btn_factory_reset_station" class="btn btn-sm btn-outline-danger w-100 fw-semibold py-1.5"
+                            onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục cài đặt gốc tủ sạc</button>
+                    </div>
+
                     <div class="d-flex justify-content-between align-items-center mb-0">
                         <div class="d-flex gap-2">
                             <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold"
                                 onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại</button>
-                            <button id="btn_factory_reset_station" class="btn btn-sm btn-outline-danger fw-semibold"
-                                onclick="factoryResetStation()"><i class="fas fa-undo me-1"></i>Khôi phục gốc</button>
                             <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="deleteStation()"><i
                                     class="fas fa-trash me-1"></i>Xóa tủ</button>
                         </div>
