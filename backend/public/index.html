@@ -1301,7 +1301,8 @@
                     <input type="hidden" id="settings_station_id">
 
                     <div id="offline_warning_alert" class="alert alert-danger d-none py-2 px-3 small mb-3">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Tủ sạc đang mất kết nối, không thể cấu hình hoặc khởi động lại.
+                        <i class="fas fa-exclamation-triangle me-1"></i> Tủ sạc đang mất kết nối, không thể cấu hình
+                        hoặc khởi động lại.
                     </div>
 
                     <div class="mb-3">
@@ -1337,13 +1338,13 @@
 
                     <div class="d-flex justify-content-between align-items-center mb-0">
                         <div class="d-flex gap-2">
-                            <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold" onclick="rebootStation()"><i
-                                    class="fas fa-power-off me-1"></i>Khởi động lại</button>
+                            <button id="btn_reboot_station" class="btn btn-sm btn-outline-danger fw-semibold"
+                                onclick="rebootStation()"><i class="fas fa-power-off me-1"></i>Khởi động lại</button>
                             <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="deleteStation()"><i
                                     class="fas fa-trash me-1"></i>Xóa tủ</button>
                         </div>
-                        <button id="btn_save_config" class="btn btn-sm btn-success fw-semibold px-3" onclick="saveHardwareConfig()"><i
-                                class="fas fa-check me-1"></i>Lưu cấu hình</button>
+                        <button id="btn_save_config" class="btn btn-sm btn-success fw-semibold px-3"
+                            onclick="saveHardwareConfig()"><i class="fas fa-check me-1"></i>Lưu cấu hình</button>
                     </div>
                 </div>
             </div>
@@ -2646,7 +2647,7 @@
                             } else if (st.status === 'maintenance') {
                                 cabinetStatus = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
                             } else {
-                                cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Offline</span>';
+                                cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Mất kết nối</span>';
                             }
                             let kwh = formatNumber(st.total_kwh).toFixed(2);
                             let price = Math.round(formatNumber(st.unit_price, 3500)).toLocaleString('vi-VN') + ' đ';
