@@ -82,29 +82,33 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
             pollAndPublishStation(stId);
         }
     }
-    // 2. Lắng nghe lệnh điều khiển trạm (VD: ev_station/001/cmd)
-    else if (sscanf(topic, "ev_station/%03d/cmd", &stId) == 1) {
-        const char *command = doc["command"];
-        if (command && strcmp(command, "REBOOT") == 0) {
-            Serial.printf("Gateway nhan lenh REBOOT cho TRAM %d từ Cloud\n", stId);
-            modbus.sendReboot(stId);
+    // 2. Lắng nghe lệnh điều khiển trạm (VD: ev_station/001/cmd) hoặc cấu hình (VD: ev_station/001/config)
+    else {
+        char action[20] = {0};
+        if (sscanf(topic, "ev_station/%03d/%19s", &stId, action) == 2) {
+            if (strcmp(action, "cmd") == 0) {
+                const char *command = doc["command"];
+                if (command && strcmp(command, "REBOOT") == 0) {
+                    Serial.printf("Gateway nhan lenh REBOOT cho TRAM %d từ Cloud\n", stId);
+                    modbus.sendReboot(stId);
+                }
+            }
+            else if (strcmp(action, "config") == 0) {
+                float maxCurrent = doc["max_current"] | 16.0;
+                int tempLimit = doc["temp_limit"] | 65;
+                const char *statusStr = doc["status"] | "online";
+                
+                uint16_t maxCurrentVal = (uint16_t)(maxCurrent * 100);
+                uint16_t tempLimitVal = (uint16_t)tempLimit;
+                uint16_t statusVal = (strcmp(statusStr, "maintenance") == 0) ? 1 : 0;
+                
+                Serial.printf("Gateway nhan cau hinh cho TRAM %d: MaxCurrent=%d (x100), TempLimit=%d, Status=%d\n", 
+                              stId, maxCurrentVal, tempLimitVal, statusVal);
+                modbus.sendConfig(stId, maxCurrentVal, tempLimitVal, statusVal);
+                delay(150);
+                pollAndPublishStation(stId);
+            }
         }
-    }
-    // 3. Lắng nghe cấu hình (VD: ev_station/001/config)
-    else if (sscanf(topic, "ev_station/%03d/config", &stId) == 1) {
-        float maxCurrent = doc["max_current"] | 16.0;
-        int tempLimit = doc["temp_limit"] | 65;
-        const char *statusStr = doc["status"] | "online";
-        
-        uint16_t maxCurrentVal = (uint16_t)(maxCurrent * 100);
-        uint16_t tempLimitVal = (uint16_t)tempLimit;
-        uint16_t statusVal = (strcmp(statusStr, "maintenance") == 0) ? 1 : 0;
-        
-        Serial.printf("Gateway nhan cau hinh cho TRAM %d: MaxCurrent=%d (x100), TempLimit=%d, Status=%d\n", 
-                      stId, maxCurrentVal, tempLimitVal, statusVal);
-        modbus.sendConfig(stId, maxCurrentVal, tempLimitVal, statusVal);
-        delay(150);
-        pollAndPublishStation(stId);
     }
 }
 
