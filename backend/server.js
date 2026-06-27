@@ -1091,6 +1091,9 @@ app.post('/api/users/register', verifyToken, async (req, res) => {
     const { username, email, password, role } = req.body;
     if (!username || !password || !email) return res.status(400).json({ success: false, message: 'Thiếu thông tin!' });
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
+
     // [TỐI ƯU] Kiểm tra trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
     db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
         if (err) {

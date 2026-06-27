@@ -1224,8 +1224,14 @@
                                     </div>
                                     <div class="mb-4">
                                         <label class="form-label text-muted small fw-semibold">Mật khẩu</label>
-                                        <input type="password" id="new_user_pass" class="form-control form-control-sm"
-                                            placeholder="Nhập mật khẩu...">
+                                        <div class="password-wrapper">
+                                            <input type="password" id="new_user_pass" class="form-control form-control-sm"
+                                                placeholder="Nhập mật khẩu...">
+                                            <span id="toggleNewUserPasswordBtn" class="password-toggle" onclick="toggleNewUserPasswordVisibility()"
+                                                title="Hiện mật khẩu">
+                                                <i class="fas fa-eye" style="font-size: 14px;"></i>
+                                            </span>
+                                        </div>
                                     </div>
                                     <!-- Ẩn lựa chọn admin, mặc định là user -->
                                     <input type="hidden" id="new_user_role" value="user">
@@ -1933,6 +1939,21 @@
 
             const input = document.getElementById('login_pass');
             const icon = document.querySelector('#togglePasswordBtn i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function toggleNewUserPasswordVisibility() {
+            const input = document.getElementById('new_user_pass');
+            const icon = document.querySelector('#toggleNewUserPasswordBtn i');
 
             if (input.type === 'password') {
                 input.type = 'text';
@@ -2788,17 +2809,21 @@
 
         // Tạo tài khoản mới từ Admin panel
         function registerUser() {
-            const u = document.getElementById('new_user_name').value;
-            const e = document.getElementById('new_user_email') ? document.getElementById('new_user_email').value : '';
-            const p = document.getElementById('new_user_pass').value;
+            const u = document.getElementById('new_user_name').value.trim();
+            const e = document.getElementById('new_user_email') ? document.getElementById('new_user_email').value.trim() : '';
+            const p = document.getElementById('new_user_pass').value.trim();
             const r = document.getElementById('new_user_role').value;
 
-            if (!u || !p) {
-                showAlert("Vui lòng điền đầy đủ tài khoản và mật khẩu!", "warning");
+            if (!u || !p || !e) {
+                showAlert("Vui lòng điền đầy đủ tên đăng nhập, email và mật khẩu!", "warning");
                 return;
             }
 
-            const email = e || `${u.toLowerCase()}@example.com`;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(e)) {
+                showAlert("Địa chỉ Email không hợp lệ!", "warning");
+                return;
+            }
 
             fetch('/api/users/register', {
                 method: 'POST',
@@ -2806,7 +2831,7 @@
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + authToken
                 },
-                body: JSON.stringify({ username: u, email: email, password: p, role: r })
+                body: JSON.stringify({ username: u, email: e, password: p, role: r })
             })
                 .then(res => res.json())
                 .then(data => {
