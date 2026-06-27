@@ -450,25 +450,52 @@
             border-color: #fee2e2 !important;
         }
 
-        /* Nút đóng/mở thanh bên Desktop giống ChatGPT, đặt ngay ở thanh bên */
+        /* Nút đóng/mở thanh bên Desktop */
         .btn-sidebar-toggle-sidebar {
             width: 32px;
             height: 32px;
-            border-radius: 6px;
-            color: #9ca3af;
-            /* Gray-400 */
-            background-color: transparent;
+
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
             flex-shrink: 0;
+
+            padding: 0;
+            margin: 0;
+
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+
+            color: #ffffff;
+            cursor: pointer;
+
+            transition:
+                background-color .2s ease,
+                color .2s ease;
+
+            outline: none;
+            box-shadow: none;
         }
 
         .btn-sidebar-toggle-sidebar:hover {
-            background-color: #1f2937 !important;
-            /* Gray-800 */
-            color: #ffffff !important;
+            background: rgba(255,255,255,.08);
+            color: #ffffff;
+        }
+
+        .btn-sidebar-toggle-sidebar:focus,
+        .btn-sidebar-toggle-sidebar:focus-visible,
+        .btn-sidebar-toggle-sidebar:active {
+            background: rgba(255,255,255,.08);
+            border: none;
+            outline: none;
+            box-shadow: none;
+        }
+
+        .btn-sidebar-toggle-sidebar svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
         }
 
         /* Chỉ hiển thị tooltip của menu item khi sidebar bị collapsed */
@@ -752,8 +779,10 @@
                         <i class="fas fa-bolt me-2 brand-icon" style="color: #10b981;"></i>
                         <span class="brand-name">Trạm Sạc HVT</span>
                     </div>
-                    <button class="btn btn-sidebar-toggle-sidebar p-0 border-0" id="sidebarToggleBtn"
-                        onclick="toggleSidebar()" data-tooltip="Đóng thanh bên">
+                    <button class="btn-sidebar-toggle-sidebar"
+                            id="sidebarToggleBtn"
+                            onclick="toggleSidebar()"
+                            data-tooltip="Đóng thanh bên">
                         <svg id="sidebarToggleIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18"
                             height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round">
