@@ -71,6 +71,9 @@ export default function App() {
   const [regEmailError, setRegEmailError] = useState(false);
   const [regPasswordError, setRegPasswordError] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [regStep, setRegStep] = useState(1);
+  const [regOtp, setRegOtp] = useState('');
+  const [regOtpError, setRegOtpError] = useState(false);
 
   // State cho Camera quét QR
   const [isScanning, setIsScanning] = useState(false);
@@ -509,8 +512,8 @@ export default function App() {
     }
   };
 
-  // Hàm xử lý Đăng ký tài khoản mới
-  const handleRegister = async () => {
+  // Hàm xử lý yêu cầu gửi mã OTP để đăng ký tài khoản mới
+  const handleRequestRegOtp = async () => {
     let hasError = false;
     if (!regUsername) { setRegUsernameError(true); hasError = true; }
     if (!regEmail) { setRegEmailError(true); hasError = true; }
@@ -528,23 +531,60 @@ export default function App() {
 
     setIsRegLoading(true);
     try {
+      const response = await fetch(`${API_URL}/api/register/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: regUsername, email: regEmail })
+      });
+      const data = await response.json();
+      if (data.success) {
+        Alert.alert('Thành công', data.message);
+        setRegStep(2);
+      } else {
+        if (data.message.includes('Tên tài khoản')) {
+          setRegUsernameError(true);
+        }
+        if (data.message.includes('Email')) {
+          setRegEmailError(true);
+        }
+        Alert.alert('Thông báo', data.message);
+      }
+    } catch (error) {
+      Alert.alert('Lỗi mạng', 'Không thể kết nối đến máy chủ!');
+    } finally {
+      setIsRegLoading(false);
+    }
+  };
+
+  // Hàm xử lý Đăng ký tài khoản mới
+  const handleRegister = async () => {
+    if (!regOtp) {
+      setRegOtpError(true);
+      return Alert.alert('Thông báo', 'Vui lòng nhập mã OTP!');
+    }
+
+    setIsRegLoading(true);
+    try {
       const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: regUsername, email: regEmail, password: regPassword })
+        body: JSON.stringify({
+          username: regUsername,
+          email: regEmail,
+          password: regPassword,
+          otp: regOtp
+        })
       });
       const data = await response.json();
       if (data.success) {
         Alert.alert('Thành công', data.message);
         setShowRegister(false);
+        setRegStep(1);
         setUsername(regUsername); // Tự động điền sẵn tên user ra màn hình đăng nhập cho tiện
-        setRegUsername(''); setRegEmail(''); setRegPassword('');
+        setRegUsername(''); setRegEmail(''); setRegPassword(''); setRegOtp('');
       } else {
-        if (data.message.includes('Tên tài khoản') || data.message.includes('Email')) {
-          setRegUsernameError(true);
-        }
-        if (data.message.includes('Email')) {
-          setRegEmailError(true);
+        if (data.message.includes('OTP')) {
+          setRegOtpError(true);
         }
         Alert.alert('Thông báo', data.message);
       }
@@ -1534,6 +1574,7 @@ export default function App() {
       <View style={[styles.container, { justifyContent: 'flex-start', paddingTop: 60 }]}>
         <TouchableOpacity style={styles.absoluteBackButton} onPress={() => {
           setShowRegister(false);
+          setRegStep(1); setRegOtp(''); setRegOtpError(false);
           setRegUsername(''); setRegEmail(''); setRegPassword('');
           setRegUsernameError(false); setRegEmailError(false); setRegPasswordError(false);
           setShowRegPassword(false);
@@ -1547,21 +1588,35 @@ export default function App() {
             <FontAwesome5 name="user-plus" size={40} color="#27ae60" />
           </View>
           <Text style={styles.mainTitle}>Đăng Ký Tài Khoản</Text>
-          <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>Tạo tài khoản mới để bắt đầu sạc xe</Text>
+          <Text style={[styles.subTitleText, { textAlign: 'center', paddingHorizontal: 20 }]}>
+            {regStep === 1 ? 'Tạo tài khoản mới để bắt đầu sạc xe' : 'Nhập mã OTP để hoàn tất đăng ký'}
+          </Text>
         </View>
 
-        <TextInput style={[styles.input, regUsernameError && styles.inputError]} placeholder="Tên tài khoản (viết liền không dấu)" value={regUsername} onChangeText={(text) => { setRegUsername(text); setRegUsernameError(false); }} autoCapitalize="none" />
-        <TextInput style={[styles.input, regEmailError && styles.inputError]} placeholder="Địa chỉ Email" value={regEmail} onChangeText={(text) => { setRegEmail(text); setRegEmailError(false); }} keyboardType="email-address" autoCapitalize="none" />
-        <View style={styles.passwordInputContainer}>
-          <TextInput style={[styles.input, styles.passwordInput, regPasswordError && styles.inputError]} placeholder="Mật khẩu (ít nhất 6 ký tự)" value={regPassword} onChangeText={(text) => { setRegPassword(text); setRegPasswordError(false); }} secureTextEntry={!showRegPassword} />
-          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowRegPassword(!showRegPassword)}>
-            <FontAwesome5 name={showRegPassword ? "eye" : "eye-slash"} size={18} color="#7f8c8d" />
-          </TouchableOpacity>
-        </View>
+        {regStep === 1 ? (
+          <>
+            <TextInput style={[styles.input, regUsernameError && styles.inputError]} placeholder="Tên tài khoản (viết liền không dấu)" value={regUsername} onChangeText={(text) => { setRegUsername(text); setRegUsernameError(false); }} autoCapitalize="none" />
+            <TextInput style={[styles.input, regEmailError && styles.inputError]} placeholder="Địa chỉ Email" value={regEmail} onChangeText={(text) => { setRegEmail(text); setRegEmailError(false); }} keyboardType="email-address" autoCapitalize="none" />
+            <View style={styles.passwordInputContainer}>
+              <TextInput style={[styles.input, styles.passwordInput, regPasswordError && styles.inputError]} placeholder="Mật khẩu (ít nhất 6 ký tự)" value={regPassword} onChangeText={(text) => { setRegPassword(text); setRegPasswordError(false); }} secureTextEntry={!showRegPassword} />
+              <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowRegPassword(!showRegPassword)}>
+                <FontAwesome5 name={showRegPassword ? "eye" : "eye-slash"} size={18} color="#7f8c8d" />
+              </TouchableOpacity>
+            </View>
 
-        <TouchableOpacity style={[styles.button, { backgroundColor: '#27ae60' }]} onPress={handleRegister} disabled={isRegLoading}>
-          {isRegLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Hoàn tất Đăng ký</Text>}
-        </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, { backgroundColor: '#27ae60' }]} onPress={handleRequestRegOtp} disabled={isRegLoading}>
+              {isRegLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Nhận mã OTP qua Email</Text>}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TextInput style={[styles.input, regOtpError && styles.inputError]} placeholder="Mã OTP (6 chữ số)" value={regOtp} onChangeText={(text) => { setRegOtp(text); setRegOtpError(false); }} keyboardType="numeric" />
+
+            <TouchableOpacity style={[styles.button, { backgroundColor: '#27ae60' }]} onPress={handleRegister} disabled={isRegLoading}>
+              {isRegLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Hoàn tất Đăng ký</Text>}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     );
   }

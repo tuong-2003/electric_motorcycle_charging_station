@@ -414,25 +414,26 @@ app.post('/api/reset-password', async (req, res) => {
     });
 });
 
-// API Đăng ký tài khoản tự do (Cho khách hàng từ App)
-app.post('/api/register', async (req, res) => {
-    let { username, email, password } = req.body;
-
-    // Cắt bỏ khoảng trắng thừa
+// API Yêu cầu gửi OTP đăng ký tài khoản mới (Chỉ gửi nếu tài khoản/email chưa tồn tại)
+app.post('/api/register/send-otp', (req, res) => {
+    let { username, email } = req.body;
     if (username) username = username.trim();
     if (email) email = email.trim();
 
-    if (!username || !email || !password) return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ thông tin!' });
-    if (password.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải từ 6 ký tự!' });
+    if (!username || !email) {
+        return res.status(400).json({ success: false, message: 'Vui lòng cung cấp cả Tài khoản và Email!' });
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
+    }
 
-    // [TỐI ƯU] Kiểm tra username và email tồn tại trước khi INSERT để có thông báo lỗi rõ ràng và an toàn hơn
-    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
+    // Kiểm tra xem Username hoặc Email đã tồn tại chưa
+    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], (err, results) => {
         if (err) {
             console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
-            return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+            return res.status(500).json({ success: false, message: 'Lỗi Database!' });
         }
 
         if (results.length > 0) {
@@ -446,19 +447,120 @@ app.post('/api/register', async (req, res) => {
             }
         }
 
-        // Nếu không trùng, tiến hành mã hóa và thêm user mới
+        const otpKey = `reg_otp:${email.toLowerCase()}`;
+
+        // [CHỐNG SPAM] Cooldown 60s
+        const existingRecord = otpStorage.get(otpKey);
+        if (existingRecord && existingRecord.nextRequestAvailable > Date.now()) {
+            const waitTime = Math.ceil((existingRecord.nextRequestAvailable - Date.now()) / 1000);
+            return res.status(429).json({ success: false, message: `Hệ thống vừa gửi OTP xong. Vui lòng chờ ${waitTime} giây nữa trước khi yêu cầu gửi lại!` });
+        }
+
+        // Tạo mã OTP ngẫu nhiên (6 chữ số)
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Lưu tạm vào RAM (Hiệu lực 5 phút)
+        otpStorage.set(otpKey, {
+            otp,
+            expires: Date.now() + 5 * 60 * 1000,
+            nextRequestAvailable: Date.now() + 60 * 1000
+        });
+
+        const maskEmailStr = email.replace(/(.{1})(.*)(?=@)/, (match, p1, p2) => p1 + '*'.repeat(p2.length));
+
+        if (!GAS_MAIL_URL) {
+            console.error('⚠️ Cảnh báo: Chưa cấu hình biến môi trường GAS_MAIL_URL!');
+            return res.status(500).json({ success: false, message: 'Lỗi: Hệ thống gửi mail chưa được cấu hình!' });
+        }
+
+        const payload = {
+            to: email,
+            subject: `Hệ thống Trạm Sạc - Mã OTP đăng ký của bạn là ${otp}`,
+            htmlBody: `<p>Chào ${username},</p><p>Mã OTP để đăng ký tài khoản của bạn là: <strong style="font-size:18px; color: #27ae60;">${otp}</strong></p><p>Lưu ý: Mã này chỉ có hiệu lực trong vòng 5 phút.</p>`
+        };
+
+        fetch(GAS_MAIL_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    res.json({ success: true, message: `Mã OTP đã được gửi về: ${maskEmailStr}` });
+                } else {
+                    console.error('⚠️ [Google API] Lỗi từ Webhook:', data.message);
+                    res.status(500).json({ success: false, message: 'Google Server từ chối lệnh gửi mail!' });
+                }
+            })
+            .catch(error => {
+                console.error('⚠️ [Google API] Fetch thất bại:', error.message);
+                res.status(500).json({ success: false, message: 'Lỗi kết nối đến Google Server.' });
+            });
+    });
+});
+
+// API Đăng ký tài khoản tự do (Cho khách hàng từ App)
+app.post('/api/register', async (req, res) => {
+    let { username, email, password, otp } = req.body;
+
+    // Cắt bỏ khoảng trắng thừa
+    if (username) username = username.trim();
+    if (email) email = email.trim();
+
+    if (!username || !email || !password || !otp) {
+        return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ thông tin và mã OTP!' });
+    }
+    if (password.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải từ 6 ký tự!' });
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ Email không hợp lệ!' });
+
+    // Xác thực mã OTP
+    const otpKey = `reg_otp:${email.toLowerCase()}`;
+    const record = otpStorage.get(otpKey);
+
+    if (!record) {
+        return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn hoặc chưa được yêu cầu!' });
+    }
+    if (Date.now() > record.expires) {
+        otpStorage.delete(otpKey);
+        return res.status(400).json({ success: false, message: 'Mã OTP đã hết hạn!' });
+    }
+    if (record.otp !== otp) {
+        return res.status(400).json({ success: false, message: 'Mã OTP không chính xác!' });
+    }
+
+    // Kiểm tra username và email tồn tại trước khi INSERT (chống race condition lần cuối)
+    db.query('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email], async (err, results) => {
+        if (err) {
+            console.error('⚠️ [MySQL] Lỗi kiểm tra User:', err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+        }
+
+        if (results.length > 0) {
+            for (const user of results) {
+                if (user.username === username) {
+                    return res.status(400).json({ success: false, message: 'Tên tài khoản đã tồn tại!' });
+                }
+                if (user.email === email) {
+                    return res.status(400).json({ success: false, message: 'Địa chỉ Email này đã được đăng ký!' });
+                }
+            }
+        }
+
+        // Tiến hành mã hóa mật khẩu và chèn dữ liệu
         try {
             const hashed = await bcrypt.hash(password, 10);
-            // Mặc định khách tự đăng ký sẽ có role là 'user'
             db.query('INSERT INTO users (username, email, password, role, balance) VALUES (?, ?, ?, "user", 0)', [username, email, hashed], (err) => {
                 if (err) {
-                    // Vẫn giữ lại block này để xử lý lỗi race condition (2 request đăng ký cùng lúc)
                     console.error('⚠️ [MySQL] Lỗi Đăng ký User:', err.message);
                     if (err.code === 'ER_DUP_ENTRY') {
                         return res.status(400).json({ success: false, message: 'Tên tài khoản hoặc Email đã tồn tại!' });
                     }
-                    return res.status(500).json({ success: false, message: 'Lỗi Database: ' + err.message });
+                    return res.status(500).json({ success: false, message: 'Lỗi Database!' });
                 }
+                // Xóa OTP sau khi đăng ký thành công
+                otpStorage.delete(otpKey);
                 res.json({ success: true, message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.' });
             });
         } catch (error) {
