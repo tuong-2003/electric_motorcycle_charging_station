@@ -5,8 +5,8 @@ void ModbusSlaveTask::begin() {
     mb.begin(&Serial1);
     mb.slave(SLAVE_ID);
 
-    // Khởi tạo các thanh ghi (Holding Registers) bao gồm cả thanh ghi cấu hình mới
-    for (uint16_t i = 0; i <= REG_STATION_STATUS; i++) {
+    // Khởi tạo các thanh ghi (Holding Registers) bao gồm cả thanh ghi cấu hình mới và reboot
+    for (uint16_t i = 0; i <= REG_REBOOT; i++) {
         mb.addHreg(i, 0);
     }
     
@@ -60,3 +60,11 @@ void ModbusSlaveTask::clearCommandOutlet2() { mb.Hreg(REG_CMD_OUTLET2, 0xFFFF); 
 uint16_t ModbusSlaveTask::getMaxCurrent() { return mb.Hreg(REG_MAX_CURRENT); }
 uint16_t ModbusSlaveTask::getTempLimit() { return mb.Hreg(REG_TEMP_LIMIT); }
 uint16_t ModbusSlaveTask::getStationStatus() { return mb.Hreg(REG_STATION_STATUS); }
+
+int ModbusSlaveTask::getRebootCommand() {
+    return mb.Hreg(REG_REBOOT);
+}
+
+void ModbusSlaveTask::clearRebootCommand() {
+    mb.Hreg(REG_REBOOT, 0);
+}

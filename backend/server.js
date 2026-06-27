@@ -826,6 +826,25 @@ app.put('/api/stations/:id', verifyToken, (req, res) => {
     );
 });
 
+// API Gửi lệnh khởi động lại (Reboot) Tủ sạc (Chỉ Admin)
+app.post('/api/stations/:id/reboot', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền khởi động lại tủ sạc!' });
+
+    const stationId = req.params.id;
+
+    console.log(`🔄 [Admin] Gửi lệnh khởi động lại tủ sạc ${stationId}`);
+
+    // Gửi lệnh reboot qua MQTT
+    const cmdTopic = `ev_station/${stationId}/cmd`;
+    client.publish(cmdTopic, JSON.stringify({ command: 'REBOOT' }), (err) => {
+        if (err) {
+            console.error(`⚠️ [MQTT] Lỗi gửi lệnh reboot tới tủ ${stationId}:`, err.message);
+            return res.status(500).json({ success: false, message: 'Lỗi gửi lệnh điều khiển thiết bị!' });
+        }
+        res.json({ success: true, message: `Lệnh khởi động lại đã được gửi tới tủ sạc ${stationId}!` });
+    });
+});
+
 // API Lấy thông tin ví tiền của User đang đăng nhập
 app.get('/api/user/me', verifyToken, (req, res) => {
     db.query('SELECT username, role, balance FROM users WHERE id = ?', [req.user.id], (err, results) => {

@@ -24,6 +24,7 @@
 #define REG_MAX_CURRENT      12 // Cấu hình giới hạn dòng sạc tối đa x100 (Ví dụ: 10A -> 1000)
 #define REG_TEMP_LIMIT       13 // Cấu hình ngưỡng cảnh báo nhiệt độ tủ sạc (°C)
 #define REG_STATION_STATUS   14 // Cấu hình trạng thái hoạt động (0: online, 1: maintenance)
+#define REG_REBOOT           15 // Ghi 1 để Khởi động lại ESP32
 
 class ModbusSlaveTask {
 public:
@@ -40,6 +41,8 @@ public:
     uint16_t getMaxCurrent();     // Đọc ngưỡng giới hạn dòng (x100)
     uint16_t getTempLimit();      // Đọc ngưỡng giới hạn nhiệt độ
     uint16_t getStationStatus();  // Đọc trạng thái trạm (0: online, 1: maintenance)
+    int getRebootCommand();       // Đọc lệnh reboot
+    void clearRebootCommand();    // Xoá lệnh reboot
 
 private:
     ModbusRTU mb;

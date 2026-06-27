@@ -285,6 +285,17 @@ void loop() {
 
   modbus.loop();
 
+  // --- NHẬN LỆNH KHỞI ĐỘNG LẠI TỪ MODBUS ---
+  int reboot_cmd = modbus.getRebootCommand();
+  if (reboot_cmd == 1) {
+    Serial.println("LOG: Nhan lenh KHOI DONG LAI tu Gateway!");
+    modbus.clearRebootCommand();
+    tft.fillScreen(ST77XX_BLACK);
+    printCentered("REBOOTING...", 60, ST77XX_RED, ST77XX_BLACK, 2);
+    delay(1000);
+    ESP.restart();
+  }
+
   // --- ĐỌC CẤU HÌNH ĐỘNG TỪ MODBUS ---
   float max_current_limit = modbus.getMaxCurrent() / 100.0;
   if (max_current_limit <= 0.1) max_current_limit = 16.0; // Fallback an toàn

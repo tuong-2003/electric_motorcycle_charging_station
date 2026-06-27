@@ -82,7 +82,15 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
             pollAndPublishStation(stId);
         }
     }
-    // 2. Lắng nghe cấu hình (VD: ev_station/001/config)
+    // 2. Lắng nghe lệnh điều khiển trạm (VD: ev_station/001/cmd)
+    else if (sscanf(topic, "ev_station/%03d/cmd", &stId) == 1) {
+        const char *command = doc["command"];
+        if (command && strcmp(command, "REBOOT") == 0) {
+            Serial.printf("Gateway nhan lenh REBOOT cho TRAM %d từ Cloud\n", stId);
+            modbus.sendReboot(stId);
+        }
+    }
+    // 3. Lắng nghe cấu hình (VD: ev_station/001/config)
     else if (sscanf(topic, "ev_station/%03d/config", &stId) == 1) {
         float maxCurrent = doc["max_current"] | 16.0;
         int tempLimit = doc["temp_limit"] | 65;
@@ -104,6 +112,7 @@ void reconnect_mqtt() {
     if (mqtt.connect(MQTT_CLIENT_ID)) {
         Serial.println("MQTT Connected!");
         mqtt.subscribe("ev_station/+/outlet/+/cmd"); // Lắng nghe lệnh cho tất cả các tủ sạc
+        mqtt.subscribe("ev_station/+/cmd");           // Lắng nghe lệnh điều khiển toàn tủ sạc
         mqtt.subscribe("ev_station/+/config");        // Lắng nghe cấu hình cho tất cả các tủ sạc
     }
 }
