@@ -3190,8 +3190,8 @@
         // Hàm xóa chốt lỗi và khôi phục hoạt động cổng sạc (Chỉ Admin)
         function resetOutletError(stationId, outletId, event) {
             if (event) event.stopPropagation();
-            
-            showConfirm(`Bạn có chắc chắn muốn xóa chốt lỗi và khôi phục hoạt động cho Cổng ${outletId} - Tủ sạc ${stationId}?`, (confirmed) => {
+
+            showConfirm(`Bạn có chắc chắn muốn khôi phục hoạt động cho Cổng ${outletId} - Tủ sạc ${stationId}?`, (confirmed) => {
                 if (!confirmed) return;
 
                 if (!authToken) {
@@ -3206,14 +3206,14 @@
                         'Authorization': 'Bearer ' + authToken
                     }
                 })
-                .then(res => res.json())
-                .then(data => {
-                    showAlert("Hệ thống: " + data.message, data.success ? "success" : "danger");
-                })
-                .catch(err => {
-                    console.error("Lỗi khi gọi API xóa lỗi:", err);
-                    showAlert("Không thể kết nối đến Backend Server!", "danger");
-                });
+                    .then(res => res.json())
+                    .then(data => {
+                        showAlert("Hệ thống: " + data.message, data.success ? "success" : "danger");
+                    })
+                    .catch(err => {
+                        console.error("Lỗi khi gọi API xóa lỗi:", err);
+                        showAlert("Không thể kết nối đến Backend Server!", "danger");
+                    });
             });
         }
 

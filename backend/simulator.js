@@ -47,7 +47,7 @@ function createDefaultStation(id) {
 // Khi kết nối MQTT thành công
 client.on('connect', () => {
     console.log(`📶 [Simulator] Đã kết nối MQTT Broker: ${MQTT_BROKER}`);
-    
+
     // Subscribe các topic cấu hình và lệnh điều khiển cho cả 3 trạm
     Object.keys(simulatedStations).forEach(stId => {
         client.subscribe(`ev_station/${stId}/outlet/+/cmd`);
@@ -120,7 +120,7 @@ client.on('message', (topic, payload) => {
             outlet.overcurrent_injected = false;
             console.log(`🧹 [Xóa Lỗi] Đã khôi phục trạng thái Cổng ${outletId} trạm ${stId} về Sẵn sàng.`);
         }
-        
+
         publishTelemetry(stId);
         printMenu();
     }
@@ -178,7 +178,7 @@ client.on('message', (topic, payload) => {
 setInterval(() => {
     Object.keys(simulatedStations).forEach(stId => {
         const station = simulatedStations[stId];
-        
+
         // Cập nhật ngẫu nhiên nhỏ thông số nhiệt độ/độ ẩm để giả lập thực tế
         if (station.overtemp_injected) {
             station.temperature = 72.5; // Đẩy lên quá ngưỡng
@@ -285,7 +285,7 @@ function printMenu() {
     console.log('⚡ TRÌNH GIẢ LẬP TỦ SẠC XE ĐIỆN VẬT LÝ TRÊN MẠNG MQTT ⚡');
     console.log('========================================================================');
     console.log(`MQTT Broker: ${MQTT_BROKER}\n`);
-    
+
     Object.keys(simulatedStations).forEach(stId => {
         const st = simulatedStations[stId];
         let maintStr = st.status === 'maintenance' ? ' [BẢO TRÌ]' : '';

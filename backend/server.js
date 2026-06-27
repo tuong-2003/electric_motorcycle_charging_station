@@ -307,6 +307,22 @@ client.on('message', (topic, message) => {
                 if (err) console.error('⚠️ [MySQL] Lỗi ghi dữ liệu:', err.message);
             });
 
+            // Đồng bộ hóa trạng thái phiên sạc: Nếu thiết bị báo RẢNH (AVAILABLE/STANDBY/IDLE)
+            // nhưng DB vẫn nghĩ đang sạc (ongoing), nghĩa là trạm sạc vừa mất nguồn hoặc reboot.
+            // Phải chốt hóa đơn ngay lập tức!
+            if (data.status === 'AVAILABLE' || data.status === 'STANDBY' || data.status === 'IDLE') {
+                db.query(
+                    'SELECT id, user_id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"',
+                    [`${stationId}.${outletId}`],
+                    (err, activeSessions) => {
+                        if (!err && activeSessions && activeSessions.length > 0) {
+                            console.log(`🔌 [Đồng bộ] Phát hiện Cổng ${outletId} - Tủ ${stationId} báo RẢNH nhưng DB có phiên sạc ongoing. Tự động chốt phiên sạc #${activeSessions[0].id}!`);
+                            processStopCharge(stationId, outletId, activeSessions[0].user_id, () => {});
+                        }
+                    }
+                );
+            }
+
             // [MỚI] Kiểm tra bảo vệ quá tải và quá nhiệt từ cấu hình cache
             const config = stationConfigCache[stationId];
             if (config) {
@@ -750,7 +766,7 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
         db.query('SELECT id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"', [`${stationId}.${outletId}`], (err, sessions) => {
             if (sessions.length > 0) {
                 releaseLock();
-                return res.status(400).json({ success: false, message: '⛔ Trụ sạc này đang được sử dụng!' });
+                return res.status(400).json({ success: false, message: 'Trụ sạc này đang được sử dụng!' });
             }
 
             // 3. Tạo Phiên sạc mới trong Database ngay lập tức (Lạc quan - Optimistic)
@@ -1149,6 +1165,16 @@ app.post('/api/stations/:id/reboot', verifyToken, (req, res) => {
 
     console.log(`🔄 [Admin] Gửi lệnh khởi động lại tủ sạc ${stationId}`);
 
+    // Chốt các phiên sạc đang chạy của trạm này (nếu có) trước khi reboot
+    db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
+        if (!err && activeSessions) {
+            activeSessions.forEach(session => {
+                const outId = session.station_id.split('.')[1];
+                processStopCharge(stationId, outId, session.user_id, () => { });
+            });
+        }
+    });
+
     // Gửi lệnh reboot qua MQTT
     const cmdTopic = `ev_station/${stationId}/cmd`;
     client.publish(cmdTopic, JSON.stringify({ command: 'REBOOT' }), (err) => {
@@ -1171,6 +1197,16 @@ app.post('/api/stations/:id/factory-reset', verifyToken, (req, res) => {
     }
 
     console.log(`⚙️ [Admin] Gửi lệnh khôi phục cài đặt gốc tới tủ sạc ${stationId}`);
+
+    // Chốt các phiên sạc đang chạy của trạm này (nếu có) trước khi factory-reset
+    db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
+        if (!err && activeSessions) {
+            activeSessions.forEach(session => {
+                const outId = session.station_id.split('.')[1];
+                processStopCharge(stationId, outId, session.user_id, () => { });
+            });
+        }
+    });
 
     // 1. Cập nhật cấu hình mặc định trong database MySQL
     const resetQuery = `
@@ -1199,7 +1235,7 @@ app.post('/api/stations/:id/factory-reset', verifyToken, (req, res) => {
                 console.error(`⚠️ [MQTT] Lỗi gửi lệnh reset tới tủ ${stationId}:`, mqttErr.message);
                 return res.status(500).json({ success: false, message: 'Đã cập nhật DB nhưng không thể gửi lệnh tới thiết bị!' });
             }
-            
+
             // 4. Đồng bộ cấu hình mặc định qua MQTT config topic (để Gateway cập nhật lại nếu cần)
             const configTopic = `ev_station/${stationId}/config`;
             const configPayload = JSON.stringify({
@@ -1289,14 +1325,14 @@ app.post('/api/stations/:id/outlets/:outletId/reset-error', verifyToken, (req, r
             console.error(`⚠️ [MQTT] Lỗi gửi lệnh RESET_ERROR tới tủ ${stationId} ổ ${outletId}:`, err.message);
             return res.status(500).json({ success: false, message: 'Lỗi gửi lệnh điều khiển!' });
         }
-        
+
         // Cập nhật ngay trạng thái trong cache tạm thời để phản hồi UI nhanh
         const cacheData = liveDataCache[stationId];
         if (cacheData && cacheData.outletsData && cacheData.outletsData[outletId]) {
             cacheData.outletsData[outletId].status = 'AVAILABLE';
         }
 
-        res.json({ success: true, message: `Đã gửi lệnh xóa lỗi cho Cổng ${outletId} - Tủ sạc ${stationId}!` });
+        res.json({ success: true, message: `Đã khôi phục Cổng ${outletId} - Tủ sạc ${stationId}!` });
     });
 });
 
