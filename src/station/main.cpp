@@ -291,7 +291,8 @@ void updateDisplay() {
       if (outlet_error[i] == 1) { // Mới bị lỗi quá dòng
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa QR
         tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-        tft.setCursor(x_offset + 12, 45);
+        tft.setCursor(x_offset + 13,
+                      52); // Đưa chữ về chính giữa vị trí cũ của QR
         tft.print("QUA DONG!");
       } else if (prev_outlet_error[i] == 1 &&
                  outlet_error[i] == 0) { // Hết lỗi quá dòng
@@ -304,15 +305,13 @@ void updateDisplay() {
     }
 
     tft.setCursor(x_offset + 5, 83);
-
-    // Hiển thị mã lỗi nếu có, ngược lại hiển thị AVAILABLE / CHARGING
     if (outlet_error[i] == 1) {
       tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-      tft.print("ERR_OVR_I");
+      tft.print("TAM NGUNG");
     } else {
       tft.setTextColor(is_charging[i] ? ST77XX_GREEN : ST77XX_CYAN,
                        ST77XX_BLACK);
-      tft.print(is_charging[i] ? "DANG SAC " : "SAN SANG");
+      tft.print(is_charging[i] ? "DANG SAC " : "SAN SANG ");
     }
 
     tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); // Nền đen ghi đè lên số cũ

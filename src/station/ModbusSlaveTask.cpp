@@ -52,13 +52,13 @@ void ModbusSlaveTask::updateTelemetry(float temp, float hum,
 
 int ModbusSlaveTask::getCommandOutlet1() {
     uint16_t val = mb.Hreg(REG_CMD_OUTLET1);
-    if (val == 1 || val == 0) return val;
+    if (val == 1 || val == 0 || val == 2) return val;
     return -1;
 }
 
 int ModbusSlaveTask::getCommandOutlet2() {
     uint16_t val = mb.Hreg(REG_CMD_OUTLET2);
-    if (val == 1 || val == 0) return val;
+    if (val == 1 || val == 0 || val == 2) return val;
     return -1;
 }
 
