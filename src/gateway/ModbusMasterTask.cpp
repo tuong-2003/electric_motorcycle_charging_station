@@ -50,12 +50,12 @@ bool ModbusMasterTask::readStation(uint8_t slaveId, StationData &data) {
         data.temp = buffer[0] / 10.0;
         data.hum = buffer[1] / 10.0;
         
-        data.stat1 = buffer[2] == 1;
+        data.stat1 = buffer[2];
         data.v1 = buffer[3] / 10.0;
         data.a1 = buffer[4] / 100.0;
         data.w1 = buffer[5] / 10.0;
 
-        data.stat2 = buffer[6] == 1;
+        data.stat2 = buffer[6];
         data.v2 = buffer[7] / 10.0;
         data.a2 = buffer[8] / 100.0;
         data.w2 = buffer[9] / 10.0;

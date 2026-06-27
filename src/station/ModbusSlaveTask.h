@@ -31,8 +31,8 @@ public:
     void begin();
     void loop();
     void updateTelemetry(float temp, float hum, 
-                         float v1, float a1, float w1, bool stat1, 
-                         float v2, float a2, float w2, bool stat2);
+                         float v1, float a1, float w1, uint16_t stat1, 
+                         float v2, float a2, float w2, uint16_t stat2);
     int getCommandOutlet1(); // Trả về 1 (Bật), 0 (Tắt), hoặc -1 (Không có lệnh)
     int getCommandOutlet2();
     void clearCommandOutlet1();

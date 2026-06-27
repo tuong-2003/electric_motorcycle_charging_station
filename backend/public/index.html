@@ -1717,9 +1717,17 @@
                     let displayStatus = data.status;
                     const isMaint = (limits.status === 'maintenance');
 
+                    const isError = (data.status === 'OVERCURRENT' || data.status === 'OVERTEMPERATURE');
+
                     if (isMaint) {
                         badgeElem.className = "badge badge-maint-orange rounded-pill fw-normal";
                         displayStatus = "Bảo trì";
+                    } else if (data.status === 'OVERCURRENT') {
+                        badgeElem.className = "badge bg-danger rounded-pill fw-normal";
+                        displayStatus = "Quá dòng";
+                    } else if (data.status === 'OVERTEMPERATURE') {
+                        badgeElem.className = "badge bg-danger rounded-pill fw-normal";
+                        displayStatus = "Quá nhiệt";
                     } else if (data.status === 'CHARGING') {
                         badgeElem.className = "badge bg-success rounded-pill fw-normal";
                         displayStatus = "Đang sạc";
@@ -1745,6 +1753,10 @@
                                 iconWrapper.style.backgroundColor = "rgba(217, 119, 6, 0.08)";
                                 iconWrapper.style.color = "#d97706";
                                 plugIcon.style.color = "#d97706";
+                            } else if (isError) {
+                                iconWrapper.style.backgroundColor = "rgba(239, 68, 68, 0.08)";
+                                iconWrapper.style.color = "#ef4444";
+                                plugIcon.style.color = "#ef4444";
                             } else if (data.status === 'CHARGING') {
                                 iconWrapper.style.backgroundColor = "rgba(16, 185, 129, 0.08)";
                                 iconWrapper.style.color = "#10b981";
@@ -1756,10 +1768,10 @@
                             }
                         }
 
-                        // Cập nhật và Vô hiệu hóa nút gạt switch nếu tủ sạc đang ở chế độ bảo trì
+                        // Cập nhật và Vô hiệu hóa nút gạt switch nếu tủ sạc đang ở chế độ bảo trì hoặc có lỗi quá dòng/nhiệt
                         const chk = document.getElementById('switch_' + uniqueId);
                         if (chk) {
-                            chk.disabled = isMaint;
+                            chk.disabled = isMaint || isError;
                             // Chặn MQTT ghi đè nút gạt trong 2 trường hợp:
                             // 1) Đang chờ xác nhận (underConfirm)
                             // 2) Vừa gửi lệnh xong, chờ phần cứng đáp ứng (5 giây)
@@ -2808,12 +2820,20 @@
                                     const uniqueId = `${st.station_id}_${outlet.id}`;
                                     let badgeClass = "bg-light text-secondary border";
                                     let displayStatus = "Chờ...";
+                                    const isError = (outlet.status === 'OVERCURRENT' || outlet.status === 'OVERTEMPERATURE' || outlet.status === 'overcurrent' || outlet.status === 'overtemperature');
+                                    
                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
                                         badgeClass = "bg-success text-white";
                                         displayStatus = "Đang sạc";
                                     } else if (outlet.status === 'available') {
                                         badgeClass = "bg-light text-secondary border";
                                         displayStatus = "Sẵn sàng";
+                                    } else if (outlet.status === 'OVERCURRENT' || outlet.status === 'overcurrent') {
+                                        badgeClass = "bg-danger text-white";
+                                        displayStatus = "Quá dòng";
+                                    } else if (outlet.status === 'OVERTEMPERATURE' || outlet.status === 'overtemperature') {
+                                        badgeClass = "bg-danger text-white";
+                                        displayStatus = "Quá nhiệt";
                                     }
 
                                     // Nếu trạm sạc đang ở chế độ bảo trì hoặc mất kết nối
@@ -2827,15 +2847,15 @@
                                         displayStatus = "Bảo trì";
                                     }
 
-                                    const disabledAttr = (isMaint || isOffline) ? 'disabled' : '';
+                                    const disabledAttr = (isMaint || isOffline || isError) ? 'disabled' : '';
 
-                                    // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam, Mất kết nối = Đỏ)
+                                    // Màu icon động theo trạng thái của từng cổng (Bảo trì = Cam, Mất kết nối = Đỏ, Lỗi = Đỏ)
                                     let iconBg = "rgba(107, 114, 128, 0.08)";
                                     let iconColor = "#6b7280";
                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
                                         iconBg = "rgba(16, 185, 129, 0.08)";
                                         iconColor = "#10b981";
-                                    } else if (isOffline) {
+                                    } else if (isOffline || isError) {
                                         iconBg = "rgba(239, 68, 68, 0.08)";
                                         iconColor = "#ef4444";
                                     } else if (outlet.status === 'maintenance' || isMaint) {

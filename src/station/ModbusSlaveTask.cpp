@@ -33,18 +33,18 @@ void ModbusSlaveTask::loop() {
 }
 
 void ModbusSlaveTask::updateTelemetry(float temp, float hum, 
-                                      float v1, float a1, float w1, bool stat1, 
-                                      float v2, float a2, float w2, bool stat2) {
+                                      float v1, float a1, float w1, uint16_t stat1, 
+                                      float v2, float a2, float w2, uint16_t stat2) {
     // Đóng gói số thập phân thành số nguyên để truyền qua Modbus
     mb.Hreg(REG_TEMP, (uint16_t)(temp * 10));
     mb.Hreg(REG_HUM, (uint16_t)(hum * 10));
     
-    mb.Hreg(REG_OUTLET1_STATUS, stat1 ? 1 : 0);
+    mb.Hreg(REG_OUTLET1_STATUS, stat1);
     mb.Hreg(REG_OUTLET1_V, (uint16_t)(v1 * 10));
     mb.Hreg(REG_OUTLET1_A, (uint16_t)(a1 * 100));
     mb.Hreg(REG_OUTLET1_W, (uint16_t)(w1 * 10));
 
-    mb.Hreg(REG_OUTLET2_STATUS, stat2 ? 1 : 0);
+    mb.Hreg(REG_OUTLET2_STATUS, stat2);
     mb.Hreg(REG_OUTLET2_V, (uint16_t)(v2 * 10));
     mb.Hreg(REG_OUTLET2_A, (uint16_t)(a2 * 100));
     mb.Hreg(REG_OUTLET2_W, (uint16_t)(w2 * 10));

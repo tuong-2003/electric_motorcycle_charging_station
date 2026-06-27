@@ -969,6 +969,10 @@ app.get('/api/stations', verifyToken, (req, res) => {
                     }
 
                     if (!sessionInfo) {
+                        // Trả về lỗi quá dòng/quá nhiệt nếu thực tế phần cứng đang báo lỗi
+                        if (outData.status === 'OVERCURRENT' || outData.status === 'OVERTEMPERATURE') {
+                            return { ...baseOutlet, status: outData.status };
+                        }
                         // Nếu không có phiên sạc đang chạy trong DB, nhưng thực tế phần cứng đang chạy sạc (dựa vào status 'CHARGING' hoặc dòng điện > 0.05A)
                         if (outData.status === 'CHARGING' || outData.current > 0.05) {
                             return { ...baseOutlet, status: 'charging_by_other' };

@@ -11,9 +11,9 @@ struct StationData {
     bool isOnline;
     float temp;
     float hum;
-    bool stat1;
+    uint16_t stat1;
     float v1, a1, w1;
-    bool stat2;
+    uint16_t stat2;
     float v2, a2, w2;
 };
 

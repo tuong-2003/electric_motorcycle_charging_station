@@ -33,7 +33,13 @@ void pollAndPublishStation(int stationId) {
         
         // --- Đẩy JSON Cổng 1 ---
         JsonDocument doc1;
-        doc1["station_id"] = stationStr; doc1["outlet_id"] = 1; doc1["status"] = data.stat1 ? "CHARGING" : "AVAILABLE";
+        doc1["station_id"] = stationStr; 
+        doc1["outlet_id"] = 1; 
+        if (data.stat1 == 1) doc1["status"] = "CHARGING";
+        else if (data.stat1 == 2) doc1["status"] = "OVERCURRENT";
+        else if (data.stat1 == 3) doc1["status"] = "OVERTEMPERATURE";
+        else doc1["status"] = "AVAILABLE";
+        
         doc1["voltage"] = data.v1; doc1["current"] = data.a1; doc1["power"] = data.w1;
         doc1["temperature"] = data.temp; doc1["humidity"] = data.hum;
         String p1; serializeJson(doc1, p1);
@@ -42,7 +48,13 @@ void pollAndPublishStation(int stationId) {
 
         // --- Đẩy JSON Cổng 2 ---
         JsonDocument doc2;
-        doc2["station_id"] = stationStr; doc2["outlet_id"] = 2; doc2["status"] = data.stat2 ? "CHARGING" : "AVAILABLE";
+        doc2["station_id"] = stationStr; 
+        doc2["outlet_id"] = 2; 
+        if (data.stat2 == 1) doc2["status"] = "CHARGING";
+        else if (data.stat2 == 2) doc2["status"] = "OVERCURRENT";
+        else if (data.stat2 == 3) doc2["status"] = "OVERTEMPERATURE";
+        else doc2["status"] = "AVAILABLE";
+        
         doc2["voltage"] = data.v2; doc2["current"] = data.a2; doc2["power"] = data.w2;
         String p2; serializeJson(doc2, p2);
         char topic2[50]; snprintf(topic2, sizeof(topic2), "ev_station/%s/outlet/2/status", stationStr);

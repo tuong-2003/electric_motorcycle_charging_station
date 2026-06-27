@@ -61,6 +61,14 @@ int outlet_error[2] = {0, 0}; // 0: OK, 1: Quá dòng, 2: Quá nhiệt
 bool was_maintenance = false;
 bool was_offline = false;
 
+// Hàm phụ để ánh xạ trạng thái ổ sạc sang mã số nguyên Modbus
+uint16_t getOutletStatus(int index) {
+  if (is_charging[index]) return 1; // Đang sạc
+  if (outlet_error[index] == 1) return 2; // Lỗi quá dòng
+  if (outlet_error[index] == 2) return 3; // Lỗi quá nhiệt
+  return 0; // Sẵn sàng
+}
+
 // --- Nút nhấn (BOOT button) và Trạng thái WiFi AP ---
 #define BUTTON_PIN 0
 bool is_ap_active = true;
@@ -459,8 +467,8 @@ void loop() {
     modbus.clearCommandOutlet1();
     updateDisplay();
     modbus.updateTelemetry(current_temp, current_hum, 
-                           current_v[0], current_a[0], current_w[0], is_charging[0],
-                           current_v[1], current_a[1], current_w[1], is_charging[1]);
+                           current_v[0], current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1], getOutletStatus(1));
   } else if (cmd1 == 0) {
     is_charging[0] = false;
     outlet_error[0] = 0; // Xóa lỗi cũ
@@ -468,8 +476,8 @@ void loop() {
     modbus.clearCommandOutlet1();
     updateDisplay();
     modbus.updateTelemetry(current_temp, current_hum, 
-                           current_v[0], current_a[0], current_w[0], is_charging[0],
-                           current_v[1], current_a[1], current_w[1], is_charging[1]);
+                           current_v[0], current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1], getOutletStatus(1));
   }
 
   int cmd2 = modbus.getCommandOutlet2();
@@ -482,8 +490,8 @@ void loop() {
     modbus.clearCommandOutlet2();
     updateDisplay();
     modbus.updateTelemetry(current_temp, current_hum, 
-                           current_v[0], current_a[0], current_w[0], is_charging[0],
-                           current_v[1], current_a[1], current_w[1], is_charging[1]);
+                           current_v[0], current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1], getOutletStatus(1));
   } else if (cmd2 == 0) {
     is_charging[1] = false;
     outlet_error[1] = 0; // Xóa lỗi cũ
@@ -491,8 +499,8 @@ void loop() {
     modbus.clearCommandOutlet2();
     updateDisplay();
     modbus.updateTelemetry(current_temp, current_hum, 
-                           current_v[0], current_a[0], current_w[0], is_charging[0],
-                           current_v[1], current_a[1], current_w[1], is_charging[1]);
+                           current_v[0], current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1], getOutletStatus(1));
   }
 
   // --- CẬP NHẬT CẢM BIẾN LÊN THANH GHI MODBUS MỖI 5 GIÂY ---
@@ -557,8 +565,8 @@ void loop() {
 
     // Đẩy dữ liệu ra thanh ghi để Gateway đọc
     modbus.updateTelemetry(current_temp, current_hum, 
-                           current_v[0], current_a[0], current_w[0], is_charging[0],
-                           current_v[1], current_a[1], current_w[1], is_charging[1]);
+                           current_v[0], current_a[0], current_w[0], getOutletStatus(0),
+                           current_v[1], current_a[1], current_w[1], getOutletStatus(1));
     
     // Cập nhật lại các thông số V, A, W lên TFT mỗi 5 giây
     updateDisplay();
