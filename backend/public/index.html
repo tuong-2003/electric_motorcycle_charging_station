@@ -24,6 +24,7 @@
             height: 100vh;
             flex-shrink: 0;
             transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-x: hidden;
         }
 
         .sidebar.collapsed {
@@ -493,9 +494,24 @@
             display: none !important;
         }
 
-        /* Đồng bộ ẩn văn bản khi thanh bên đóng lại */
+        /* Hiệu ứng trượt chữ mượt mà từ trái sang phải */
+        .nav-text {
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity 0.25s ease, transform 0.25s ease, width 0.25s ease, margin 0.25s ease;
+            display: inline-block;
+            white-space: nowrap; /* Bắt buộc để chữ không bị rớt dòng nhảy lung tung */
+            overflow: hidden;
+            margin-left: 8px; /* Tạo khoảng cách êm ái giữa icon và chữ */
+            vertical-align: middle;
+        }
+
         .sidebar.collapsed .nav-text {
-            display: none !important;
+            opacity: 0;
+            transform: translateX(-15px); /* Lùi về trái 15px khi đóng */
+            width: 0; /* Ép kích thước về 0 để không xô lệch icon */
+            margin-left: 0;
+            visibility: hidden; /* Ẩn đi để không vô tình trỏ chuột trúng */
         }
 
         .sidebar.collapsed a {
