@@ -1510,6 +1510,15 @@
                 }
             }
 
+            const clearBtnWrapper = document.getElementById('clear_alerts_btn_wrapper');
+            if (clearBtnWrapper) {
+                if (systemAlerts.length === 0) {
+                    clearBtnWrapper.classList.add('d-none');
+                } else {
+                    clearBtnWrapper.classList.remove('d-none');
+                }
+            }
+
             if (!alertList) return;
 
             if (systemAlerts.length === 0) {
@@ -1545,15 +1554,6 @@
                 `;
             });
             alertList.innerHTML = html;
-
-            const clearBtnWrapper = document.getElementById('clear_alerts_btn_wrapper');
-            if (clearBtnWrapper) {
-                if (systemAlerts.length === 0) {
-                    clearBtnWrapper.classList.add('d-none');
-                } else {
-                    clearBtnWrapper.classList.remove('d-none');
-                }
-            }
         }
 
         function clearAllAlerts(event) {
