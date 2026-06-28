@@ -898,7 +898,10 @@
                                         có cảnh báo nào</li>
                                 </div>
                                 <div class="p-2 border-top text-center bg-light d-none" id="clear_alerts_btn_wrapper">
-                                    <button class="btn btn-link btn-sm text-decoration-none text-danger p-0 w-100 fw-semibold" style="font-size: 0.8rem;" onclick="clearAllAlerts(event)">Xóa toàn bộ cảnh báo</button>
+                                    <button
+                                        class="btn btn-link btn-sm text-decoration-none text-danger p-0 w-100 fw-semibold"
+                                        style="font-size: 0.8rem;" onclick="clearAllAlerts(event)">Xóa toàn bộ cảnh
+                                        báo</button>
                                 </div>
                             </ul>
                         </div>
@@ -1540,14 +1543,13 @@
                 }
 
                 const unreadBg = alert.isRead ? '' : 'bg-light-unread';
-                const resolvedStyle = alert.isActive ? '' : 'opacity: 0.7; text-decoration: line-through;';
-                const statusSuffix = alert.isActive ? '' : ' <span class="badge text-success ms-1 small" style="font-size: 0.65rem; background-color: rgba(16, 185, 129, 0.1);">Đã giải quyết</span>';
+                const resolvedStyle = alert.isActive ? '' : 'opacity: 0.65;';
 
                 html += `
-                <li class="alert-item ${unreadBg}" style="${resolvedStyle}">
+                <li class="alert-item ${unreadBg}" style="${resolvedStyle} cursor: pointer;" onclick="navigateToAlertTarget('${alert.id}', event)">
                     <i class="fas ${iconClass} alert-item-icon"></i>
                     <div class="alert-item-content">
-                        <div class="alert-item-desc">${alert.message}${statusSuffix}</div>
+                        <div class="alert-item-desc">${alert.message}</div>
                         <span class="alert-item-time">${timeStr}</span>
                     </div>
                 </li>
@@ -1563,6 +1565,73 @@
             if (alertDot) alertDot.classList.add('d-none');
             renderAlertList();
             updateAlertStatsCard();
+        }
+
+        function navigateToAlertTarget(alertId, event) {
+            if (event) event.stopPropagation();
+
+            const parts = alertId.split('_');
+            if (parts.length < 2) return;
+
+            const type = parts[0]; // 'current', 'temp', 'offline', etc.
+            const stationId = parts[1];
+            const outletId = parts[2] || null;
+            const uniqueId = outletId ? `${stationId}_${outletId}` : null;
+
+            // 1. Chuyển sang Tab "Trạm sạc"
+            switchTab('stations');
+
+            // 2. Chờ một khoảng rất ngắn để trình duyệt vẽ tab (nếu chưa được vẽ)
+            setTimeout(() => {
+                const mainRow = document.getElementById('station_row_' + stationId);
+                if (!mainRow) return;
+
+                // Nếu là lỗi quá dòng hoặc mất kết nối ở cổng cụ thể
+                if ((type === 'current' || type === 'offline') && outletId) {
+                    // Mở rộng chi tiết ổ cắm nếu đang đóng
+                    const expandedRow = document.getElementById('outlets_row_' + stationId);
+                    if (expandedRow && expandedRow.classList.contains('d-none')) {
+                        toggleOutletsRow(stationId, mainRow);
+                    }
+
+                    // Đợi dòng được mở rộng và vẽ xong rồi scroll + highlight
+                    setTimeout(() => {
+                        const outletCard = document.getElementById('outlet_card_' + uniqueId);
+                        if (outletCard) {
+                            outletCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            outletCard.style.outline = '2px solid #ef4444';
+                            outletCard.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.3)';
+                            setTimeout(() => {
+                                outletCard.style.transition = 'outline 0.5s, box-shadow 0.5s';
+                                outletCard.style.outline = '';
+                                outletCard.style.boxShadow = '';
+                            }, 3000);
+                        }
+                    }, 100);
+                } else if (type === 'temp') {
+                    // Cuộn tới dòng trạm sạc và highlight cột nhiệt độ
+                    mainRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const tempCell = document.getElementById('table_th_' + stationId);
+                    if (tempCell) {
+                        tempCell.style.backgroundColor = 'rgba(249, 115, 22, 0.15)'; // Màu cam nhạt
+                        setTimeout(() => {
+                            tempCell.style.transition = 'background-color 0.5s';
+                            tempCell.style.backgroundColor = '';
+                        }, 3000);
+                    }
+                } else {
+                    // Mất kết nối hoặc các lỗi chung của Tủ sạc
+                    mainRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const statusCell = document.getElementById('cabinet_status_' + stationId);
+                    if (statusCell) {
+                        statusCell.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; // Đỏ nhạt
+                        setTimeout(() => {
+                            statusCell.style.transition = 'background-color 0.5s';
+                            statusCell.style.backgroundColor = '';
+                        }, 3000);
+                    }
+                }
+            }, 50);
         }
 
         function markAlertsAsRead() {
@@ -1852,7 +1921,7 @@
 
                 // Thêm/Xóa cảnh báo quá tải dòng sạc thực tế (nếu vượt ngưỡng hoặc thiết bị báo lỗi quá dòng)
                 if (data.status === 'OVERCURRENT' || data.status === 'overcurrent') {
-                    addSystemAlert('current_' + uniqueId, `🚨 Cảnh báo: Tủ sạc ${stationId} - Cổng sạc ${outletId} đã bị ngắt do lỗi QUÁ DÒNG!`, 'danger');
+                    addSystemAlert('current_' + uniqueId, `Cảnh báo: Tủ sạc ${stationId} - Cổng sạc ${outletId} đã bị ngắt do lỗi QUÁ DÒNG!`, 'danger');
                 } else if (data.current !== undefined && data.current > limits.max_current) {
                     addSystemAlert('current_' + uniqueId, `Cổng ${stationId}.${outletId} quá tải dòng sạc: ${data.current.toFixed(2)}A! (Giới hạn: ${limits.max_current}A)`, 'danger');
                 } else {
@@ -2832,7 +2901,7 @@
                             let price = Math.round(formatNumber(st.unit_price, 3500)).toLocaleString('vi-VN') + ' đ';
                             let isExpanded = expandedStations.has(st.station_id);
 
-                            tbody.innerHTML += `<tr class="align-middle" style="cursor: pointer;" onclick="toggleOutletsRow('${st.station_id}', this)">
+                            tbody.innerHTML += `<tr id="station_row_${st.station_id}" class="align-middle" style="cursor: pointer;" onclick="toggleOutletsRow('${st.station_id}', this)">
                         <td>
                             <button class="btn btn-link btn-sm text-secondary p-0" onclick="event.stopPropagation(); toggleOutletsRow('${st.station_id}', this.parentElement.parentElement)">
                                 <i class="fas fa-chevron-right transition-rotate ${isExpanded ? 'rotate-90' : ''}"></i>
@@ -2913,7 +2982,7 @@
                                     }
 
                                     return `
-                                     <div class="col-md-6">
+                                     <div class="col-md-6" id="outlet_card_${uniqueId}">
                                          <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-white shadow-sm">
                                              <div class="d-flex align-items-center" style="width: 25%;">
                                                  <div class="icon-wrapper-stat me-2" style="width: 32px; height: 32px; background-color: ${iconBg}; color: ${iconColor}; border-radius: 6px; flex-shrink: 0; display:flex; align-items:center; justify-content:center;">
