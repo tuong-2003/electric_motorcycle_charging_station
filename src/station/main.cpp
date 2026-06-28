@@ -214,6 +214,7 @@ void factoryResetStation() {
 // Hàm cập nhật giao diện màn hình TFT (Chỉ cập nhật phần động, KHÔNG xóa toàn
 // bộ nền)
 void updateDisplay() {
+  bool screen_cleared = false;
   uint16_t station_status_val = modbus.getStationStatus();
   bool is_maintenance = (station_status_val == 1);
   bool is_offline =
@@ -231,6 +232,7 @@ void updateDisplay() {
   if (was_offline) {
     was_offline = false;
     initDisplay();
+    screen_cleared = true;
   }
 
   // Quản lý chuyển đổi màn hình bảo trì để chống Flicker
@@ -246,6 +248,7 @@ void updateDisplay() {
   if (was_maintenance) {
     was_maintenance = false;
     initDisplay();
+    screen_cleared = true;
   }
 
   // Quản lý chuyển đổi màn hình quá nhiệt toàn tủ để chống Flicker
@@ -269,6 +272,7 @@ void updateDisplay() {
   if (was_overtemp) {
     was_overtemp = false;
     initDisplay();
+    screen_cleared = true;
   }
 
   tft.setTextSize(1);
@@ -288,6 +292,7 @@ void updateDisplay() {
     tft.initR(INITR_BLACKTAB); // Reset và nạp lại cấu hình màn hình chống nhiễu EMI
     tft.setRotation(1);
     initDisplay();
+    screen_cleared = true;
   }
 
   // 1. Cập nhật thanh trạng thái (Top Bar)
@@ -302,7 +307,7 @@ void updateDisplay() {
     int x_offset = i * 80; // Cột trái cho ổ 1, Cột phải cho ổ 2
 
     // Quản lý ẩn hiện QR Code theo trạng thái lỗi quá dòng cục bộ
-    if (need_reinit) {
+    if (screen_cleared) {
       if (outlet_error[i] == 1) { // Đang bị lỗi quá dòng
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa QR
         tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
