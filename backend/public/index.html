@@ -1808,7 +1808,13 @@
                 const statusCol = document.getElementById('cabinet_status_' + stationId);
                 if (statusCol) {
                     const tempLimit = limits ? (limits.temp_limit || 65) : 65;
-                    const isOverTemp = (data.temperature !== undefined && data.temperature > tempLimit) || (data.status === 'OVERTEMPERATURE');
+                    const tempEl = document.getElementById('temp_' + stationId);
+                    const currentCachedTemp = tempEl ? parseFloat(tempEl.innerText) : null;
+                    const tempVal = (data.temperature !== undefined) ? data.temperature : currentCachedTemp;
+                    const isOverTemp = (tempVal !== null && !isNaN(tempVal) && tempVal > tempLimit) || 
+                                       (data.status === 'OVERTEMPERATURE' || data.status === 'overtemperature') ||
+                                       (document.getElementById('stat_badge_' + stationId + '_1')?.innerText === 'Quá nhiệt') ||
+                                       (document.getElementById('stat_badge_' + stationId + '_2')?.innerText === 'Quá nhiệt');
 
                     if (limits.status === 'maintenance') {
                         statusCol.innerHTML = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
