@@ -1749,15 +1749,15 @@
                     let displayStatus = data.status;
                     const isMaint = (limits.status === 'maintenance');
 
-                    const isError = (data.status === 'OVERCURRENT' || data.status === 'OVERTEMPERATURE');
+                    const isError = (data.status === 'OVERCURRENT' || data.status === 'OVERTEMPERATURE' || data.status === 'overcurrent' || data.status === 'overtemperature');
 
                     if (isMaint) {
                         badgeElem.className = "badge badge-maint-orange rounded-pill fw-normal";
                         displayStatus = "Bảo trì";
-                    } else if (data.status === 'OVERCURRENT') {
+                    } else if (data.status === 'OVERCURRENT' || data.status === 'overcurrent') {
                         badgeElem.className = "badge bg-danger rounded-pill fw-normal";
                         displayStatus = "Quá dòng";
-                    } else if (data.status === 'OVERTEMPERATURE') {
+                    } else if (data.status === 'OVERTEMPERATURE' || data.status === 'overtemperature') {
                         badgeElem.className = "badge bg-danger rounded-pill fw-normal";
                         displayStatus = "Quá nhiệt";
                     } else if (data.status === 'CHARGING') {
@@ -1850,8 +1850,10 @@
                     if (humEl) humEl.innerText = data.humidity;
                 }
 
-                // [MỚI] Thêm/Xóa cảnh báo quá tải dòng sạc thực tế (nếu vượt ngưỡng)
-                if (data.current !== undefined && data.current > limits.max_current) {
+                // Thêm/Xóa cảnh báo quá tải dòng sạc thực tế (nếu vượt ngưỡng hoặc thiết bị báo lỗi quá dòng)
+                if (data.status === 'OVERCURRENT' || data.status === 'overcurrent') {
+                    addSystemAlert('current_' + uniqueId, `🚨 Cảnh báo: Tủ sạc ${stationId} - Cổng sạc ${outletId} đã bị ngắt do lỗi QUÁ DÒNG!`, 'danger');
+                } else if (data.current !== undefined && data.current > limits.max_current) {
                     addSystemAlert('current_' + uniqueId, `Cổng ${stationId}.${outletId} quá tải dòng sạc: ${data.current.toFixed(2)}A! (Giới hạn: ${limits.max_current}A)`, 'danger');
                 } else {
                     removeSystemAlert('current_' + uniqueId);
