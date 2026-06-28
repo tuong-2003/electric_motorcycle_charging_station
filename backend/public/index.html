@@ -1155,6 +1155,7 @@
                                         <tr>
                                             <th style="width: 80px;">Mã HĐ</th>
                                             <th id="th_history_user" class="d-none">Người dùng</th>
+                                            <th id="th_history_role" class="d-none">Phân quyền</th>
                                             <th>Tủ / Cổng</th>
                                             <th>Bắt đầu</th>
                                             <th>Kết thúc</th>
@@ -2525,17 +2526,19 @@
                             let kwhFormat = rowKwh.toFixed(3);
                             let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
 
-                                                        let roleBadge = '';
-                            if (row.role === 'admin') {
-                                roleBadge = '<span class="badge bg-danger ms-1" style="font-size: 0.65rem; padding: 2px 4px; vertical-align: middle;" title="Admin">A</span>';
-                            } else if (row.role === 'user') {
-                                roleBadge = '<span class="badge bg-primary ms-1" style="font-size: 0.65rem; padding: 2px 4px; vertical-align: middle;" title="User">U</span>';
+                                                        let userTd = '';
+                            let roleTd = '';
+                            if (currentUserRole === 'admin') {
+                                userTd = `<td>${row.username || '-'}</td>`;
+                                const roleText = row.role === 'admin' ? 'Admin' : 'User';
+                                const badgeClass = row.role === 'admin' ? 'bg-danger' : 'bg-primary';
+                                roleTd = `<td><span class="badge ${badgeClass}" style="padding: 4px 8px; font-size: 0.75rem;">${roleText}</span></td>`;
                             }
-                            let userTd = currentUserRole === 'admin' ? `<td>${row.username || '-'}${roleBadge}</td>` : '';
 
                             tbody.innerHTML += `<tr>
                                 <td>#${row.id}</td>
                                 ${userTd}
+                                ${roleTd}
                                 <td>${row.station_id}</td>
                                 <td>${row.start}</td>
                                 <td>${row.end || '-'}</td>
@@ -2551,7 +2554,7 @@
                         document.getElementById('summary_total_cost').innerText = totalCost.toLocaleString('vi-VN');
 
                         if (data.data.length === 0) {
-                            const colCount = currentUserRole === 'admin' ? 8 : 7;
+                            const colCount = currentUserRole === 'admin' ? 9 : 7;
                             tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-muted py-3">Không tìm thấy hóa đơn nào trong khoảng thời gian này!</td></tr>`;
                         }
                     }
@@ -2561,7 +2564,7 @@
                     document.getElementById('summary_total_sessions').innerText = '0';
                     document.getElementById('summary_total_kwh').innerText = '0.00';
                     document.getElementById('summary_total_cost').innerText = '0';
-                    showTableError('history_table_body', currentUserRole === 'admin' ? 8 : 7, 'Không tải được hóa đơn. Vui lòng thử lại hoặc kiểm tra Backend.');
+                    showTableError('history_table_body', currentUserRole === 'admin' ? 9 : 7, 'Không tải được hóa đơn. Vui lòng thử lại hoặc kiểm tra Backend.');
                 });
         }
 
