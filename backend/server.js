@@ -891,7 +891,7 @@ app.get('/api/telemetry/history', (req, res) => {
 // API Lấy danh sách lịch sử sạc cá nhân hoặc tất cả (đối với Admin)
 app.get('/api/sessions/history', verifyToken, (req, res) => {
     const { startDate, endDate, stationId, username, limit } = req.query;
-    const queryLimit = parseInt(limit as string) > 0 ? parseInt(limit as string) : 200;
+    const queryLimit = parseInt(String(limit)) > 0 ? parseInt(String(limit)) : 200;
 
     let sql = `
         SELECT s.id, s.station_id, u.username,
