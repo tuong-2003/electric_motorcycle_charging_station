@@ -2526,13 +2526,13 @@
                             let kwhFormat = rowKwh.toFixed(3);
                             let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
 
-                                                        let userTd = '';
+                            let userTd = '';
                             let roleTd = '';
                             if (currentUserRole === 'admin') {
                                 userTd = `<td>${row.username || '-'}</td>`;
                                 const roleText = row.role === 'admin' ? 'Admin' : 'User';
-                                const badgeClass = row.role === 'admin' ? 'bg-danger' : 'bg-primary';
-                                roleTd = `<td><span class="badge ${badgeClass}" style="padding: 4px 8px; font-size: 0.75rem;">${roleText}</span></td>`;
+                                const textColor = row.role === 'admin' ? 'text-danger fw-semibold' : 'text-secondary';
+                                roleTd = `<td><span class="${textColor}">${roleText}</span></td>`;
                             }
 
                             tbody.innerHTML += `<tr>
