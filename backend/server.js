@@ -33,7 +33,7 @@ const db = mysql.createPool({
     database: process.env.DB_NAME || 'ev_station',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 1,
+    connectionLimit: 2,
     queueLimit: 0,
     timezone: '+07:00' // Bổ sung cấu hình này để driver format đúng Date objects
 });
@@ -275,6 +275,9 @@ client.on('connect', () => {
     });
 });
 
+// Trạng thái quá nhiệt của các tủ sạc để chống spam
+const cabinetOvertempState = {};
+
 // Hứng dữ liệu ESP32 gửi lên
 client.on('message', (topic, message) => {
     const parts = topic.split('/');
@@ -347,21 +350,29 @@ client.on('message', (topic, message) => {
 
                 // 2. Kiểm tra quá nhiệt (overtemperature protection)
                 if (data.temperature && data.temperature > config.temp_limit) {
-                    console.warn(`🚨 [BẢO VỆ] Phát hiện quá nhiệt tại Tủ ${stationId}: ${data.temperature}°C (Giới hạn: ${config.temp_limit}°C). Đang ngắt sạc toàn tủ!`);
+                    if (!cabinetOvertempState[stationId]) {
+                        cabinetOvertempState[stationId] = true;
+                        console.warn(`🚨 [BẢO VỆ] Phát hiện quá nhiệt tại Tủ ${stationId}: ${data.temperature}°C (Giới hạn: ${config.temp_limit}°C). Đang ngắt sạc toàn tủ!`);
 
-                    // Gửi lệnh ngắt sạc qua MQTT cho cả 2 cổng
-                    client.publish(`ev_station/${stationId}/outlet/1/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
-                    client.publish(`ev_station/${stationId}/outlet/2/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                        // Gửi lệnh ngắt sạc qua MQTT cho cả 2 cổng
+                        client.publish(`ev_station/${stationId}/outlet/1/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
+                        client.publish(`ev_station/${stationId}/outlet/2/cmd`, JSON.stringify({ command: 'STOP_CHARGE' }));
 
-                    // Chốt toàn bộ phiên sạc đang sạc của trạm này
-                    db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
-                        if (!err && activeSessions) {
-                            activeSessions.forEach(session => {
-                                const outId = session.station_id.split('.')[1];
-                                processStopCharge(stationId, outId, session.user_id, () => { });
-                            });
-                        }
-                    });
+                        // Chốt toàn bộ phiên sạc đang sạc của trạm này
+                        db.query('SELECT user_id, station_id FROM charging_sessions WHERE station_id LIKE ? AND status = "ongoing"', [`${stationId}.%`], (err, activeSessions) => {
+                            if (!err && activeSessions) {
+                                activeSessions.forEach(session => {
+                                    const outId = session.station_id.split('.')[1];
+                                    processStopCharge(stationId, outId, session.user_id, () => { });
+                                });
+                            }
+                        });
+                    }
+                } else if (data.temperature && data.temperature <= config.temp_limit) {
+                    if (cabinetOvertempState[stationId]) {
+                        cabinetOvertempState[stationId] = false;
+                        console.log(`✅ [BẢO VỆ] Tủ sạc ${stationId} đã nguội xuống mức an toàn (${data.temperature}°C).`);
+                    }
                 }
             }
         } catch (error) {
