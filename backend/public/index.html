@@ -1567,9 +1567,7 @@
             updateAlertStatsCard();
         }
 
-        function navigateToAlertTarget(alertId, event) {
-            if (event) event.stopPropagation();
-
+        function performNavigationToElement(alertId) {
             const parts = alertId.split('_');
             if (parts.length < 2) return;
 
@@ -1578,60 +1576,78 @@
             const outletId = parts[2] || null;
             const uniqueId = outletId ? `${stationId}_${outletId}` : null;
 
-            // 1. Chuyển sang Tab "Trạm sạc"
+            const mainRow = document.getElementById('station_row_' + stationId);
+            if (!mainRow) return;
+
+            // Nếu là lỗi quá dòng hoặc mất kết nối ở cổng cụ thể
+            if ((type === 'current' || type === 'offline') && outletId) {
+                // Mở rộng chi tiết ổ cắm nếu đang đóng
+                const expandedRow = document.getElementById('outlets_row_' + stationId);
+                if (expandedRow && expandedRow.classList.contains('d-none')) {
+                    toggleOutletsRow(stationId, mainRow);
+                }
+
+                // Đợi dòng được mở rộng và vẽ xong rồi scroll + highlight
+                setTimeout(() => {
+                    const outletCard = document.getElementById('outlet_card_' + uniqueId);
+                    if (outletCard) {
+                        outletCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        outletCard.style.outline = '2px solid #ef4444';
+                        outletCard.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.3)';
+                        setTimeout(() => {
+                            outletCard.style.transition = 'outline 0.5s, box-shadow 0.5s';
+                            outletCard.style.outline = '';
+                            outletCard.style.boxShadow = '';
+                        }, 3000);
+                    }
+                }, 150);
+            } else if (type === 'temp') {
+                // Cuộn tới dòng trạm sạc và highlight cột nhiệt độ
+                mainRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const tempCell = document.getElementById('table_th_' + stationId);
+                if (tempCell) {
+                    tempCell.style.backgroundColor = 'rgba(249, 115, 22, 0.15)'; // Màu cam nhạt
+                    setTimeout(() => {
+                        tempCell.style.transition = 'background-color 0.5s';
+                        tempCell.style.backgroundColor = '';
+                    }, 3000);
+                }
+            } else {
+                // Mất kết nối hoặc các lỗi chung của Tủ sạc
+                mainRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const statusCell = document.getElementById('cabinet_status_' + stationId);
+                if (statusCell) {
+                    statusCell.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; // Đỏ nhạt
+                    setTimeout(() => {
+                        statusCell.style.transition = 'background-color 0.5s';
+                        statusCell.style.backgroundColor = '';
+                    }, 3000);
+                }
+            }
+        }
+
+        // Định vị mục tiêu điều hướng đang chờ
+        window.pendingAlertNavigation = null;
+
+        function navigateToAlertTarget(alertId, event) {
+            if (event) event.stopPropagation();
+
+            const parts = alertId.split('_');
+            if (parts.length < 2) return;
+            const stationId = parts[1];
+
+            // 1. Ghi nhận yêu cầu điều hướng đang chờ
+            window.pendingAlertNavigation = alertId;
+
+            // 2. Chuyển sang Tab "Trạm sạc" (sẽ kích hoạt loadStations nếu chưa load)
             switchTab('stations');
 
-            // 2. Chờ một khoảng rất ngắn để trình duyệt vẽ tab (nếu chưa được vẽ)
-            setTimeout(() => {
-                const mainRow = document.getElementById('station_row_' + stationId);
-                if (!mainRow) return;
-
-                // Nếu là lỗi quá dòng hoặc mất kết nối ở cổng cụ thể
-                if ((type === 'current' || type === 'offline') && outletId) {
-                    // Mở rộng chi tiết ổ cắm nếu đang đóng
-                    const expandedRow = document.getElementById('outlets_row_' + stationId);
-                    if (expandedRow && expandedRow.classList.contains('d-none')) {
-                        toggleOutletsRow(stationId, mainRow);
-                    }
-
-                    // Đợi dòng được mở rộng và vẽ xong rồi scroll + highlight
-                    setTimeout(() => {
-                        const outletCard = document.getElementById('outlet_card_' + uniqueId);
-                        if (outletCard) {
-                            outletCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            outletCard.style.outline = '2px solid #ef4444';
-                            outletCard.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.3)';
-                            setTimeout(() => {
-                                outletCard.style.transition = 'outline 0.5s, box-shadow 0.5s';
-                                outletCard.style.outline = '';
-                                outletCard.style.boxShadow = '';
-                            }, 3000);
-                        }
-                    }, 100);
-                } else if (type === 'temp') {
-                    // Cuộn tới dòng trạm sạc và highlight cột nhiệt độ
-                    mainRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    const tempCell = document.getElementById('table_th_' + stationId);
-                    if (tempCell) {
-                        tempCell.style.backgroundColor = 'rgba(249, 115, 22, 0.15)'; // Màu cam nhạt
-                        setTimeout(() => {
-                            tempCell.style.transition = 'background-color 0.5s';
-                            tempCell.style.backgroundColor = '';
-                        }, 3000);
-                    }
-                } else {
-                    // Mất kết nối hoặc các lỗi chung của Tủ sạc
-                    mainRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    const statusCell = document.getElementById('cabinet_status_' + stationId);
-                    if (statusCell) {
-                        statusCell.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; // Đỏ nhạt
-                        setTimeout(() => {
-                            statusCell.style.transition = 'background-color 0.5s';
-                            statusCell.style.backgroundColor = '';
-                        }, 3000);
-                    }
-                }
-            }, 50);
+            // 3. Nếu các dòng bảng đã được vẽ sẵn (đã load từ trước), thực hiện điều hướng ngay lập tức
+            const mainRow = document.getElementById('station_row_' + stationId);
+            if (mainRow) {
+                window.pendingAlertNavigation = null; // Đã tìm thấy, xóa hàng chờ
+                performNavigationToElement(alertId);
+            }
         }
 
         function markAlertsAsRead() {
@@ -3026,6 +3042,13 @@
                                 </td>
                             </tr>`;
                         });
+
+                        // [MỚI] Thực hiện điều hướng/highlight nếu có yêu cầu điều hướng đang chờ
+                        if (window.pendingAlertNavigation) {
+                            const alertId = window.pendingAlertNavigation;
+                            window.pendingAlertNavigation = null;
+                            performNavigationToElement(alertId);
+                        }
                     }
                 })
                 .catch(err => {
