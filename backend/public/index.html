@@ -1843,7 +1843,8 @@
                     // Hiện/Ẩn nút Khôi phục lỗi tùy theo trạng thái lỗi
                     const resetBtnContainer = document.getElementById('btn_reset_error_' + uniqueId);
                     if (resetBtnContainer) {
-                        if (isError) {
+                        const isOvercurrent = (data.status === 'OVERCURRENT' || data.status === 'overcurrent');
+                        if (isOvercurrent) {
                             resetBtnContainer.classList.remove('d-none');
                         } else {
                             resetBtnContainer.classList.add('d-none');
@@ -2939,6 +2940,7 @@
                                     let badgeClass = "bg-light text-secondary border";
                                     let displayStatus = "Chờ...";
                                     const isError = (outlet.status === 'OVERCURRENT' || outlet.status === 'OVERTEMPERATURE' || outlet.status === 'overcurrent' || outlet.status === 'overtemperature');
+                                    const isOvercurrent = (outlet.status === 'OVERCURRENT' || outlet.status === 'overcurrent');
 
                                     if (outlet.status === 'charging_by_me' || outlet.status === 'charging_by_other') {
                                         badgeClass = "bg-success text-white";
@@ -2991,7 +2993,7 @@
                                                  <div>
                                                      <div class="fw-bold text-dark" style="font-size: 0.85rem;">Cổng ${outlet.id}</div>
                                                      <span id="stat_badge_${uniqueId}" class="badge ${badgeClass} rounded-pill fw-normal mt-1" style="font-size: 0.7rem;">${displayStatus}</span>
-                                                     <div id="btn_reset_error_${uniqueId}" class="${isError ? '' : 'd-none'} mt-1">
+                                                     <div id="btn_reset_error_${uniqueId}" class="${isOvercurrent ? '' : 'd-none'} mt-1">
                                                          <button class="btn btn-xs btn-outline-danger py-0 px-1 fw-bold" style="font-size: 0.65rem; border-radius: 4px; line-height: 1.4;" onclick="resetOutletError('${st.station_id}', ${outlet.id}, event)">Khôi phục</button>
                                                      </div>
                                                  </div>

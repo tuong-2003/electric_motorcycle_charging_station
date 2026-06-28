@@ -664,7 +664,9 @@ void loop() {
       if (current_temp > temp_limit_val) {
         for (int i = 0; i < 2; i++) {
           is_charging[i] = false;
-          outlet_error[i] = 2; // Lỗi quá nhiệt (2)
+          if (outlet_error[i] != 1) {
+            outlet_error[i] = 2; // Lỗi quá nhiệt (2)
+          }
         }
         digitalWrite(RELAY1_PIN, HIGH);
         digitalWrite(RELAY2_PIN, HIGH);
