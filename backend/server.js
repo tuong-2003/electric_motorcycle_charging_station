@@ -490,7 +490,7 @@ client.on('message', (topic, message) => {
 
 // API Đăng nhập ảo
 app.post('/api/login', (req, res) => {
-    let { username, password, rememberMe } = req.body;
+    let { username, password, rememberMe, clientType } = req.body;
 
     // Tự động cắt bỏ dấu cách thừa do bàn phím điện thoại tự chèn vào
     if (username) username = username.trim();
@@ -533,6 +533,14 @@ app.post('/api/login', (req, res) => {
         }
 
         if (isMatch) {
+            // Phân quyền rõ ràng dựa vào clientType đăng nhập
+            if (clientType === 'web' && user.role !== 'admin') {
+                return res.status(403).json({ success: false, message: 'Tài khoản không có quyền truy cập Web Dashboard!' });
+            }
+            if (clientType === 'app' && user.role !== 'user') {
+                return res.status(403).json({ success: false, message: 'Tài khoản không được phép đăng nhập App!' });
+            }
+
             const expireTime = rememberMe ? '30d' : '1d';
             const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, SECRET_KEY, { expiresIn: expireTime });
             res.json({ success: true, token: token, message: `Đăng nhập thành công! Xin chào ${user.role} ${user.username}` });

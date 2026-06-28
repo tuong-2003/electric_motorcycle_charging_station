@@ -2283,7 +2283,7 @@
             fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p, rememberMe: rememberMe })
+                body: JSON.stringify({ username: u, password: p, rememberMe: rememberMe, clientType: 'web' })
             })
                 .then(response => response.json())
                 .then(data => {
