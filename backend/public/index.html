@@ -2525,7 +2525,13 @@
                             let kwhFormat = rowKwh.toFixed(3);
                             let badge = row.status === 'completed' ? '<span class="badge bg-success">Hoàn tất</span>' : '<span class="badge bg-warning text-dark">Đang sạc</span>';
 
-                            let userTd = currentUserRole === 'admin' ? `<td>${row.username || '-'}</td>` : '';
+                                                        let roleBadge = '';
+                            if (row.role === 'admin') {
+                                roleBadge = '<span class="badge bg-danger ms-1" style="font-size: 0.65rem; padding: 2px 4px; vertical-align: middle;" title="Admin">A</span>';
+                            } else if (row.role === 'user') {
+                                roleBadge = '<span class="badge bg-primary ms-1" style="font-size: 0.65rem; padding: 2px 4px; vertical-align: middle;" title="User">U</span>';
+                            }
+                            let userTd = currentUserRole === 'admin' ? `<td>${row.username || '-'}${roleBadge}</td>` : '';
 
                             tbody.innerHTML += `<tr>
                                 <td>#${row.id}</td>

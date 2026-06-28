@@ -1014,7 +1014,7 @@ app.get('/api/sessions/history', verifyToken, (req, res) => {
     const queryLimit = parseInt(String(limit)) > 0 ? parseInt(String(limit)) : 200;
 
     let sql = `
-        SELECT s.id, s.station_id, u.username,
+        SELECT s.id, s.station_id, u.username, u.role,
                DATE_FORMAT(s.start_time, '%d/%m/%Y %H:%i:%s') as start, 
                DATE_FORMAT(s.end_time, '%d/%m/%Y %H:%i:%s') as end, 
                s.total_kwh, s.total_cost, s.status 
