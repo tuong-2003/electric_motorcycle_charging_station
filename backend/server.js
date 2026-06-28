@@ -390,8 +390,26 @@ client.on('message', (topic, message) => {
             // Phải chốt hóa đơn ngay lập tức để đồng bộ thời gian thực!
             const isIdleStatus = ['AVAILABLE', 'STANDBY', 'IDLE'].includes(data.status);
             const isErrorOrMaintStatus = ['OVERCURRENT', 'OVERTEMPERATURE', 'ERROR', 'MAINTENANCE'].includes(data.status);
+
+            // Kiểm tra cờ chuyển đổi trạng thái tạm thời (startPending) để tránh race condition khi vừa bật sạc
+            const oldOutletData = liveDataCache[stationId]?.outletsData?.[outletId];
+            let isStartPending = false;
+            if (oldOutletData && oldOutletData.startPending) {
+                if (Date.now() - oldOutletData.startPendingTime < 8000) {
+                    if (data.status === 'CHARGING') {
+                        // Đã nhận phản hồi chuyển đổi trạng thái thành công -> Xóa cờ ngay lập tức
+                        oldOutletData.startPending = false;
+                    } else {
+                        // Vẫn đang ở trạng thái cũ -> Bật cờ chặn auto-stop
+                        isStartPending = true;
+                    }
+                } else {
+                    // Quá timeout 8 giây -> Tự động hủy cờ
+                    oldOutletData.startPending = false;
+                }
+            }
             
-            if (isIdleStatus || isErrorOrMaintStatus) {
+            if ((isIdleStatus && !isStartPending) || isErrorOrMaintStatus) {
                 db.query(
                     'SELECT id, user_id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"',
                     [`${stationId}.${outletId}`],
@@ -875,6 +893,15 @@ app.post('/api/charge/start', verifyToken, (req, res) => {
                 if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo phiên sạc trên Database!' });
 
                 console.log(`📲 [API] User [${req.user.username}] bắt đầu sạc tại Tủ ${stationId}, Ổ ${outletId}`);
+
+                // Cài đặt cờ startPending để chặn gói tin trạng thái cũ (AVAILABLE/STANDBY) làm tắt sạc
+                if (!liveDataCache[stationId]) liveDataCache[stationId] = {};
+                if (!liveDataCache[stationId].outletsData) liveDataCache[stationId].outletsData = {};
+                liveDataCache[stationId].outletsData[outletId] = {
+                    ...liveDataCache[stationId].outletsData[outletId],
+                    startPending: true,
+                    startPendingTime: Date.now()
+                };
 
                 // Gửi lệnh sạc xuống thiết bị qua MQTT
                 const topicCmd = `ev_station/${stationId}/outlet/${outletId}/cmd`;
