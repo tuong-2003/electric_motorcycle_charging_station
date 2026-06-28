@@ -2240,10 +2240,12 @@
                         if (currentUserRole === 'admin') {
                             document.getElementById('history_username_group')?.classList.remove('d-none');
                             document.getElementById('th_history_user')?.classList.remove('d-none');
+                            document.getElementById('th_history_role')?.classList.remove('d-none');
                             document.getElementById('btn_clear_history')?.classList.add('d-none');
                         } else {
                             document.getElementById('history_username_group')?.classList.add('d-none');
                             document.getElementById('th_history_user')?.classList.add('d-none');
+                            document.getElementById('th_history_role')?.classList.add('d-none');
                             document.getElementById('btn_clear_history')?.classList.remove('d-none');
                         }
 
