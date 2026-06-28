@@ -289,6 +289,11 @@ void updateDisplay() {
     // Quản lý ẩn hiện QR Code theo trạng thái lỗi quá dòng cục bộ
     if (outlet_error[i] != prev_outlet_error[i]) {
       if (outlet_error[i] == 1) { // Mới bị lỗi quá dòng
+        delay(150); // Chờ 150ms để xung nhiễu dập tắt hoàn toàn
+        tft.initR(INITR_BLACKTAB); // Reset và nạp lại cấu hình màn hình chống nhiễu EMI làm trắng màn
+        tft.setRotation(1);
+        initDisplay();
+        
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa QR
         tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
         tft.setCursor(x_offset + 13,
@@ -296,6 +301,11 @@ void updateDisplay() {
         tft.print("QUA DONG!");
       } else if (prev_outlet_error[i] == 1 &&
                  outlet_error[i] == 0) { // Hết lỗi quá dòng
+        delay(150); // Chờ 150ms tránh nhiễu chuyển mạch cơ khí
+        tft.initR(INITR_BLACKTAB);
+        tft.setRotation(1);
+        initDisplay();
+
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa chữ báo lỗi
         char qrText[10];
         snprintf(qrText, sizeof(qrText), "%03d.%d", STATION_ID, i + 1);

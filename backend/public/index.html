@@ -897,6 +897,9 @@
                                     <li class="dropdown-item text-center py-3 text-muted small" id="no_alerts_msg">Không
                                         có cảnh báo nào</li>
                                 </div>
+                                <div class="p-2 border-top text-center bg-light d-none" id="clear_alerts_btn_wrapper">
+                                    <button class="btn btn-link btn-sm text-decoration-none text-danger p-0 w-100 fw-semibold" style="font-size: 0.8rem;" onclick="clearAllAlerts(event)">Xóa toàn bộ cảnh báo</button>
+                                </div>
                             </ul>
                         </div>
 
@@ -1455,13 +1458,15 @@
                 existing.type = type;
                 existing.timestamp = Date.now();
                 existing.isRead = false;
+                existing.isActive = true; // Cập nhật lại trạng thái kích hoạt nếu xuất hiện lại
             } else {
                 systemAlerts.push({
                     id: id,
                     message: message,
                     type: type,
                     timestamp: Date.now(),
-                    isRead: false
+                    isRead: false,
+                    isActive: true
                 });
             }
 
@@ -1477,10 +1482,10 @@
         }
 
         function removeSystemAlert(id) {
-            const initialLength = systemAlerts.length;
-            systemAlerts = systemAlerts.filter(a => a.id !== id);
+            const alert = systemAlerts.find(a => a.id === id);
+            if (alert && alert.isActive) {
+                alert.isActive = false; // Đánh dấu đã giải quyết (không còn là hiện tại)
 
-            if (systemAlerts.length !== initialLength) {
                 const hasUnread = systemAlerts.some(a => !a.isRead);
                 const alertDot = document.getElementById('nav_alert_dot');
                 if (alertDot && !hasUnread) {
@@ -1517,25 +1522,47 @@
                 const timeStr = new Date(alert.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
                 let iconClass = 'fa-exclamation-circle text-warning';
-                if (alert.type === 'danger') {
+                if (!alert.isActive) {
+                    iconClass = 'fa-circle-check text-success';
+                } else if (alert.type === 'danger') {
                     iconClass = 'fa-circle-exclamation text-danger';
                 } else if (alert.type === 'info') {
                     iconClass = 'fa-info-circle text-info';
                 }
 
                 const unreadBg = alert.isRead ? '' : 'bg-light-unread';
+                const resolvedStyle = alert.isActive ? '' : 'opacity: 0.7; text-decoration: line-through;';
+                const statusSuffix = alert.isActive ? '' : ' <span class="badge text-success ms-1 small" style="font-size: 0.65rem; background-color: rgba(16, 185, 129, 0.1);">Đã giải quyết</span>';
 
                 html += `
-                <li class="alert-item ${unreadBg}">
+                <li class="alert-item ${unreadBg}" style="${resolvedStyle}">
                     <i class="fas ${iconClass} alert-item-icon"></i>
                     <div class="alert-item-content">
-                        <div class="alert-item-desc">${alert.message}</div>
+                        <div class="alert-item-desc">${alert.message}${statusSuffix}</div>
                         <span class="alert-item-time">${timeStr}</span>
                     </div>
                 </li>
                 `;
             });
             alertList.innerHTML = html;
+
+            const clearBtnWrapper = document.getElementById('clear_alerts_btn_wrapper');
+            if (clearBtnWrapper) {
+                if (systemAlerts.length === 0) {
+                    clearBtnWrapper.classList.add('d-none');
+                } else {
+                    clearBtnWrapper.classList.remove('d-none');
+                }
+            }
+        }
+
+        function clearAllAlerts(event) {
+            if (event) event.stopPropagation();
+            systemAlerts = [];
+            const alertDot = document.getElementById('nav_alert_dot');
+            if (alertDot) alertDot.classList.add('d-none');
+            renderAlertList();
+            updateAlertStatsCard();
         }
 
         function markAlertsAsRead() {
@@ -1550,14 +1577,14 @@
         }
 
         function updateAlertStatsCard() {
-            const alertCount = systemAlerts.length;
+            const activeAlertCount = systemAlerts.filter(a => a.isActive).length;
             const valAlerts = document.getElementById('val_alerts');
-            if (valAlerts) valAlerts.innerText = alertCount;
+            if (valAlerts) valAlerts.innerText = activeAlertCount;
 
             const valStatus = document.getElementById('val_system_status');
             if (valStatus) {
-                if (alertCount > 0) {
-                    valStatus.innerHTML = `<span class="text-danger fw-semibold">Có ${alertCount} cảnh báo</span>`;
+                if (activeAlertCount > 0) {
+                    valStatus.innerHTML = `<span class="text-danger fw-semibold">Có ${activeAlertCount} cảnh báo hiện tại</span>`;
                 } else {
                     valStatus.innerText = 'Trạng thái: Ổn định';
                 }

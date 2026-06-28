@@ -194,18 +194,17 @@ export default function App() {
     }
   }, [stations]);
 
-  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc để bắt kịp thông số và lỗi thời gian thực
+  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc mỗi 5 giây để bắt kịp nhiệt độ mới nhất
   useEffect(() => {
     let interval: any;
     if (isLoggedIn && authToken && activeTab === 'home') {
-      const pollInterval = selectedStation ? 2000 : 10000; // Tăng tốc lên 2 giây khi đang xem chi tiết trạm/đang sạc
       interval = setInterval(() => {
         fetchStations(authToken);
-      }, pollInterval);
+      }, 10000); // [TỐI ƯU] Tăng lên 10 giây để tiết kiệm pin và giảm tải máy chủ
     }
     // Dọn dẹp timer khi chuyển tab hoặc tắt app
     return () => clearInterval(interval);
-  }, [isLoggedIn, authToken, activeTab, selectedStation]);
+  }, [isLoggedIn, authToken, activeTab]);
 
   // Hàm tải Lịch sử sạc từ Backend (Hỗ trợ lọc theo Khoảng thời gian)
   const fetchHistory = async (start = historyStartDate, end = historyEndDate, isReset = false) => {
@@ -1009,11 +1008,11 @@ export default function App() {
               {stations.map((st: any) => {
                 const isAllBusy = st.status === 'online' && st.outlets && st.outlets.length > 0 && st.outlets.every((o: any) => o.status !== 'available');
                 const isOverTemp = (st.temperature != null && st.temp_limit != null && st.temperature > st.temp_limit) ||
-                    (st.outlets && st.outlets.some((o: any) => o.status === 'OVERTEMPERATURE' || o.status === 'overtemperature'));
-                
+                  (st.outlets && st.outlets.some((o: any) => o.status === 'OVERTEMPERATURE' || o.status === 'overtemperature'));
+
                 let badgeText = 'Mất kết nối';
                 let badgeStyle = styles.statusOffline;
-                
+
                 if (st.status === 'online') {
                   if (isOverTemp) {
                     badgeText = 'Quá nhiệt';
@@ -1032,7 +1031,7 @@ export default function App() {
                   badgeText = 'Mất kết nối';
                   badgeStyle = styles.statusOffline;
                 }
-                
+
                 return (
                   <TouchableOpacity key={st.station_id} style={styles.stationCard} onPress={() => setSelectedStation(st)}>
                     <View style={styles.stationIcon}><FontAwesome5 name="charging-station" size={24} color="#27ae60" /></View>
@@ -1100,10 +1099,10 @@ export default function App() {
                       statusText = "Bảo trì";
                     } else if (outlet.status === 'OVERCURRENT' || outlet.status === 'overcurrent') {
                       outletColor = "#e74c3c"; // Đỏ (Quá dòng)
-                      statusText = "Lỗi quá dòng";
+                      statusText = "Quá dòng";
                     } else if (outlet.status === 'OVERTEMPERATURE' || outlet.status === 'overtemperature') {
                       outletColor = "#e74c3c"; // Đỏ (Quá nhiệt)
-                      statusText = "Lỗi quá nhiệt";
+                      statusText = "Quá nhiệt";
                     } else if (outlet.status === 'charging_by_me') {
                       outletColor = "#e67e22"; // Cam nếu mình đang sạc
                       statusText = `Đang sạc (${Math.floor((outlet.duration_sec || 0) / 60)}p)`;
@@ -1155,10 +1154,10 @@ export default function App() {
                           badgeText = "Đang bảo trì";
                         } else if (outletData.status === 'OVERCURRENT' || outletData.status === 'overcurrent') {
                           badgeColor = "#e74c3c";
-                          badgeText = "Lỗi quá dòng";
+                          badgeText = "Quá dòng";
                         } else if (outletData.status === 'OVERTEMPERATURE' || outletData.status === 'overtemperature') {
                           badgeColor = "#e74c3c";
-                          badgeText = "Lỗi quá nhiệt";
+                          badgeText = "Quá nhiệt";
                         } else if (outletData.status === 'charging_by_me') {
                           badgeColor = "#e67e22";
                           badgeText = `Đang sạc (${Math.floor((outletData.duration_sec || 0) / 60)} phút)`;
