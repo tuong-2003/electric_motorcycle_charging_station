@@ -2940,6 +2940,12 @@
 
                             if (st.status === 'offline') {
                                 cabinetStatus = '<span style="color: #dc2626; font-weight: 600;">Mất kết nối</span>';
+                                // Đồng bộ nhịp tim client về quá khứ để kích hoạt Watchdog ngay
+                                if (st.outlets) {
+                                    st.outlets.forEach(o => {
+                                        lastSeenTime[`${st.station_id}_${o.id}`] = Date.now() - 40000;
+                                    });
+                                }
                             } else if (st.status === 'maintenance') {
                                 cabinetStatus = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
                             } else if (isOverTemp) {

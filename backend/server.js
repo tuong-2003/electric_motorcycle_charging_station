@@ -1091,7 +1091,10 @@ app.get('/api/stations', verifyToken, (req, res) => {
                     };
 
                     if (!online) {
+                        dbAddAlert(`offline_${st.station_id}_${outletId}`, `Ổ cắm ${outletId} - Tủ sạc ${st.station_id} mất kết nối!`, 'danger');
                         return { ...baseOutlet, status: 'offline' };
+                    } else {
+                        dbResolveAlert(`offline_${st.station_id}_${outletId}`);
                     }
 
                     if (!sessionInfo) {
