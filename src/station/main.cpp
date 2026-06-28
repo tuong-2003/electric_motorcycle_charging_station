@@ -273,6 +273,23 @@ void updateDisplay() {
 
   tft.setTextSize(1);
 
+  // --- KIỂM TRA NHU CẦU REINIT MÀN HÌNH DO THAY ĐỔI TRẠNG THÁI LỖI (CHỐNG NHIỄU EMI) ---
+  static int prev_outlet_error[2] = {0, 0};
+  bool need_reinit = false;
+  for (int i = 0; i < 2; i++) {
+    if (outlet_error[i] != prev_outlet_error[i]) {
+      need_reinit = true;
+      break;
+    }
+  }
+
+  if (need_reinit) {
+    delay(150); // Chờ 150ms để nhiễu hồ quang dập tắt hoàn toàn
+    tft.initR(INITR_BLACKTAB); // Reset và nạp lại cấu hình màn hình chống nhiễu EMI
+    tft.setRotation(1);
+    initDisplay();
+  }
+
   // 1. Cập nhật thanh trạng thái (Top Bar)
   tft.setTextColor(ST77XX_WHITE, ST77XX_BLUE); // Ghi đè nền xanh
   tft.setCursor(5, 6);
@@ -281,37 +298,22 @@ void updateDisplay() {
   tft.printf("%2.0fC %2.0f%%   ", current_temp, current_hum);
 
   // 2. Cập nhật thông số 2 ổ cắm
-  static int prev_outlet_error[2] = {0, 0};
-
   for (int i = 0; i < 2; i++) {
     int x_offset = i * 80; // Cột trái cho ổ 1, Cột phải cho ổ 2
 
     // Quản lý ẩn hiện QR Code theo trạng thái lỗi quá dòng cục bộ
-    if (outlet_error[i] != prev_outlet_error[i]) {
-      if (outlet_error[i] == 1) { // Mới bị lỗi quá dòng
-        delay(150); // Chờ 150ms để xung nhiễu dập tắt hoàn toàn
-        tft.initR(INITR_BLACKTAB); // Reset và nạp lại cấu hình màn hình chống nhiễu EMI làm trắng màn
-        tft.setRotation(1);
-        initDisplay();
-        
+    if (need_reinit) {
+      if (outlet_error[i] == 1) { // Đang bị lỗi quá dòng
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa QR
         tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-        tft.setCursor(x_offset + 13,
-                      52); // Đưa chữ về chính giữa vị trí cũ của QR
+        tft.setCursor(x_offset + 13, 52); // Đưa chữ về chính giữa vị trí cũ của QR
         tft.print("QUA DONG!");
-      } else if (prev_outlet_error[i] == 1 &&
-                 outlet_error[i] == 0) { // Hết lỗi quá dòng
-        delay(150); // Chờ 150ms tránh nhiễu chuyển mạch cơ khí
-        tft.initR(INITR_BLACKTAB);
-        tft.setRotation(1);
-        initDisplay();
-
-        tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa chữ báo lỗi
+      } else { // Trạng thái bình thường vẽ lại QR
+        tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK);
         char qrText[10];
         snprintf(qrText, sizeof(qrText), "%03d.%d", STATION_ID, i + 1);
         drawQRCode(qrText, x_offset + 19, 35); // Vẽ lại QR
       }
-      prev_outlet_error[i] = outlet_error[i];
     }
 
     tft.setCursor(x_offset + 5, 83);
@@ -335,7 +337,12 @@ void updateDisplay() {
                current_w[i]); // Nâng độ chuẩn xác: 1 chữ số thập phân
 
     // Vẽ lại viền cho mỗi ô cắm để tránh việc hiển thị chữ quá dài/lệch pixel làm mất khung
-    tft.drawRect(x_offset, 20, 80, 108, ST77XX_DARKGREY);
+    tft.drawRect(x_offset, 20, 80, 108, ST77XX_WHITE);
+  }
+
+  // Cập nhật lại giá trị lưu vết lỗi
+  for (int i = 0; i < 2; i++) {
+    prev_outlet_error[i] = outlet_error[i];
   }
 }
 

@@ -200,8 +200,10 @@ setInterval(() => {
                 o.voltage = 0.0;
                 o.current = 0.0;
                 o.power = 0.0;
-                o.status = 'OVERTEMPERATURE';
-                o.error = 2;
+                if (o.status !== 'OVERCURRENT') {
+                    o.status = 'OVERTEMPERATURE';
+                    o.error = 2;
+                }
             });
         } else {
             // Khôi phục tự động lỗi quá nhiệt khi nhiệt độ hạ xuống dưới ngưỡng

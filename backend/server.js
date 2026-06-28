@@ -33,7 +33,7 @@ const db = mysql.createPool({
     database: process.env.DB_NAME || 'ev_station',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 3,
+    connectionLimit: 1,
     queueLimit: 0,
     timezone: '+07:00' // Bổ sung cấu hình này để driver format đúng Date objects
 });
