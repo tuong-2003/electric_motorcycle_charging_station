@@ -2594,9 +2594,12 @@
 
             let csvContent = "\uFEFF"; // UTF-8 BOM để Excel hiển thị đúng dấu tiếng Việt
 
-            let headers = ['Ma Hoa Don'];
-            if (currentUserRole === 'admin') headers.push('Nguoi Dung');
-            headers.push('Tram', 'Bat Dau', 'Ket Thuc', 'Dien Nang (kWh)', 'Thanh Tien (VND)', 'Trang Thai');
+            let headers = ['Mã HĐ'];
+            if (currentUserRole === 'admin') {
+                headers.push('Người dùng');
+                headers.push('Phân quyền');
+            }
+            headers.push('Tủ / Cổng', 'Bắt đầu', 'Kết thúc', 'Điện năng (kWh)', 'Thành tiền (VNĐ)', 'Trạng thái');
             csvContent += headers.join(",") + "\n";
 
             rows.forEach(tr => {
