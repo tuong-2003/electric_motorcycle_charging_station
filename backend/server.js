@@ -91,6 +91,22 @@ db.getConnection((err, connection) => {
             }
         });
 
+        // Tự động tạo bảng cảnh báo hệ thống nếu chưa có (Không tự động xóa sau 7 ngày, dựa vào nút xóa)
+        const createAlertsTable = `
+        CREATE TABLE IF NOT EXISTS system_alerts (
+            id          VARCHAR(100) NOT NULL PRIMARY KEY,
+            message     TEXT        NOT NULL,
+            type        VARCHAR(20)  DEFAULT 'danger',
+            is_active   TINYINT(1)   DEFAULT 1,
+            is_read     TINYINT(1)   DEFAULT 0,
+            created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        );`;
+        db.query(createAlertsTable, (err) => {
+            if (err) console.error('⚠️ [MySQL] Lỗi tạo bảng system_alerts:', err.message);
+            else console.log('✅ [MySQL] Bảng system_alerts đã sẵn sàng.');
+        });
+
         // Tự động kiểm tra và cập nhật cột status và activation_token cho bảng users
         db.query("SHOW COLUMNS FROM users LIKE 'status'", (err, results) => {
             if (!err && results.length === 0) {
@@ -278,6 +294,64 @@ client.on('connect', () => {
 // Trạng thái quá nhiệt của các tủ sạc để chống spam
 const cabinetOvertempState = {};
 
+// Hàm tiện ích: Ghi/cập nhật cảnh báo vào MySQL
+function dbAddAlert(id, message, type = 'danger') {
+    db.query(
+        'INSERT INTO system_alerts (id, message, type, is_active, is_read) VALUES (?, ?, ?, 1, 0)' +
+        ' ON DUPLICATE KEY UPDATE message = VALUES(message), type = VALUES(type), is_active = 1, is_read = 0, updated_at = NOW()',
+        [id, message, type]
+    );
+}
+
+// Hàm tiện ích: Đánh dấu cảnh báo đã giải quyết trong MySQL
+function dbResolveAlert(id) {
+    db.query('UPDATE system_alerts SET is_active = 0 WHERE id = ?', [id]);
+}
+
+// API CẢNH BÁO HỆ THỐNG (SYSTEM ALERTS)
+// Lấy toàn bộ danh sách cảnh báo (cả hoạt động và đã giải quyết, Admin only)
+app.get('/api/alerts', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền xem.' });
+    db.query('SELECT id, message, type, is_active, is_read, created_at, updated_at FROM system_alerts ORDER BY created_at DESC LIMIT 200', (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database!' });
+        res.json({ success: true, data: results });
+    });
+});
+
+// Thêm hoặc cập nhật 1 cảnh báo từ Dashboard
+app.post('/api/alerts', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false });
+    const { id, message, type } = req.body;
+    if (!id || !message) return res.status(400).json({ success: false, message: 'Thiếu tham số.' });
+    dbAddAlert(id, message, type);
+    res.json({ success: true });
+});
+
+// Đánh dấu 1 cảnh báo đã giải quyết
+app.patch('/api/alerts/:id/resolve', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false });
+    dbResolveAlert(req.params.id);
+    res.json({ success: true });
+});
+
+// Đánh dấu tất cả cảnh báo là đã đọc
+app.patch('/api/alerts/read-all', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false });
+    db.query('UPDATE system_alerts SET is_read = 1', (err) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true });
+    });
+});
+
+// Xóa toàn bộ cảnh báo (Bấm nút Xóa thông báo sẽ đảm nhiệm xóa hoàn toàn khỏi DB)
+app.delete('/api/alerts', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false });
+    db.query('DELETE FROM system_alerts', (err) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true });
+    });
+});
+
 // Hứng dữ liệu ESP32 gửi lên
 client.on('message', (topic, message) => {
     const parts = topic.split('/');
@@ -324,10 +398,18 @@ client.on('message', (topic, message) => {
                     (err, activeSessions) => {
                         if (!err && activeSessions && activeSessions.length > 0) {
                             console.log(`🔌 [Đồng bộ] Phát hiện Cổng ${outletId} - Tủ ${stationId} báo trạng thái ${data.status} nhưng DB có phiên sạc ongoing. Tự động chốt phiên sạc #${activeSessions[0].id}!`);
-                            processStopCharge(stationId, outletId, activeSessions[0].user_id, () => {});
+                            processStopCharge(stationId, outletId, activeSessions[0].user_id, () => { });
                         }
                     }
                 );
+            }
+
+            // Ghi cảnh báo quá dòng vào DB
+            if (data.status === 'OVERCURRENT' || data.status === 'overcurrent') {
+                dbAddAlert(`current_${stationId}_${outletId}`,
+                    `Cảnh báo: Tủ sạc ${stationId} - Cổng sạc ${outletId} đã bị ngắt do lỗi QUÁ DÒNG!`);
+            } else if (data.status === 'AVAILABLE' || data.status === 'STANDBY' || data.status === 'IDLE') {
+                dbResolveAlert(`current_${stationId}_${outletId}`);
             }
 
             // [MỚI] Kiểm tra bảo vệ quá tải và quá nhiệt từ cấu hình cache
@@ -350,6 +432,8 @@ client.on('message', (topic, message) => {
 
                 // 2. Kiểm tra quá nhiệt (overtemperature protection)
                 if (data.temperature && data.temperature > config.temp_limit) {
+                    dbAddAlert(`temp_${stationId}`,
+                        `Nhiệt độ Tủ sạc ${stationId} quá cao: ${data.temperature}°C! (Giới hạn: ${config.temp_limit}°C)`);
                     if (!cabinetOvertempState[stationId]) {
                         cabinetOvertempState[stationId] = true;
                         console.warn(`🚨 [BẢO VỆ] Phát hiện quá nhiệt tại Tủ ${stationId}: ${data.temperature}°C (Giới hạn: ${config.temp_limit}°C). Đang ngắt sạc toàn tủ!`);
@@ -371,6 +455,7 @@ client.on('message', (topic, message) => {
                 } else if (data.temperature && data.temperature <= config.temp_limit) {
                     if (cabinetOvertempState[stationId]) {
                         cabinetOvertempState[stationId] = false;
+                        dbResolveAlert(`temp_${stationId}`);
                         console.log(`✅ [BẢO VỆ] Tủ sạc ${stationId} đã nguội xuống mức an toàn (${data.temperature}°C).`);
                     }
                 }

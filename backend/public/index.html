@@ -1454,50 +1454,64 @@
         let currentHistoryFilter = 'all';
         let activeDateFilterTarget = 'stations'; // 'stations' hoáº·c 'history'
 
-        function addSystemAlert(id, message, type) {
-            const existing = systemAlerts.find(a => a.id === id);
-            if (existing) {
-                existing.message = message;
-                existing.type = type;
-                existing.timestamp = Date.now();
-                existing.isRead = false;
-                existing.isActive = true; // Cập nhật lại trạng thái kích hoạt nếu xuất hiện lại
-            } else {
-                systemAlerts.push({
-                    id: id,
-                    message: message,
-                    type: type,
-                    timestamp: Date.now(),
-                    isRead: false,
-                    isActive: true
+        async function fetchAlertsFromServer() {
+            if (!authToken) return;
+            try {
+                const res = await fetch('/api/alerts', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
                 });
+                const data = await res.json();
+                if (data.success) {
+                    systemAlerts = data.data.map(alert => ({
+                        id: alert.id,
+                        message: alert.message,
+                        type: alert.type,
+                        timestamp: new Date(alert.created_at).getTime(),
+                        isRead: alert.is_read === 1,
+                        isActive: alert.is_active === 1
+                    }));
+                    renderAlertList();
+                    updateAlertStatsCard();
+                    const alertDot = document.getElementById('nav_alert_dot');
+                    if (alertDot) {
+                        if (systemAlerts.some(a => !a.isRead)) {
+                            alertDot.classList.remove('d-none');
+                        } else {
+                            alertDot.classList.add('d-none');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi tải thông báo:", err);
             }
-
-            systemAlerts.sort((a, b) => b.timestamp - a.timestamp);
-
-            const alertDot = document.getElementById('nav_alert_dot');
-            if (alertDot && systemAlerts.some(a => !a.isRead)) {
-                alertDot.classList.remove('d-none');
-            }
-
-            renderAlertList();
-            updateAlertStatsCard();
         }
 
-        function removeSystemAlert(id) {
-            const alert = systemAlerts.find(a => a.id === id);
-            if (alert && alert.isActive) {
-                alert.isActive = false; // Đánh dấu đã giải quyết (không còn là hiện tại)
-
-                const hasUnread = systemAlerts.some(a => !a.isRead);
-                const alertDot = document.getElementById('nav_alert_dot');
-                if (alertDot && !hasUnread) {
-                    alertDot.classList.add('d-none');
-                }
-
-                renderAlertList();
-                updateAlertStatsCard();
+        async function addSystemAlert(id, message, type) {
+            try {
+                await fetch('/api/alerts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken
+                    },
+                    body: JSON.stringify({ id, message, type })
+                });
+            } catch (err) {
+                console.error("Không thể thêm thông báo lên server", err);
             }
+            await fetchAlertsFromServer();
+        }
+
+        async function removeSystemAlert(id) {
+            try {
+                await fetch(`/api/alerts/${id}/resolve`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+            } catch (err) {
+                console.error("Không thể cập nhật trạng thái lỗi lên server", err);
+            }
+            await fetchAlertsFromServer();
         }
 
         function renderAlertList() {
@@ -1558,13 +1572,17 @@
             alertList.innerHTML = html;
         }
 
-        function clearAllAlerts(event) {
+        async function clearAllAlerts(event) {
             if (event) event.stopPropagation();
-            systemAlerts = [];
-            const alertDot = document.getElementById('nav_alert_dot');
-            if (alertDot) alertDot.classList.add('d-none');
-            renderAlertList();
-            updateAlertStatsCard();
+            try {
+                await fetch('/api/alerts', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+            } catch (err) {
+                console.error("Lỗi xóa thông báo:", err);
+            }
+            await fetchAlertsFromServer();
         }
 
         function performNavigationToElement(alertId) {
@@ -1650,15 +1668,16 @@
             }
         }
 
-        function markAlertsAsRead() {
-            systemAlerts.forEach(alert => {
-                alert.isRead = true;
-            });
-
-            const alertDot = document.getElementById('nav_alert_dot');
-            if (alertDot) alertDot.classList.add('d-none');
-
-            renderAlertList();
+        async function markAlertsAsRead() {
+            try {
+                await fetch('/api/alerts/read-all', {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+            } catch (err) {
+                console.error("Lỗi cập nhật đã đọc:", err);
+            }
+            await fetchAlertsFromServer();
         }
 
         function updateAlertStatsCard() {
@@ -2119,6 +2138,7 @@
                 }).catch(e => { });
 
             syncDailyEnergyCard();
+            fetchAlertsFromServer();
         }
 
         // Quét cập nhật tự động mỗi 5 giây
@@ -2234,6 +2254,7 @@
 
                         // Sau khi Dashboard xuất hiện thì mới bắt đầu tải dữ liệu
                         syncStationsData();
+                        fetchAlertsFromServer();
 
                         // Nếu có tin nhắn chào mừng lúc đăng nhập thì hiện ra sau khi đã vẽ xong ví tiền
                         if (loginMessage) {
@@ -2287,6 +2308,12 @@
         // Hàm Đăng xuất
         function doLogout(shouldShowAlert) {
             clearStoredAuth();
+            systemAlerts = [];
+            renderAlertList();
+            updateAlertStatsCard();
+            const alertDot = document.getElementById('nav_alert_dot');
+            if (alertDot) alertDot.classList.add('d-none');
+
             const walletInfo = document.getElementById('wallet_info');
             if (walletInfo) walletInfo.classList.add('d-none');
             document.getElementById('sidebar_unauth').classList.remove('d-none');
