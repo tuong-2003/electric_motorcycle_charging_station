@@ -323,6 +323,9 @@ void updateDisplay() {
     tft.setTextColor(is_charging[i] ? ST77XX_RED : ST77XX_WHITE, ST77XX_BLACK);
     tft.printf("%-6.1f W  ",
                current_w[i]); // Nâng độ chuẩn xác: 1 chữ số thập phân
+
+    // Vẽ lại viền cho mỗi ô cắm để tránh việc hiển thị chữ quá dài/lệch pixel làm mất khung
+    tft.drawRect(x_offset, 20, 80, 108, ST77XX_DARKGREY);
   }
 }
 

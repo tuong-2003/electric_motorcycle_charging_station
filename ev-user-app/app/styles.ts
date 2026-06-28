@@ -51,6 +51,8 @@ export const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, fontSize: 12, fontWeight: 'bold', overflow: 'hidden' },
   statusOnline: { backgroundColor: '#e8f8f5', color: '#2ecc71' },
   statusOffline: { backgroundColor: '#fdedec', color: '#e74c3c' },
+  statusBusy: { backgroundColor: '#fef5e7', color: '#e67e22' },
+  statusMaint: { backgroundColor: '#fef5e7', color: '#d97706' },
   backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingVertical: 5 },
   backButtonText: { fontSize: 16, color: '#34495e', marginLeft: 8, fontWeight: '500' },
   stationDetailHeader: { alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 15, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },

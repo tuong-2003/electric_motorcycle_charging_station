@@ -308,15 +308,19 @@ client.on('message', (topic, message) => {
             });
 
             // Đồng bộ hóa trạng thái phiên sạc: Nếu thiết bị báo RẢNH (AVAILABLE/STANDBY/IDLE)
-            // nhưng DB vẫn nghĩ đang sạc (ongoing), nghĩa là trạm sạc vừa mất nguồn hoặc reboot.
-            // Phải chốt hóa đơn ngay lập tức!
-            if (data.status === 'AVAILABLE' || data.status === 'STANDBY' || data.status === 'IDLE') {
+            // hoặc báo LỖI/BẢO TRÌ (OVERCURRENT/OVERTEMPERATURE/ERROR/MAINTENANCE)
+            // nhưng DB vẫn nghĩ đang sạc (ongoing), nghĩa là trạm sạc vừa mất nguồn, reboot hoặc ngắt bảo vệ.
+            // Phải chốt hóa đơn ngay lập tức để đồng bộ thời gian thực!
+            const isIdleStatus = ['AVAILABLE', 'STANDBY', 'IDLE'].includes(data.status);
+            const isErrorOrMaintStatus = ['OVERCURRENT', 'OVERTEMPERATURE', 'ERROR', 'MAINTENANCE'].includes(data.status);
+            
+            if (isIdleStatus || isErrorOrMaintStatus) {
                 db.query(
                     'SELECT id, user_id FROM charging_sessions WHERE station_id = ? AND status = "ongoing"',
                     [`${stationId}.${outletId}`],
                     (err, activeSessions) => {
                         if (!err && activeSessions && activeSessions.length > 0) {
-                            console.log(`🔌 [Đồng bộ] Phát hiện Cổng ${outletId} - Tủ ${stationId} báo RẢNH nhưng DB có phiên sạc ongoing. Tự động chốt phiên sạc #${activeSessions[0].id}!`);
+                            console.log(`🔌 [Đồng bộ] Phát hiện Cổng ${outletId} - Tủ ${stationId} báo trạng thái ${data.status} nhưng DB có phiên sạc ongoing. Tự động chốt phiên sạc #${activeSessions[0].id}!`);
                             processStopCharge(stationId, outletId, activeSessions[0].user_id, () => {});
                         }
                     }

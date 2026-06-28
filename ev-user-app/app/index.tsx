@@ -194,17 +194,18 @@ export default function App() {
     }
   }, [stations]);
 
-  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc mỗi 5 giây để bắt kịp nhiệt độ mới nhất
+  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc để bắt kịp thông số và lỗi thời gian thực
   useEffect(() => {
     let interval: any;
     if (isLoggedIn && authToken && activeTab === 'home') {
+      const pollInterval = selectedStation ? 2000 : 10000; // Tăng tốc lên 2 giây khi đang xem chi tiết trạm/đang sạc
       interval = setInterval(() => {
         fetchStations(authToken);
-      }, 10000); // [TỐI ƯU] Tăng lên 10 giây để tiết kiệm pin và giảm tải máy chủ
+      }, pollInterval);
     }
     // Dọn dẹp timer khi chuyển tab hoặc tắt app
     return () => clearInterval(interval);
-  }, [isLoggedIn, authToken, activeTab]);
+  }, [isLoggedIn, authToken, activeTab, selectedStation]);
 
   // Hàm tải Lịch sử sạc từ Backend (Hỗ trợ lọc theo Khoảng thời gian)
   const fetchHistory = async (start = historyStartDate, end = historyEndDate, isReset = false) => {
@@ -1007,18 +1008,29 @@ export default function App() {
               <Text style={styles.sectionTitle}>Danh sách tủ sạc</Text>
               {stations.map((st: any) => {
                 const isAllBusy = st.status === 'online' && st.outlets && st.outlets.length > 0 && st.outlets.every((o: any) => o.status !== 'available');
+                const isOverTemp = (st.temperature != null && st.temp_limit != null && st.temperature > st.temp_limit) ||
+                    (st.outlets && st.outlets.some((o: any) => o.status === 'OVERTEMPERATURE' || o.status === 'overtemperature'));
                 
-                let badgeText = 'Bảo trì';
+                let badgeText = 'Mất kết nối';
                 let badgeStyle = styles.statusOffline;
                 
                 if (st.status === 'online') {
-                  if (isAllBusy) {
+                  if (isOverTemp) {
+                    badgeText = 'Quá nhiệt';
+                    badgeStyle = styles.statusOffline;
+                  } else if (isAllBusy) {
                     badgeText = 'Đang bận';
                     badgeStyle = styles.statusBusy;
                   } else {
                     badgeText = 'Sẵn sàng';
                     badgeStyle = styles.statusOnline;
                   }
+                } else if (st.status === 'maintenance') {
+                  badgeText = 'Bảo trì';
+                  badgeStyle = styles.statusMaint;
+                } else if (st.status === 'offline') {
+                  badgeText = 'Mất kết nối';
+                  badgeStyle = styles.statusOffline;
                 }
                 
                 return (
@@ -1074,10 +1086,25 @@ export default function App() {
                     { id: 1, status: 'available' },
                     { id: 2, status: 'available' }
                   ]).map((outlet: any) => {
-                    let outletColor = "#2ecc71"; // Xanh mặc định
+                    let outletColor = "#2ecc71"; // Xanh mặc định (Sẵn sàng/Trống)
                     let statusText = "Trống";
 
-                    if (outlet.status === 'charging_by_me') {
+                    const isCabinetOffline = selectedStation.status === 'offline';
+                    const isCabinetMaint = selectedStation.status === 'maintenance';
+
+                    if (isCabinetOffline || outlet.status === 'offline') {
+                      outletColor = "#7f8c8d"; // Xám (Mất kết nối)
+                      statusText = "Mất kết nối";
+                    } else if (isCabinetMaint || outlet.status === 'maintenance') {
+                      outletColor = "#e67e22"; // Cam (Bảo trì)
+                      statusText = "Bảo trì";
+                    } else if (outlet.status === 'OVERCURRENT' || outlet.status === 'overcurrent') {
+                      outletColor = "#e74c3c"; // Đỏ (Quá dòng)
+                      statusText = "Lỗi quá dòng";
+                    } else if (outlet.status === 'OVERTEMPERATURE' || outlet.status === 'overtemperature') {
+                      outletColor = "#e74c3c"; // Đỏ (Quá nhiệt)
+                      statusText = "Lỗi quá nhiệt";
+                    } else if (outlet.status === 'charging_by_me') {
                       outletColor = "#e67e22"; // Cam nếu mình đang sạc
                       statusText = `Đang sạc (${Math.floor((outlet.duration_sec || 0) / 60)}p)`;
                     } else if (outlet.status === 'charging_by_other') {
@@ -1112,12 +1139,27 @@ export default function App() {
                         if (selectedOutletModal) lastOutletRef.current = selectedOutletModal;
                         const outletData = lastOutletRef.current;
                         if (!outletData) return null;
+                        const isCabinetOffline = selectedStation.status === 'offline';
+                        const isCabinetMaint = selectedStation.status === 'maintenance';
+
                         let badgeColor = "#2ecc71";
                         let badgeText = "Sẵn sàng sạc";
                         let actionBtnText = "TIẾN HÀNH SẠC";
                         let actionBtnColor = "#2ecc71";
 
-                        if (outletData.status === 'charging_by_me') {
+                        if (isCabinetOffline || outletData.status === 'offline') {
+                          badgeColor = "#7f8c8d";
+                          badgeText = "Mất kết nối";
+                        } else if (isCabinetMaint || outletData.status === 'maintenance') {
+                          badgeColor = "#e67e22";
+                          badgeText = "Đang bảo trì";
+                        } else if (outletData.status === 'OVERCURRENT' || outletData.status === 'overcurrent') {
+                          badgeColor = "#e74c3c";
+                          badgeText = "Lỗi quá dòng";
+                        } else if (outletData.status === 'OVERTEMPERATURE' || outletData.status === 'overtemperature') {
+                          badgeColor = "#e74c3c";
+                          badgeText = "Lỗi quá nhiệt";
+                        } else if (outletData.status === 'charging_by_me') {
                           badgeColor = "#e67e22";
                           badgeText = `Đang sạc (${Math.floor((outletData.duration_sec || 0) / 60)} phút)`;
                           actionBtnText = "DỪNG SẠC & THANH TOÁN";
@@ -1160,7 +1202,7 @@ export default function App() {
                             </View>
 
                             {/* Nút Điều Khiển Mạch */}
-                            {outletData.status !== 'charging_by_other' ? (
+                            {(outletData.status === 'available' || outletData.status === 'charging_by_me') && !isCabinetOffline && !isCabinetMaint ? (
                               <TouchableOpacity
                                 style={{ backgroundColor: actionBtnColor, paddingVertical: 15, borderRadius: 10, alignItems: 'center' }}
                                 onPress={() => {
@@ -1737,6 +1779,7 @@ const styles = StyleSheet.create({
   statusOnline: { backgroundColor: '#e8f8f5', color: '#2ecc71' },
   statusOffline: { backgroundColor: '#fdedec', color: '#e74c3c' },
   statusBusy: { backgroundColor: '#fef5e7', color: '#e67e22' },
+  statusMaint: { backgroundColor: '#fef5e7', color: '#d97706' },
   backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingVertical: 5 },
   absoluteBackButton: { position: 'absolute', top: 5, left: 20, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, zIndex: 10 },
   backButtonText: { fontSize: 16, color: '#34495e', marginLeft: 8, fontWeight: '500' },
