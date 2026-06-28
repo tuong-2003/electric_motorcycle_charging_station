@@ -80,6 +80,12 @@ export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const isProcessingScan = useRef(false);
 
+  // State cho popup Hóa đơn chốt phiên sạc
+  const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+  // Ref theo dõi các phiên sạc đang hoạt động của user (dùng cho tự phát hiện ngắt)
+  const activeSessionsRef = useRef<Set<string>>(new Set());
+
   // Tự động kiểm tra trạng thái đăng nhập khi người dùng mở App
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -194,13 +200,50 @@ export default function App() {
     }
   }, [stations]);
 
-  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc mỗi 5 giây để bắt kịp nhiệt độ mới nhất
+  // Cơ chế Polling: Tự động tải lại dữ liệu Trạm sạc mỗi 5 giây và phát hiện phiên sạc bị ngắt tự động
   useEffect(() => {
     let interval: any;
     if (isLoggedIn && authToken && activeTab === 'home') {
-      interval = setInterval(() => {
-        fetchStations(authToken);
-      }, 10000); // [TỐI ƯU] Tăng lên 10 giây để tiết kiệm pin và giảm tải máy chủ
+      interval = setInterval(async () => {
+        const token = authToken;
+        const response = await fetch(`${API_URL}/api/stations`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => null);
+        if (!response) return;
+        const data = await response.json().catch(() => null);
+        if (!data?.success) return;
+
+        const newStations: any[] = data.data || [];
+        setStations(newStations);
+
+        // Kiểm tra phiên sạc bị ngắt tự động (quá dòng, quá nhiệt, ...)
+        for (const st of newStations) {
+          for (const outlet of (st.outlets || [])) {
+            const key = `${st.station_id}_${outlet.id}`;
+            const wasCharging = activeSessionsRef.current.has(key);
+            const isNowCharging = outlet.is_my_session === true;
+
+            // Cập nhật danh sách phiên đang sạc
+            if (isNowCharging) {
+              activeSessionsRef.current.add(key);
+            } else if (wasCharging && !isNowCharging) {
+              // Phát hiện phiên vừa bị ngắt tự động -> Hiển popup hóa đơn
+              activeSessionsRef.current.delete(key);
+              const histRes = await fetch(`${API_URL}/api/sessions/history?limit=1`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              }).catch(() => null);
+              const histData = await histRes?.json().catch(() => null);
+              const lastSession = histData?.data?.[0];
+              if (lastSession && lastSession.status === 'completed') {
+                fetchProfile(token);
+                fetchHistory();
+                setInvoiceData(lastSession);
+                setInvoiceModalVisible(true);
+              }
+            }
+          }
+        }
+      }, 10000); // Kiểm tra mỗi 10 giây
     }
     // Dọn dẹp timer khi chuyển tab hoặc tắt app
     return () => clearInterval(interval);
@@ -366,8 +409,24 @@ export default function App() {
 
       const result = await response.json();
       if (result.success) {
+        // Xóa phiên khỏi danh sách đang theo dõi trước khi fetch lại
+        activeSessionsRef.current.delete(`${stationId}_${outletId}`);
         fetchProfile(authToken); // Cập nhật lại số dư ví sau khi bị trừ tiền
         fetchHistory(); // Làm mới lại danh sách lịch sử sạc
+        fetchStations(authToken);
+
+        // Lấy hóa đơn mới nhất và hiển popup
+        try {
+          const histRes = await fetch(`${API_URL}/api/sessions/history?limit=1`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          const histData = await histRes.json();
+          const lastSession = histData?.data?.[0];
+          if (lastSession) {
+            setInvoiceData(lastSession);
+            setInvoiceModalVisible(true);
+          }
+        } catch (_) { /* bỏ qua nếu lỗi lấy hóa đơn */ }
       } else {
         Alert.alert('Lỗi', result.message);
       }
@@ -1399,6 +1458,64 @@ export default function App() {
             </ScrollView>
           )}
         </View>
+
+        {/* Modal: HÓA ĐƠN CHỐT PHIÊN SẠC */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={invoiceModalVisible}
+          onRequestClose={() => setInvoiceModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: '88%', backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 12 }}>
+              {/* Header */}
+              <View style={{ alignItems: 'center', marginBottom: 18 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#e8f5e9', justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                  <FontAwesome5 name="check-circle" size={30} color="#27ae60" />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2c3e50' }}>Phiên sạc kết thúc</Text>
+                <Text style={{ fontSize: 13, color: '#7f8c8d', marginTop: 4 }}>Hóa đơn chi tiết</Text>
+              </View>
+
+              {invoiceData && (
+                <View style={{ backgroundColor: '#f8f9fa', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ color: '#7f8c8d', fontSize: 13 }}>Trạm sạc</Text>
+                    <Text style={{ fontWeight: '600', fontSize: 13, color: '#2c3e50' }}>{invoiceData.station_id}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ color: '#7f8c8d', fontSize: 13 }}>Bắt đầu</Text>
+                    <Text style={{ fontWeight: '600', fontSize: 13, color: '#2c3e50' }}>{invoiceData.start || '--'}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ color: '#7f8c8d', fontSize: 13 }}>Kết thúc</Text>
+                    <Text style={{ fontWeight: '600', fontSize: 13, color: '#2c3e50' }}>{invoiceData.end || '--'}</Text>
+                  </View>
+                  {invoiceData.total_kwh ? (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <Text style={{ color: '#7f8c8d', fontSize: 13 }}>Điện năng tiêu thụ</Text>
+                      <Text style={{ fontWeight: '600', fontSize: 13, color: '#2c3e50' }}>{parseFloat(invoiceData.total_kwh).toFixed(2)} kWh</Text>
+                    </View>
+                  ) : null}
+                  <View style={{ height: 1, backgroundColor: '#e9ecef', marginVertical: 10 }} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#2c3e50', fontSize: 15, fontWeight: '600' }}>Tổng tiền</Text>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#e74c3c' }}>
+                      {parseInt(invoiceData.total_cost || 0).toLocaleString('vi-VN')} đ
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() => setInvoiceModalVisible(false)}
+                style={{ backgroundColor: '#27ae60', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Đã hiểu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Modal: NHẬP SỐ TIỀN NẠP */}
         <Modal

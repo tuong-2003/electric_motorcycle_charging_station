@@ -890,7 +890,8 @@ app.get('/api/telemetry/history', (req, res) => {
 
 // API Lấy danh sách lịch sử sạc cá nhân hoặc tất cả (đối với Admin)
 app.get('/api/sessions/history', verifyToken, (req, res) => {
-    const { startDate, endDate, stationId, username } = req.query;
+    const { startDate, endDate, stationId, username, limit } = req.query;
+    const queryLimit = parseInt(limit as string) > 0 ? parseInt(limit as string) : 200;
 
     let sql = `
         SELECT s.id, s.station_id, u.username,
@@ -927,7 +928,7 @@ app.get('/api/sessions/history', verifyToken, (req, res) => {
         sql += ' WHERE ' + conditions.join(' AND ');
     }
 
-    sql += ' ORDER BY s.id DESC LIMIT 200';
+    sql += ` ORDER BY s.id DESC LIMIT ${queryLimit}`;
 
     db.query(sql, params, (err, results) => {
         if (err) {
