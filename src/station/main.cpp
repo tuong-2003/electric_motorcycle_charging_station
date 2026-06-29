@@ -277,7 +277,8 @@ void updateDisplay() {
 
   tft.setTextSize(1);
 
-  // --- KIỂM TRA NHU CẦU REINIT MÀN HÌNH DO THAY ĐỔI TRẠNG THÁI LỖI (CHỐNG NHIỄU EMI) ---
+  // --- KIỂM TRA NHU CẦU REINIT MÀN HÌNH DO THAY ĐỔI TRẠNG THÁI LỖI (CHỐNG
+  // NHIỄU EMI) ---
   static int prev_outlet_error[2] = {0, 0};
   bool need_reinit = false;
   for (int i = 0; i < 2; i++) {
@@ -289,7 +290,8 @@ void updateDisplay() {
 
   if (need_reinit) {
     delay(150); // Chờ 150ms để nhiễu hồ quang dập tắt hoàn toàn
-    tft.initR(INITR_BLACKTAB); // Reset và nạp lại cấu hình màn hình chống nhiễu EMI
+    tft.initR(
+        INITR_BLACKTAB); // Reset và nạp lại cấu hình màn hình chống nhiễu EMI
     tft.setRotation(1);
     initDisplay();
     screen_cleared = true;
@@ -311,7 +313,8 @@ void updateDisplay() {
       if (outlet_error[i] == 1) { // Đang bị lỗi quá dòng
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK); // Xóa QR
         tft.setTextColor(ST77XX_RED, ST77XX_BLACK);
-        tft.setCursor(x_offset + 13, 52); // Đưa chữ về chính giữa vị trí cũ của QR
+        tft.setCursor(x_offset + 13,
+                      52); // Đưa chữ về chính giữa vị trí cũ của QR
         tft.print("QUA DONG!");
       } else { // Trạng thái bình thường vẽ lại QR
         tft.fillRect(x_offset + 2, 33, 76, 46, ST77XX_BLACK);
@@ -341,7 +344,8 @@ void updateDisplay() {
     tft.printf("%-6.1f W  ",
                current_w[i]); // Nâng độ chuẩn xác: 1 chữ số thập phân
 
-    // Vẽ lại viền cho mỗi ô cắm để tránh việc hiển thị chữ quá dài/lệch pixel làm mất khung
+    // Vẽ lại viền cho mỗi ô cắm để tránh việc hiển thị chữ quá dài/lệch pixel
+    // làm mất khung
     tft.drawRect(x_offset, 20, 80, 108, ST77XX_WHITE);
   }
 
@@ -529,10 +533,10 @@ void loop() {
   if (max_current_limit < 1.0)
     max_current_limit = 16.0; // Fallback an toàn (tránh lỗi tỷ lệ chia)
 
-  // --- ĐOẠN CODE GIẢ LẬP TEST QUÁ DÒNG VỚI TẢI TIÊU THỤ THẤP ---
-  max_current_limit = 0.1; // Cố định ngưỡng bảo vệ ở 0.1 Ampe (22W) để mọi
-                           // thiết bị đều có thể kích hoạt quá dòng
-  // ---------------------------------------------------------------
+  // // --- ĐOẠN CODE GIẢ LẬP TEST QUÁ DÒNG VỚI TẢI TIÊU THỤ THẤP ---
+  // max_current_limit = 0.1; // Cố định ngưỡng bảo vệ ở 0.1 Ampe (22W) để mọi
+  //                          // thiết bị đều có thể kích hoạt quá dòng
+  // // ---------------------------------------------------------------
 
   float temp_limit_val = (float)modbus_temp_limit;
   if (temp_limit_val <= 1.0)

@@ -1831,10 +1831,10 @@
                     const tempEl = document.getElementById('temp_' + stationId);
                     const currentCachedTemp = tempEl ? parseFloat(tempEl.innerText) : null;
                     const tempVal = (data.temperature !== undefined) ? data.temperature : currentCachedTemp;
-                    const isOverTemp = (tempVal !== null && !isNaN(tempVal) && tempVal > tempLimit) || 
-                                       (data.status === 'OVERTEMPERATURE' || data.status === 'overtemperature') ||
-                                       (document.getElementById('stat_badge_' + stationId + '_1')?.innerText === 'Quá nhiệt') ||
-                                       (document.getElementById('stat_badge_' + stationId + '_2')?.innerText === 'Quá nhiệt');
+                    const isOverTemp = (tempVal !== null && !isNaN(tempVal) && tempVal > tempLimit) ||
+                        (data.status === 'OVERTEMPERATURE' || data.status === 'overtemperature') ||
+                        (document.getElementById('stat_badge_' + stationId + '_1')?.innerText === 'Quá nhiệt') ||
+                        (document.getElementById('stat_badge_' + stationId + '_2')?.innerText === 'Quá nhiệt');
 
                     if (limits.status === 'maintenance') {
                         statusCol.innerHTML = '<span style="color: #d97706; font-weight: 600;">Bảo trì</span>';
@@ -2408,7 +2408,7 @@
         }
 
         function factoryResetSystem() {
-            showConfirm('CẢNH BÁO ĐẶC BIỆT NGUY HIỂM: Hành động này sẽ khôi phục cấu hình mặc định (16A, 65°C, 3500đ) của TOÀN BỘ trạm sạc trong hệ thống và reset phần cứng vật lý của chúng. Lịch sử giao dịch và ví tiền của người dùng sẽ KHÔNG bị ảnh hưởng. Bạn có chắc chắn?', (confirmed) => {
+            showConfirm('CẢNH BÁO: Hành động này sẽ khôi phục cấu hình mặc định của toàn bộ trạm sạc trong hệ thống và reset phần cứng vật lý của chúng. Bạn có chắc chắn?', (confirmed) => {
                 if (confirmed) {
                     fetch('/api/system/factory-reset', {
                         method: 'POST',
